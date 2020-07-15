@@ -27,12 +27,14 @@ namespace gpu {
 namespace cache {
 
 using code = std::string;
+using compressed_code = std::vector<uint8_t>;
 using primitive_id = std::string;
 
 struct primitive_db {
     primitive_db();
 
     std::vector<code> get(const primitive_id& id) const;
+    std::vector<code> get_compressed(const primitive_id& id) const;
 
 private:
     struct case_insensitive_compare {
@@ -45,6 +47,7 @@ private:
         }
     };
     std::multimap<primitive_id, code, case_insensitive_compare> primitives;
+    std::multimap<primitive_id, compressed_code, case_insensitive_compare> primitives_compressed;
 };
 
 }  // namespace cache

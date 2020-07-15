@@ -20,6 +20,12 @@ set(CLDNN_BUILD__PROJ_OUTPUT_NAME "${CLDNN_BUILD__PROJ}${CLDNN__OUT_CPU_SUFFIX}"
 
 # ========================================== Compiler options ==========================================
 
+find_package(ZLIB)
+if (NOT ZLIB_FOUND)
+  message(FATAL_ERROR "ZLIB NOT FOUND")
+endif()
+
+
 intel_config_flag_apply_settings(
     CompilerOptions
     CMAKE_CXX_FLAGS
@@ -102,8 +108,10 @@ set(__CLDNN_Directory__cg_cache        "${CLDNN__CODEGEN_INCDIR}")
 set(__CLDNN_CGDirectory__cg_cache      "${CLDNN__CODEGEN_DIR}/cache")
 set(__CLDNN_Label__cg_cache            "${__CLDNN_Label__core}\\codegen")
 set(__CLDNN_File__cg_cache__prim_db    "ks_primitive_db.inc")
+set(__CLDNN_File__cg_cache__prim_db1    "ks_primitive_db.inc1")
 set(__CLDNN_Sources__cg_cache
     "${__CLDNN_Directory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
+    "${__CLDNN_Directory__cg_cache}/${__CLDNN_File__cg_cache__prim_db1}"
   )
 
 
@@ -152,9 +160,9 @@ add_library("${CLDNN_BUILD__PROJ}" STATIC
 set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY PROJECT_LABEL "${CLDNN_BUILD__PROJ_LABEL}")
 set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY OUTPUT_NAME   "${CLDNN_BUILD__PROJ_OUTPUT_NAME}")
 
-
 target_link_libraries("${CLDNN_BUILD__PROJ}"
     clDNN_OpenCL
+    ${ZLIB_LIBRARIES}
   )
 
 if(WIN32)
@@ -165,7 +173,7 @@ endif()
 target_link_libraries("${CLDNN_BUILD__PROJ}" ${CLDNN__SYSTEM_LINK_LIBRARIES})
 
 # =================================== Custom pre- and post-steps =======================================
-add_custom_command(OUTPUT "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
+add_custom_command(OUTPUT "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}" "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db1}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${__CLDNN_CGDirectory__cg_cache}"
     COMMAND "${PYTHON_EXECUTABLE}" "${__CLDNN_Directory__core_common}/primitive_db_gen.py" -out_path "${__CLDNN_CGDirectory__cg_cache}" -out_file_name "${__CLDNN_File__cg_cache__prim_db}" -kernels "${__CLDNN_Directory__cl_kernels}"
     DEPENDS ${__CLDNN_Sources__cl_kernels} "${__CLDNN_Directory__core_common}/primitive_db_gen.py"
@@ -176,6 +184,15 @@ add_custom_command(OUTPUT "${__CLDNN_Directory__cg_cache}/${__CLDNN_File__cg_cac
     DEPENDS "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}" ${__CLDNN_Sources__cl_kernels} "${__CLDNN_Directory__core_common}/primitive_db_gen.py"
     COMMENT "Updating file if the file changed (${__CLDNN_File__cg_cache__prim_db}) ..."
   )
+
+add_custom_command(OUTPUT "${__CLDNN_Directory__cg_cache}/${__CLDNN_File__cg_cache__prim_db1}"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db1}" "${__CLDNN_Directory__cg_cache}/${__CLDNN_File__cg_cache__prim_db1}"
+    DEPENDS "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db1}" ${__CLDNN_Sources__cl_kernels} "${__CLDNN_Directory__core_common}/primitive_db_gen.py"
+    COMMENT "Updating file if the file changed ("${__CLDNN_File__cg_cache__prim_db1}") ..."
+  )
+
+  #message(FATAL_ERROR "${__CLDNN_Directory__cg_cache}/${__CLDNN_File__cg_cache__prim_db1}")
+
 if(WIN32)
   set(CLDNN_CACHE_PATH "${CLDNN__OUTPUT_BIN_DIR}/$<CONFIGURATION>")
 else((NOT ANDROID) AND (UNIX))

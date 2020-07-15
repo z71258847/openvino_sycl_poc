@@ -1032,6 +1032,7 @@ set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
 
 include_directories(
     ${CLDNN_UTILS__RAPIDJSON_INCDIRS}
+    "utils/"
     "${CLDNN__KHR_CLHPP_DIR}"
     "${CLDNN__CODEGEN_INCDIR}"
   )

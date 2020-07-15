@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <fstream>
 
 #if defined __INTEL_COMPILER
 #pragma warning disable : 177
@@ -143,7 +144,20 @@ std::shared_ptr<KernelString> common_kernel_base::GetKernelString(const std::str
                                                                   const std::string& exe_mode) const {
     std::shared_ptr<KernelString> kernel_string = std::make_shared<KernelString>();
 
-    auto codes = db.get(name);
+    auto codes_ref = db.get(name);
+    auto codes = db.get_compressed(name);
+
+    if (codes.size() != codes_ref.size()) {
+        std::cerr << "codes count differs for kernel" << name << "\n";
+        throw std::runtime_error("compression/decompression error");
+    }
+
+    for (size_t i = 0; i < codes.size(); i++) {
+        if (codes[i] != codes_ref[i]) {
+            std::cerr << "kernel " << name << " is corrupted\n";
+            throw std::runtime_error("compression/decompression error");
+        }
+    }
 
     if (codes.size()) {
         kernel_string->str = codes[0];

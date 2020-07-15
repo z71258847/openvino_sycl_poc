@@ -19,6 +19,10 @@
 #include <vector>
 #include <utility>
 #include <stdexcept>
+#include <iostream>
+#include <chrono>
+
+#include "gzip/decompress.hpp"
 
 #ifndef NDEBUG
 #include <fstream>
@@ -31,8 +35,59 @@ namespace cache {
 
 primitive_db::primitive_db()
     : primitives({
+#include "ks_primitive_db.inc1"
+      }),
+
+      primitives_compressed({
 #include "ks_primitive_db.inc"
+
       }) {
+}
+
+std::vector<code> primitive_db::get_compressed(const primitive_id& id) const {
+#ifndef NDEBUG
+    {
+        std::ifstream kernel_file{id + ".cl", std::ios::in | std::ios::binary};
+        if (kernel_file.is_open()) {
+            code ret;
+            auto beg = kernel_file.tellg();
+            kernel_file.seekg(0, std::ios::end);
+            auto end = kernel_file.tellg();
+            kernel_file.seekg(0, std::ios::beg);
+
+            ret.resize((size_t)(end - beg));
+            kernel_file.read(&ret[0], (size_t)(end - beg));
+
+            return {std::move(ret)};
+        }
+    }
+#endif
+    try {
+        const auto codes = primitives_compressed.equal_range(id);
+        std::vector<code> temp;
+        std::for_each(codes.first, codes.second, [&](const std::pair<const std::string, compressed_code>& c) {
+            using ms = std::chrono::duration<double, std::ratio<1, 1000>>;
+            using Time = std::chrono::high_resolution_clock;
+
+            auto start = Time::now();
+            std::string decompressed_data = gzip::decompress((const char*)(c.second.data()), c.second.size());
+            auto stop = Time::now();
+            std::chrono::duration<float> fs = stop - start;
+            ms opt_pass_time = std::chrono::duration_cast<ms>(fs);
+
+            std::cerr << "DECOMPRESSION TIME: " << c.first << " = " << opt_pass_time.count() <<  "ms" << std::endl;
+
+            temp.push_back(decompressed_data);
+        });
+
+        if (temp.size() != 1) {
+            throw std::runtime_error("cannot find the kernel " + id + " in primitive database.");
+        }
+
+        return temp;
+    } catch (...) {
+        throw std::runtime_error("cannot find the kernel " + id + " in primitive database.");
+    }
 }
 
 std::vector<code> primitive_db::get(const primitive_id& id) const {
