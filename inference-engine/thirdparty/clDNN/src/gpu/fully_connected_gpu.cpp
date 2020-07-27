@@ -58,7 +58,7 @@ public:
         fc_optional_params.allowInputReordering = true;
 
         const auto primitive = arg.get_primitive();
-        if (primitive->original_sizes.front().size() == 3) {
+        if (!primitive->original_sizes.empty() && primitive->original_sizes.front().size() == 3) {
             fc_params.inputs[0] = fc_params.inputs[0].FlattenToBatchAndFeature();
             fc_params.output = fc_params.output.FlattenToBatchAndFeature();
         } else {

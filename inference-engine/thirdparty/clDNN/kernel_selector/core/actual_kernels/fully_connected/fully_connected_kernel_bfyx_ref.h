@@ -33,6 +33,7 @@ protected:
     std::vector<FusedOpType> GetSupportedFusedOps() const override {
         return { FusedOpType::QUANTIZE,
                  FusedOpType::SCALE,
+                 FusedOpType::ELTWISE,
                  FusedOpType::ACTIVATION };
     }
     bool Validate(const Params& params, const optional_params& options) const override;
