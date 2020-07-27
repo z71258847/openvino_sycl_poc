@@ -35,6 +35,8 @@ INSTANTIATE_TEST_CASE_P(MatMul, MatMulTest,
         ::testing::Combine(
                 ::testing::ValuesIn(inputPrecisions),
                 ::testing::ValuesIn(shapes),
+                ::testing::Values(false),
+                ::testing::Values(false),
                 ::testing::ValuesIn(secondaryInputTypes),
                 ::testing::Values(CommonTestUtils::DEVICE_GPU)),
         MatMulTest::getTestCaseName);

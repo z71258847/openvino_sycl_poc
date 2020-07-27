@@ -19,7 +19,6 @@ std::string MatMulTest::getTestCaseName(const testing::TestParamInfo<MatMulLayer
     bool transpose_a;
     bool transpose_b;
     ngraph::helpers::InputLayerType secondaryInputType;
-    InferenceEngine::Precision netPrecision;
     std::string targetDevice;
     std::tie(netPrecision, inputShapes, transpose_a, transpose_b, secondaryInputType, targetDevice) = obj.param;
     InferenceEngine::SizeVector inputShape0 = inputShapes.first;
