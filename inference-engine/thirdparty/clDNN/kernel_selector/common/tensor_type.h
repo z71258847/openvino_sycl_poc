@@ -508,6 +508,8 @@ struct DataTensor : public TensorBaseT<Datatype, DataLayout> {
 
     DataTensor TransformIgnorePadding(DataLayout l) const;
     DataTensor FlattenFeatureAndSpatials() const;
+    // Flattens f*b -> b; y*x -> f
+    DataTensor FlattenToBatchAndFeature() const;
     DataTensor FlattenEverything() const;
 
     static inline Dim Extract(DataLayout l, DataChannelName channel, const NDims& d) {

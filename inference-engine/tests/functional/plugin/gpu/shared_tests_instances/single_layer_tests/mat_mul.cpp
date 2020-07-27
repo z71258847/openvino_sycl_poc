@@ -18,8 +18,12 @@ using input_shapes = std::pair<std::vector<size_t>, std::vector<size_t>>;
 
 const std::vector<input_shapes> shapes = {
         { {1, 4, 5, 6}, {1, 4, 6, 4}},
+        { {1, 4, 5, 6}, {6, 4}},
+        { {1, 4, 7, 5, 6}, {1, 4, 1, 6, 4}},
         { {1, 5, 6}, {1, 6, 4}},
         { {7, 5, 6}, {7, 6, 4}},
+        { {7, 5, 6}, {1, 6, 4}},
+        { {10, 6}, {6, 4}},
 };
 
 std::vector<ngraph::helpers::InputLayerType> secondaryInputTypes = {
@@ -31,10 +35,8 @@ INSTANTIATE_TEST_CASE_P(MatMul, MatMulTest,
         ::testing::Combine(
                 ::testing::ValuesIn(inputPrecisions),
                 ::testing::ValuesIn(shapes),
-                ::testing::Values(false),
-                ::testing::Values(false),
                 ::testing::ValuesIn(secondaryInputTypes),
-                ::testing::Values(CommonTestUtils::DEVICE_CPU)),
+                ::testing::Values(CommonTestUtils::DEVICE_GPU)),
         MatMulTest::getTestCaseName);
 
 } // namespace

@@ -13,8 +13,7 @@
 
 typedef std::tuple<
         InferenceEngine::Precision,
-        InferenceEngine::SizeVector,
-        InferenceEngine::SizeVector,
+        std::pair<InferenceEngine::SizeVector, InferenceEngine::SizeVector>,
         bool,
         bool,
         ngraph::helpers::InputLayerType,

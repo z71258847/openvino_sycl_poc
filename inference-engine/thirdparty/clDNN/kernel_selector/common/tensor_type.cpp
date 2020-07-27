@@ -18,8 +18,12 @@
 #include "tensor_type.h"
 #include "common_tools.h"
 #include <vector>
+#include <iostream>
 
 namespace kernel_selector {
+
+std::string toString(Tensor::DataLayout l);
+
 namespace Tensor {
 
 DataTensor::DataChannelArray DataTensor::dataChannelArray {{
@@ -411,6 +415,74 @@ DataTensor DataTensor::FlattenFeatureAndSpatials() const {
     } else {
         res.dims[Channelndex(l, DataChannelName::FEATURE)].pitch = dims[Channelndex(l, DataChannelName::BATCH) + 1].pitch;
         res.dims[Channelndex(l, DataChannelName::FEATURE)].pad = dims[Channelndex(l, DataChannelName::BATCH) + 1].pad;
+    }
+
+    return res;
+}
+
+DataTensor DataTensor::FlattenToBatchAndFeature() const {
+    DataLayout l;
+
+    const auto x = X();
+    const auto y = Y();
+    const auto f = Feature();
+    const auto b = Batch();
+
+    DataLayout targetLayout = Tensor::bf;
+    std::cerr << "B: " << b.v << " " <<b.pitch << " " << b.pad.Total() << std::endl;
+    std::cerr << "F: " << f.v << " " <<f.pitch << " " << f.pad.Total() << std::endl;
+    std::cerr << "Y: " << y.v << " " <<y.pitch << " " << y.pad.Total() << std::endl;
+    std::cerr << "X: " << x.v << " " <<x.pitch << " " << x.pad.Total() << std::endl;
+    switch (layout) {
+        case Tensor::bfyx: {
+            if (b.pitch == f.v * f.pitch) {  // no padding in F axis
+                l = targetLayout;
+                break;
+            }
+            throw std::runtime_error("Unsupported - cannot flatten batch and feature with padding");
+
+        }
+        case Tensor::yxfb: {
+            targetLayout = Tensor::fb;
+
+            if (f.pitch == b.v && y.pitch == x.v*x.pitch) {
+                l = targetLayout;
+                break;
+            }
+            throw std::runtime_error("Unsupported - cannot flatten yxf to f if f/yx != 1");
+        }
+
+        default:
+            throw std::runtime_error("Unsupported - unsupported layout " + toString(layout));
+            break;
+    }
+
+
+    const uint32_t src_channels = ChannelsCount(layout);
+    const uint32_t dst_channels = ChannelsCount(l);
+
+    std::cerr << "SC: " << src_channels << std::endl;
+    std::cerr << "DC: " << dst_channels << std::endl;
+    std::vector<size_t> vec(dst_channels);
+    if (src_channels == 3 && dst_channels == 2) {
+        vec[Channelndex(l, DataChannelName::FEATURE)] = y.v;
+        vec[Channelndex(l, DataChannelName::BATCH)] = b.v * f.v;
+    } else if (src_channels == 4 && dst_channels == 2) {
+        vec[Channelndex(l, DataChannelName::FEATURE)] = y.v * x.v;
+        vec[Channelndex(l, DataChannelName::BATCH)] = b.v * f.v;
+    } else {
+        throw std::runtime_error("[clDNN] Unsupported FlattenBatchAndFeature case");
+    }
+
+    for (auto& d : vec) {
+        std::cerr << "NEW D: " << d << std::endl;
+    }
+
+    DataTensor res = {vec, dtype, l};
+
+    if (l == DataLayout::bf) {
+        res.dims[Channelndex(l, DataChannelName::BATCH)].pitch = b.pitch;
+        res.dims[Channelndex(l, DataChannelName::BATCH)].pad = b.pad;
     }
 
     return res;

@@ -25,6 +25,7 @@
 #include <ngraph/opsets/opset2.hpp>
 #include <ngraph/opsets/opset3.hpp>
 #include <ngraph/op/fused/gelu.hpp>
+#include <ngraph_ops/fully_connected.hpp>
 #include <generic_ie.hpp>
 #include <transformations/common_optimizations/common_optimizations.hpp>
 #include <transformations/convert_opset1_to_legacy/convert_opset1_to_legacy.hpp>
@@ -83,6 +84,13 @@ InferenceEngine::ICNNNetwork::Ptr clDNNEngine::CloneNetwork(const InferenceEngin
             // SpaceToDepth node implementation supports only equal input/output tensors with rank <= 5
             if (auto stdOp = std::dynamic_pointer_cast<const ::ngraph::opset3::SpaceToDepth>(node)) {
                 return stdOp->input_value(0).get_shape().size() <= 5lu && stdOp->input_value(0).get_shape().size() == stdOp->get_output_shape(0).size();
+            }
+
+            // FullyConnected node with 3d shapes need special support in the kernels
+            // because the case [B, I, K] * [1, K, O] = [B, I, O]
+            // must be treated as [B*I, K] * [K, O] = [B*I, O]
+            if (auto fc_op = std::dynamic_pointer_cast<const ngraph::op::FullyConnected>(node)) {
+                return fc_op->input_value(0).get_shape().size() == 3ul;
             }
 
             return std::dynamic_pointer_cast<const ::ngraph::opset2::Gelu>(node) ||

@@ -15,13 +15,15 @@ namespace LayerTestsDefinitions {
 
 std::string MatMulTest::getTestCaseName(const testing::TestParamInfo<MatMulLayerTestParamsSet> &obj) {
     InferenceEngine::Precision netPrecision;
-    InferenceEngine::SizeVector inputShape0;
-    InferenceEngine::SizeVector inputShape1;
+    std::pair<InferenceEngine::SizeVector, InferenceEngine::SizeVector> inputShapes;
     bool transpose_a;
     bool transpose_b;
     ngraph::helpers::InputLayerType secondaryInputType;
+    InferenceEngine::Precision netPrecision;
     std::string targetDevice;
-    std::tie(netPrecision, inputShape0, inputShape1, transpose_a, transpose_b, secondaryInputType, targetDevice) = obj.param;
+    std::tie(netPrecision, inputShapes, transpose_a, transpose_b, secondaryInputType, targetDevice) = obj.param;
+    InferenceEngine::SizeVector inputShape0 = inputShapes.first;
+    InferenceEngine::SizeVector inputShape1 = inputShapes.second;
 
     std::ostringstream result;
     result << "IS0=" << CommonTestUtils::vec2str(inputShape0) << "_";
@@ -35,13 +37,14 @@ std::string MatMulTest::getTestCaseName(const testing::TestParamInfo<MatMulLayer
 }
 
 void MatMulTest::SetUp() {
-    InferenceEngine::SizeVector inputShape0;
-    InferenceEngine::SizeVector inputShape1;
+    std::pair<InferenceEngine::SizeVector, InferenceEngine::SizeVector> inputShapes;
     bool transpose_a;
     bool transpose_b;
     ngraph::helpers::InputLayerType secondaryInputType;
     auto netPrecision = InferenceEngine::Precision::UNSPECIFIED;
-    std::tie(netPrecision, inputShape0, inputShape1, transpose_a, transpose_b, secondaryInputType, targetDevice) = this->GetParam();
+    std::tie(netPrecision, inputShapes, transpose_a, transpose_b, secondaryInputType, targetDevice) = this->GetParam();
+    InferenceEngine::SizeVector inputShape0 = inputShapes.first;
+    InferenceEngine::SizeVector inputShape1 = inputShapes.second;
     auto ngPrc = FuncTestUtils::PrecisionUtils::convertIE2nGraphPrc(netPrecision);
     auto params = ngraph::builder::makeParams(ngPrc, {inputShape0});
 

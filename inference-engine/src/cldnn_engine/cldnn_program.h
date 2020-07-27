@@ -305,6 +305,12 @@ private:
     static InferenceEngine::CNNLayerPtr GetNextSingleLayer(const InferenceEngine::CNNLayerPtr layer);
     void AddSingleValuePrimitive(cldnn::topology& topology, cldnn::primitive_id valPrimID, cldnn::data_types dataType, float value);
 
+    void SetTensorDescriptors(cldnn::primitive& prim, InferenceEngine::CNNLayerPtr layer);
+    template<typename PrimType>
+    void AddPrimitive(cldnn::topology& topology, PrimType& prim, InferenceEngine::CNNLayerPtr layer) {
+        SetTensorDescriptors(prim, layer);
+        topology.add(prim);
+    }
     GenericBlobMap CreateGenericLayerBlobPrimitives(cldnn::topology& topology, const InferenceEngine::GenericLayer* layer);
     static void ValidateGenericLayerBlobs(const InferenceEngine::GenericLayer* layer, const std::vector<std::string>& blobNames);
     static bool HasParam(const std::map<std::string, std::string>& layerParams, std::string paramName) {

@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016-2019 Intel Corporation
+// Copyright (c) 2016-2020 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -65,6 +65,10 @@ layout fully_connected_inst::calc_output_layout(fully_connected_node const& node
         output_type = node.get_fused_output_layout().data_type;
     }
 
+    auto out_size = tensor(input_layout.size.batch[0], weights_layout.size.batch[0], 1, 1);
+    if (!desc->output_sizes.empty())
+        out_size = desc->output_sizes.front();
+
     if (data_type_traits::is_floating_point(input_layout.data_type) &&
         (is_batch_after_spatial(input_layout.format.order()) ||
         (input_layout.format ==
@@ -73,15 +77,9 @@ layout fully_connected_inst::calc_output_layout(fully_connected_node const& node
                                              // "is_batch_after_spatial" should return true)
         input_layout.format == format::bs_x_bsv16 ||
         input_layout.format == format::bs_xs_xsv8_bsv8)) {
-        auto result = layout(output_type,
-                             format::yxfb,
-                             tensor(input_layout.size.batch[0], weights_layout.size.batch[0], 1, 1));
-        return result;
+        return layout(output_type, format::yxfb, out_size);
     } else {
-        auto result = layout(output_type,
-                             format::bfyx,
-                             tensor(input_layout.size.batch[0], weights_layout.size.batch[0], 1, 1));
-        return result;
+        return layout(output_type, format::bfyx, out_size);
     }
 }
 

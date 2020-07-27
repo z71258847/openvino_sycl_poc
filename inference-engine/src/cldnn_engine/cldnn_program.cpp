@@ -170,6 +170,18 @@ void Program::changeInputBatch(int batch) {
     m_curBatch = batch;
 }
 
+void Program::SetTensorDescriptors(cldnn::primitive& prim, InferenceEngine::CNNLayerPtr layer) {
+    std::vector<cldnn::tensor> out_sizes;
+    std::vector<std::vector<size_t>> original_sizes;
+    for (auto& od : layer->outData) {
+        auto td = od->getTensorDesc();
+        out_sizes.push_back(CldnnTensorFromIEDims(td.getDims()));
+        original_sizes.push_back(td.getDims());
+    }
+    prim.output_sizes = std::move(out_sizes);
+    prim.original_sizes = std::move(original_sizes);
+}
+
 bool Program::CanProcessDynBatch(InferenceEngine::ICNNNetwork &network) const {
     InputsDataMap inputs;
     network.getInputsInfo(inputs);
@@ -872,9 +884,8 @@ void Program::CreateWeightAndBiasPrimitives(cldnn::topology& topology,
                 break;
             case 3:
                 weightDimsVec = { TensorValue(layer->outData[0]->getTensorDesc().getDims().back()),
-                                  TensorValue(in0dims[1]),
                                   TensorValue(in0dims[2]),
-                                  1 };
+                                  1, 1 };
                 break;
             case 2:
                 weightDimsVec = { TensorValue(layer->outData[0]->getTensorDesc().getDims().back()), TensorValue(in0dims[1]), 1, 1 };
@@ -2618,8 +2629,8 @@ void Program::CreateFullyConnectedPrimitive(cldnn::topology& topology, Inference
                                          biasPrimID.empty() ? "" : biasPrimID[0],
                                          DataTypeFromPrecision(fcLayer->outData[0]->getTensorDesc().getPrecision()));
 
-    topology.add(fcPrim);
-
+    std::cerr << "CREATE FC\n";
+    AddPrimitive(topology, fcPrim, layer);
     AddPrimitiveToProfiler(fcLayerName, layer);
 }
 
@@ -3547,6 +3558,8 @@ void Program::AddConstantBlobInput(cldnn::topology& topology, InferenceEngine::C
         constTensor.feature[0] = 1;
     }
 
+    std::cerr << "ADD CONSTANT: " << constTensor << std::endl;
+
     cldnn::layout constLayout = cldnn::layout(
         DataTypeFromPrecision(layer->blobs.begin()->second->getTensorDesc().getPrecision()),
         FormatFromTensorDesc(layer->outData[0]->getTensorDesc()),
@@ -4267,7 +4280,7 @@ void Program::CreateGemmPrimitive(cldnn::topology& topology, InferenceEngine::CN
         beta);
 
     topology.add(gemmPrim);
-
+    std::cerr << "CREATE GEMM\n";
     auto lastLayerName = gemmLayerName;
 
     // Reshape output if gemm specific shape does not match default one

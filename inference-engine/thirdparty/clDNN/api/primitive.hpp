@@ -97,6 +97,12 @@ public:
     /// @brief Requested output precision, if any.
     optional_data_type output_data_type;
 
+    /// @brief Sizes of output tensors. If empty, then out shape is inferred in calc_output_layout method
+    std::vector<tensor> output_sizes;
+
+    /// @brief Original shapes inferred by IE
+    std::vector<std::vector<size_t>> original_sizes;
+
     size_t input_size() const { return input.size(); }
 
     using primitive_id_arr = std::vector<primitive_id>;
