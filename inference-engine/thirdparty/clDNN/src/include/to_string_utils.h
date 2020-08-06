@@ -180,6 +180,8 @@ inline std::string fmt_to_str(format fmt) {
             return "os_is_zyx_isv8_osv16_isv2";
         case format::os_zyxi_osv16:
             return "os_zyxi_osv16";
+        case format::os_yxi_osv16:
+            return "os_yxi_osv16";
 
         case format::goiyx:
             return "goiyx";

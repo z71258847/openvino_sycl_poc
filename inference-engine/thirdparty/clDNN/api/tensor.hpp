@@ -130,6 +130,7 @@ struct format {
         os_iyx_osv16,                                 ///< format used only for convolution weights:
         os_is_yx_osv16_isv16,                               ///< format used for convolution i8 weights
         os_zyxi_osv16,                                ///< format used for weights for 3D convolution
+        os_yxi_osv16,                                 ///< format used for weights for 3D convolution
         os_is_yx_isv16_osv16,                         ///< format used for blocked convolution
         os_is_zyx_isv16_osv16,                        ///< format used for weights for blocked 3D convolution
         is_os_zyx_osv16_isv16,                        ///< format used for weights for blocked 3D deconvolution
@@ -275,6 +276,7 @@ struct format {
                 { os_is_osv32_isv32_swizzled_by_4,             { 1, 1, 0, 0, 0, "bfxy",   "bfxy?",      {{0, 32}, {1, 32}}}},
                 { os_is_zyx_isv8_osv16_isv2,                   { 1, 1, 3, 0, 0, "bfzyx",  "bfxyz",      {{1, 8}, {0, 16}, {1, 2}}}},
                 { os_zyxi_osv16,                               { 1, 1, 3, 0, 0, "bzyxf",  "bfxyz",      {{0, 16}}}},
+                { os_yxi_osv16,                                { 1, 1, 2, 0, 0, "byxf",   "bfxy?",      {{0, 16}}}},
                 { os_is_yx_isv8_osv16_isv2,                    { 1, 1, 2, 0, 0, "bfzyx",  "bfxyz",      {{1, 8}, {0, 16}, {1, 2}}}},
                 { os_is_yx_osv16_isv16,                        { 1, 1, 2, 0, 0, "bfyx",   "bfxy",       {{1, 16}, {0, 16}}}},
 

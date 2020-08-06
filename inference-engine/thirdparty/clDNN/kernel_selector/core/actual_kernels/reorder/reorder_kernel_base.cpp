@@ -39,6 +39,7 @@ inline uint32_t SubGroupSize(WeightsLayout l) {
         case WeightsLayout::os_is_yx_isv8_osv16_isv2:
         case WeightsLayout::os_is_zyx_isv8_osv16_isv2:
         case WeightsLayout::os_zyxi_osv16:
+        case WeightsLayout::os_yxi_osv16:
         case WeightsLayout::g_os_iyx_osv16:
         case WeightsLayout::g_os_iyx_osv32:
         case WeightsLayout::gs_oiyx_gsv16:
