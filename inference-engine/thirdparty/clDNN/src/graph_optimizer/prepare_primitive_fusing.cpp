@@ -61,8 +61,8 @@
 void prepare_primitive_fusing::run(program_impl& p) {
     fuse_reorders(p);
     fuse_sigmoid_mul_to_swish(p);
-    fuse_simple_primitives(p);
-    fuse_activations(p);
+    // fuse_simple_primitives(p);
+    // fuse_activations(p);
     optimize_fused_ops(p);
 }
 
