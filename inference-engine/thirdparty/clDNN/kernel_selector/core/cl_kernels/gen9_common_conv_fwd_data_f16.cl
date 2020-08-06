@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright 2019 Intel Corporation
+* Copyright 2020 Intel Corporation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -13,1290 +13,715 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 *******************************************************************************/
-#include "include/include_all.cl"
-#include "include/unit_type.cl"
-#include "include/mmad.cl"
 
-#define WITH_ELTWISE 1
+#include "include/ocl_types.cl"
 
-#if WITH_ELTWISE == 1
-//#include "ocl_post_ops.h"    // Use CLDNN activation
+#define _BLOCK_READ8(ptr) \
+    AS_DATA8_T(BLOCK_READ8((const __global BLOCK_DATA_T *)(ptr)))
+#define _BLOCK_READ4(ptr) \
+    AS_DATA4_T(BLOCK_READ4((const __global BLOCK_DATA_T *)(ptr)))
+#define _BLOCK_READ2(ptr) \
+    AS_DATA2_T(BLOCK_READ2((const __global BLOCK_DATA_T *)(ptr)))
+#define _BLOCK_READ(ptr) \
+    AS_DATA_T(BLOCK_READ((const __global BLOCK_DATA_T *)(ptr)))
+
+#define _BLOCK_WRITE8(ptr, v) \
+    BLOCK_WRITE8((__global BLOCK_DATA_T *)(ptr), AS_BLOCK_DATA8_T(v))
+#define _BLOCK_WRITE4(ptr, v) \
+    BLOCK_WRITE4((__global BLOCK_DATA_T *)(ptr), AS_BLOCK_DATA4_T(v))
+#define _BLOCK_WRITE2(ptr, v) \
+    BLOCK_WRITE2((__global BLOCK_DATA_T *)(ptr), AS_BLOCK_DATA2_T(v))
+#define _BLOCK_WRITE(ptr, v) \
+    BLOCK_WRITE((__global BLOCK_DATA_T *)(ptr), AS_BLOCK_DATA_T(v))
+
+#define IS_3D (OD > 1)
+#define IS_1STCONV (IC == 3)
+
+#define HAS_PAD_D (PD > 0 || (OD - 1) * SD - PD + (KD - 1) * (1 + DD) >= ID)
+#define HAS_PAD_H (PH > 0 || (OH - 1) * SH - PH + (KH - 1) * (1 + DH) >= IH)
+#define HAS_PAD_W (PW > 0 || (OW - 1) * SW - PW + (KW - 1) * (1 + DW) >= IW)
+
+#define ENABLE_SRC_BUF (MB_BLOCK == 1 && KW >= 3)
+
+#define W_VEC (IS_1STCONV && ENABLE_SRC_BUF && KW >= 5 && SW <= 3)
+#define C_VEC (!W_VEC)
+
+#define IC_INNER (C_VEC ? (IC < 16 ? IC : 16) : 1)
+
+#define IC_OUTER (IC_BLOCK / IC_INNER)
+#define OC_OUTER (OC_BLOCK / 16)
+#define IW_BLOCK (SW * (OW_BLOCK - 1) + (KW - 1) * (1 + DW) + 1)
+
+#define OW_INNER (C_VEC ? 1 : 16)
+#define IW_INNER OW_INNER
+
+#define OW_OUTER ((OW_BLOCK + OW_INNER - 1) / OW_INNER)
+#define IW_OUTER ((IW_BLOCK + IW_INNER - 1) / IW_INNER)
+
+#if OW_BLOCK >= 32
+#error "Block is too big for unrolled_read and unrolled_write."
 #endif
 
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+int FUNC(off_ncdhw)(int n, int c, int d, int h, int w, int C, int D, int H, int W) {
+    int off = 0;
+    off += n * C * D * H * W;
+    off += c * D * H * W;
+    off += d * H * W;
+    off += h * W;
+    off += w;
+    return off;
+}
 
-// Use CLDNN activation
-#define DO_ELTWISE(blockC, nelems, alpha, beta) \
+int FUNC(off_nCdhw16c)(
+        int n, int c, int d, int h, int w, int C, int D, int H, int W) {
+    int off = 0;
+    off += n * (C / 16) * D * H * W * 16;
+    off += (c / 16) * D * H * W * 16;
+    off += d * H * W * 16;
+    off += h * W * 16;
+    off += w * 16;
+    off += c % 16;
+    return off;
+}
+
+int FUNC(off_NCdhw16n16c)(
+        int n, int c, int d, int h, int w, int C, int D, int H, int W) {
+    int off = 0;
+    off += (n / 16) * (C / 16) * D * H * W * 16 * 16;
+    off += (c / 16) * D * H * W * 16 * 16;
+    off += d * H * W * 16 * 16;
+    off += h * W * 16 * 16;
+    off += w * 16 * 16;
+    off += (n % 16) * 16;
+    off += (c % 16);
+    return off;
+}
+
+int FUNC(off_NCdhw32n16c)(
+        int n, int c, int d, int h, int w, int C, int D, int H, int W) {
+    int off = 0;
+    off += (n / 32) * (C / 16) * D * H * W * 32 * 16;
+    off += (c / 16) * D * H * W * 32 * 16;
+    off += d * H * W * 32 * 16;
+    off += h * W * 32 * 16;
+    off += w * 32 * 16;
+    off += (n % 32) * 16;
+    off += (c % 16);
+    return off;
+}
+
+int FUNC(off_gOdhwi16o)(int g, int o, int i, int d, int h, int w, int O, int I, int D,
+        int H, int W) {
+    int off = 0;
+    off += g * (O / 16) * D * H * W * I * 16;
+    off += (o / 16) * D * H * W * I * 16;
+    off += d * H * W * I * 16;
+    off += h * W * I * 16;
+    off += w * I * 16;
+    off += i * 16;
+    off += (o % 16);
+    return off;
+}
+
+int FUNC(off_gOIdhw16i16o)(int g, int o, int i, int d, int h, int w, int O, int I,
+        int D, int H, int W) {
+    int off = 0;
+    off += g * (O / 16) * (I / 16) * D * H * W * 16 * 16;
+    off += (o / 16) * (I / 16) * D * H * W * 16 * 16;
+    off += (i / 16) * D * H * W * 16 * 16;
+    off += d * H * W * 16 * 16;
+    off += h * W * 16 * 16;
+    off += w * 16 * 16;
+    off += (i % 16) * 16;
+    off += (o % 16);
+    return off;
+}
+
+int FUNC(off_gIOdhw16i16o)(int g, int o, int i, int d, int h, int w, int O, int I,
+        int D, int H, int W) {
+    int off = 0;
+    off += g * (I / 16) * (O / 16) * D * H * W * 16 * 16;
+    off += (i / 16) * (O / 16) * D * H * W * 16 * 16;
+    off += (o / 16) * D * H * W * 16 * 16;
+    off += d * H * W * 16 * 16;
+    off += h * W * 16 * 16;
+    off += w * 16 * 16;
+    off += (i % 16) * 16;
+    off += (o % 16);
+    return off;
+}
+
+int FUNC(src_off)(int n, int c, int d, int h, int w) {
+    if (SRC_NCHW) return FUNC_CALL(off_ncdhw)(n, c, d, h, w, G * IC, ID, IH, IW);
+    if (SRC_W16C) return FUNC_CALL(off_nCdhw16c)(n, c, d, h, w, G * IC, ID, IH, IW);
+    if (SRC_16N16C) return FUNC_CALL(off_NCdhw16n16c)(n, c, d, h, w, G * IC, ID, IH, IW);
+    return 0;
+}
+
+int FUNC(wei_off)(int g, int o, int i, int d, int h, int w) {
+    if (WEI_I16O) return FUNC_CALL(off_gOdhwi16o)(g, o, i, d, h, w, OC, IC, KD, KH, KW);
+    if (WEI_16I16O)
+        return FUNC_CALL(off_gOIdhw16i16o)(g, o, i, d, h, w, OC, IC, KD, KH, KW);
+    if (WEI_16I16O_FLIPPED)
+        return FUNC_CALL(off_gIOdhw16i16o)(g, o, i, d, h, w, OC, IC, KD, KH, KW);
+    return 0;
+}
+
+int FUNC(dst_off)(int n, int c, int d, int h, int w) {
+    if (DST_W16C) return FUNC_CALL(off_nCdhw16c)(n, c, d, h, w, G * OC, OD, OH, OW);
+    if (DST_16N16C) return FUNC_CALL(off_NCdhw16n16c)(n, c, d, h, w, G * OC, OD, OH, OW);
+    if (DST_32N16C) return FUNC_CALL(off_NCdhw32n16c)(n, c, d, h, w, G * OC, OD, OH, OW);
+    return 0;
+}
+
+// Layout is:
+// - cwn[16c] for NCdhw16n16c (16c is mapped to sub-group)
+// - ncw[16c] for others (16c is mapped to sub-group)
+int FUNC(src_idx_c_vec)(int mb_block, int ic_outer, int ow_outer) {
+    if (SRC_16N16C)
+        return ic_outer * OW_BLOCK * MB_BLOCK + ow_outer * MB_BLOCK + mb_block;
+    return mb_block * IC_OUTER * OW_BLOCK + ic_outer * OW_BLOCK + ow_outer;
+}
+
+// Layout is ncW[16w] (16w is mapped to sub-group).
+int FUNC(src_idx_w_vec)(int mb_block, int ic_outer, int ow_outer) {
+    return mb_block * IC_OUTER * OW_OUTER + ic_outer * OW_OUTER + ow_outer;
+}
+
+int FUNC(src_idx)(int mb_block, int ic_outer, int ow_outer) {
+    if (C_VEC) return FUNC_CALL(src_idx_c_vec)(mb_block, ic_outer, ow_outer);
+    return FUNC_CALL(src_idx_w_vec)(mb_block, ic_outer, ow_outer);
+}
+
+// Same as src_idx_c_vec but contains contiguous input spatial (even unused).
+int FUNC(src_buf_idx_c_vec)(int mb_block, int ic_outer, int iw_outer) {
+    if (SRC_16N16C)
+        return mb_block * IC_OUTER * IW_OUTER + ic_outer * IW_OUTER + iw_outer;
+    return ic_outer * IW_OUTER * MB_BLOCK + iw_outer * MB_BLOCK + mb_block;
+}
+
+// Same as src_idx_w_vec but contains contiguous input spatial (even unused).
+int FUNC(src_buf_idx_w_vec)(int mb_block, int ic_outer, int iw_outer) {
+    return mb_block * IC_OUTER * IW_OUTER + ic_outer * IW_OUTER + iw_outer;
+}
+
+int FUNC(src_buf_idx)(int mb_block, int ic_outer, int iw_outer) {
+    if (C_VEC) return FUNC_CALL(src_buf_idx_c_vec)(mb_block, ic_outer, iw_outer);
+    return FUNC_CALL(src_buf_idx_w_vec)(mb_block, ic_outer, iw_outer);
+}
+
+// Layout is IO16i[16o] (16o is mapped to sub-group).
+int FUNC(wei_idx_c_vec)(int oc_outer, int ic_outer) {
+    return ic_outer * OC_OUTER * IC_INNER + oc_outer * IC_INNER;
+}
+
+// Layout is Oi[16o] (16o is mapped to sub-group).
+int FUNC(wei_idx_w_vec)(int oc_outer, int ic_outer) {
+    return oc_outer * IC_OUTER + ic_outer;
+}
+
+int FUNC(wei_idx)(int oc_outer, int ic_outer) {
+    if (C_VEC) return FUNC_CALL(wei_idx_c_vec)(oc_outer, ic_outer);
+    return FUNC_CALL(wei_idx_w_vec)(oc_outer, ic_outer);
+}
+
+// Layout is:
+// - cwn[16c] for NCdhw16n16c (16c is mapped to sub-group)
+// - ncw[16c] for nCdhw16c (16c is mapped to sub-group)
+int FUNC(dst_idx)(int mb_block, int oc_outer, int ow_block) {
+    if (DST_16N16C || DST_32N16C)
+        return oc_outer * OW_BLOCK * MB_BLOCK + ow_block * MB_BLOCK + mb_block;
+    return mb_block * OC_OUTER * OW_BLOCK + oc_outer * OW_BLOCK + ow_block;
+}
+
+#define copy(dst, src, n) \
     do { \
-        for (uint i = 0; i < nelems; i++) \
-            blockC[i] = ACTIVATION(blockC[i], ACTIVATION_PARAMS); \
+        for (int i = 0; i < (n); i++) \
+            (dst)[i] = (src)[i]; \
     } while (0)
 
-#define ODHW_SIZE (OD_FULL * OH_FULL * OW_FULL)
-#define IDHW_SIZE (ID_FULL * IH_FULL * IW_FULL)
-#define KDHW_SIZE (KD * KH * KW)
+// block[i].j = ptr[i * 16 + j], 0 <= i < n, 0 <= j < 16
+#define unrolled_read(n, block, ptr) \
+    do { \
+        if ((n)&16) { \
+            *((DATA8_T *)(block)) = _BLOCK_READ8((ptr)); \
+            *((DATA8_T *)((block) + 8)) = _BLOCK_READ8((ptr) + 8 * 16); \
+        } \
+        if ((n)&8) \
+            *((DATA8_T *)((block) + ((n) & ~15))) \
+                    = _BLOCK_READ8((ptr) + ((n) & ~15) * 16); \
+        if ((n)&4) \
+            *((DATA4_T *)((block) + ((n) & ~7))) \
+                    = _BLOCK_READ4((ptr) + ((n) & ~7) * 16); \
+        if ((n)&2) \
+            *((DATA2_T *)((block) + ((n) & ~3))) \
+                    = _BLOCK_READ2((ptr) + ((n) & ~3) * 16); \
+        if ((n)&1) \
+            *((block) + ((n) & ~1)) = _BLOCK_READ((ptr) + ((n) & ~1) * 16); \
+    } while (0)
 
-#define HAS_PAD_D (PD != 0 || PD_R != 0)
-#define HAS_PAD_H (PH != 0 || PH_R != 0)
-#define HAS_PAD_W (PW != 0 || PW_R != 0)
+// block[0].i = ptr[i * stride], 0 <= i < n
+// block[0].i = 0, n <= i < 16
+#define strided_read(block, ptr, n, stride) \
+    do { \
+        if ((n) == 16 && (stride) == 1) { \
+            (block)[0] = _BLOCK_READ((ptr)); \
+        } else { \
+            int local_id = get_sub_group_local_id(); \
+            (block)[0] = (local_id < (n)) ? (ptr)[local_id * (stride)] : 0; \
+        } \
+    } while (0)
 
-__attribute__((reqd_work_group_size(LWS_0, LWS_1, LWS_2))) // attr:no-format
-#if SUB_GROUP_SIZE != 1
-__attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE))) // attr:no-format
-#endif
-KERNEL(gen9_common_conv_fwd_f16_kernel)(
-        const __global half *src,
-        __global half *dst,
-#if USE_IMAGE == 1
-        __read_only image2d_t wei,
-#else
-        const __global half *wei,
-#endif
-#if WITH_BIAS
-        const __global half *bias,
+// ptr[i * 16 + j] = block[i].j, 0 <= i < n, 0 <= j < 16
+#define unrolled_write(n, block, ptr) \
+    do { \
+        if ((n)&16) { \
+            _BLOCK_WRITE8((ptr), *(DATA8_T *)((block))); \
+            _BLOCK_WRITE8((ptr) + 8 * 16, *(DATA8_T *)((block) + 8)); \
+        } \
+        if ((n)&8) \
+            _BLOCK_WRITE8((ptr) + ((n) & ~15) * 16, \
+                    *(DATA8_T *)((block) + ((n) & ~15))); \
+        if ((n)&4) \
+            _BLOCK_WRITE4((ptr) + ((n) & ~7) * 16, \
+                    *(DATA4_T *)((block) + ((n) & ~7))); \
+        if ((n)&2) \
+            _BLOCK_WRITE2((ptr) + ((n) & ~3) * 16, \
+                    *(DATA2_T *)((block) + ((n) & ~3))); \
+        if ((n)&1) \
+            _BLOCK_WRITE((ptr) + ((n) & ~1) * 16, *((block) + ((n) & ~1))); \
+    } while (0)
+
+// Supports C vectorization only.
+#define multiply_row(C, A, B, mb_block, oc_outer, ic_outer, ow_outer) \
+    do { \
+        int b_off = FUNC_CALL(wei_idx)((oc_outer), (ic_outer)); \
+        int c_off = FUNC_CALL(dst_idx)((mb_block), (oc_outer), (ow_outer)); \
+        for (int ic_inner = 0; ic_inner < min(IC_WO_PADDING, IC_INNER); \
+                ic_inner++) { \
+            (C)[c_off] = fma(intel_sub_group_shuffle((A), ic_inner), \
+                    (B)[b_off + ic_inner], (C)[c_off]); \
+        } \
+    } while (0)
+
+// Supports C vectorization only.
+#define read_src_and_multiply_w16c_dense(ptr, iw, kw, C, B) \
+    do { \
+        for (int mb_block = 0; mb_block < MB_BLOCK; mb_block++) \
+            for (int ic_outer = 0; ic_outer < IC_OUTER; ic_outer++) { \
+                int idx = FUNC_CALL(src_idx)(mb_block, ic_outer, 0); \
+                for (int ow_block = 0; ow_block < OW_BLOCK; ow_block += 8) { \
+                    int ow_bound = min(8, OW_BLOCK - ow_block); \
+                    DATA_T A[8]; \
+                    int off = FUNC_CALL(src_off)(mb_block, ic_outer * IC_INNER, 0, 0, \
+                            ow_block + (kw) * (1 + DW)); \
+                    unrolled_read(ow_bound, A, &(ptr)[off]); \
+                    for (int oc_outer = 0; oc_outer < OC_OUTER; oc_outer++) { \
+                        for (int i = 0; i < ow_bound; i++) { \
+                            multiply_row((C), A[i], (B), mb_block, oc_outer, \
+                                    ic_outer, ow_block + i); \
+                        } \
+                    } \
+                } \
+            } \
+    } while (0)
+
+// Supports C vectorization only.
+#define read_src_and_multiply_16n16c(ptr, iw, kw, do_w_check, C, B) \
+    do { \
+        for (int ow_block = 0; ow_block < OW_BLOCK; ow_block++) { \
+            int iw_off = ow_block * SW + (kw) * (1 + DW); \
+            if ((do_w_check) && HAS_PAD_W \
+                    && ((iw) + iw_off < 0 || (iw) + iw_off >= IW)) \
+                continue; \
+            for (int ic_outer = 0; ic_outer < IC_OUTER; ic_outer++) \
+                for (int mb_block = 0; mb_block < MB_BLOCK; mb_block += 8) { \
+                    int mb_bound = min(8, MB_BLOCK - mb_block); \
+                    DATA_T A[8]; \
+                    int off = FUNC_CALL(src_off)( \
+                            mb_block, ic_outer * IC_INNER, 0, 0, iw_off); \
+                    unrolled_read(mb_bound, A, &(ptr)[off]); \
+                    for (int oc_outer = 0; oc_outer < OC_OUTER; oc_outer++) { \
+                        for (int i = 0; i < mb_bound; i++) { \
+                            multiply_row((C), A[i], (B), mb_block + i, \
+                                    oc_outer, ic_outer, ow_block); \
+                        } \
+                    } \
+                } \
+        } \
+    } while (0)
+
+// Supports C vectorization only.
+#define read_src_and_multiply_common(ptr, iw, kw, do_w_check, C, B) \
+    do { \
+        for (int i = 0; i < OW_BLOCK; i++) { \
+            int iw_off = i * SW + (kw) * (1 + DW); \
+            if ((do_w_check) && HAS_PAD_W \
+                    && ((iw) + iw_off < 0 || (iw) + iw_off >= IW)) \
+                continue; \
+            for (int ic_outer = 0; ic_outer < IC_OUTER; ic_outer++) { \
+                for (int mb_block = 0; mb_block < MB_BLOCK; mb_block++) { \
+                    int off = FUNC_CALL(src_off)( \
+                            mb_block, ic_outer * IC_INNER, 0, 0, iw_off); \
+                    DATA_T A; \
+                    strided_read(&A, &(ptr)[off], IC_INNER, \
+                            FUNC_CALL(src_off)(0, 1, 0, 0, 0)); \
+                    for (int oc_outer = 0; oc_outer < OC_OUTER; oc_outer++) { \
+                        int b_off = FUNC_CALL(wei_idx)(oc_outer, ic_outer); \
+                        int c_off = FUNC_CALL(dst_idx)(mb_block, oc_outer, i); \
+                        for (int ic_inner = 0; \
+                                ic_inner < min(IC_WO_PADDING, IC_INNER); \
+                                ic_inner++) { \
+                            (C)[c_off] = fma( \
+                                    intel_sub_group_shuffle(A, ic_inner), \
+                                    (B)[b_off + ic_inner], (C)[c_off]); \
+                        } \
+                    } \
+                } \
+            } \
+        } \
+    } while (0)
+
+// Read MB_BLOCK x IC_BLOCK x OW_BLOCK block of src.
+// Supports C vectorization only.
+#define read_src_and_multiply(ptr, iw, kw, do_w_check, C, B) \
+    do { \
+        if (SRC_W16C && (!(do_w_check) || (!HAS_PAD_W && SW == 1))) { \
+            read_src_and_multiply_w16c_dense((ptr), (iw), (kw), (C), (B)); \
+        } else if (SRC_16N16C) { \
+            read_src_and_multiply_16n16c( \
+                    (ptr), (iw), (kw), (do_w_check), (C), (B)); \
+        } else { \
+            read_src_and_multiply_common( \
+                    (ptr), (iw), (kw), (do_w_check), (C), (B)); \
+        } \
+    } while (0)
+
+#define read_src_buf(buf, ptr, iw) \
+    do { \
+        for (int iw_outer = 0; iw_outer < IW_OUTER; iw_outer++) { \
+            int iw_inner = (C_VEC ? 0 : get_sub_group_local_id()); \
+            int iw_block = iw_outer * IW_INNER + iw_inner; \
+            if (HAS_PAD_W && ((iw) + iw_block < 0 || (iw) + iw_block >= IW)) \
+                continue; \
+            for (int ic_outer = 0; ic_outer < IC_OUTER; ic_outer++) { \
+                for (int mb_block = 0; mb_block < MB_BLOCK; mb_block++) { \
+                    int off = FUNC_CALL(src_off)( \
+                            mb_block, ic_outer * IC_INNER, 0, 0, iw_block); \
+                    int idx = FUNC_CALL(src_buf_idx)(mb_block, ic_outer, iw_outer); \
+                    if (C_VEC) { \
+                        strided_read(&(buf)[idx], &(ptr)[off], IC_INNER, \
+                                FUNC_CALL(src_off)(0, 1, 0, 0, 0)); \
+                    } else { \
+                        (buf)[idx] = (ptr)[off]; \
+                    } \
+                } \
+            } \
+        } \
+    } while (0)
+
+// Read IC_BLOCK x OC_BLOCK block of weights.
+#define read_wei_block(block, ptr) \
+    do { \
+        for (int oc_outer = 0; oc_outer < OC_OUTER; oc_outer++) { \
+            int ic_bound = min(IC_WO_PADDING, IC_BLOCK); \
+            for (int ic_block = 0; ic_block < ic_bound; ic_block += 16) { \
+                int off = FUNC_CALL(wei_off)(0, oc_outer * 16, ic_block, 0, 0, 0); \
+                int idx = FUNC_CALL(wei_idx)(oc_outer, ic_block); \
+                unrolled_read(min(16, ic_bound - ic_block), &(block)[idx], \
+                        &(ptr)[off]); \
+            } \
+        } \
+    } while (0)
+
+#define read_wei_and_multiply_c_vec(wei, kw, C, A) \
+    do { \
+        for (int oc_outer = 0; oc_outer < OC_OUTER; oc_outer++) { \
+            int ic_bound1 = min(IC_WO_PADDING, IC_BLOCK); \
+            for (int ic_block = 0; ic_block < ic_bound1; ic_block += 8) { \
+                int ic_bound2 = min(8, ic_bound1 - ic_block); \
+                int off = FUNC_CALL(wei_off)(0, oc_outer * 16, ic_block, 0, 0, 0); \
+                DATA_T B[8]; \
+                unrolled_read(ic_bound2, B, &(wei)[off]); \
+                for (int mb_block = 0; mb_block < MB_BLOCK; mb_block++) { \
+                    for (int ow_block = 0; ow_block < OW_BLOCK; ow_block++) { \
+                        int iw_off = ow_block * SW + (kw) * (1 + DW); \
+                        int buf_idx = FUNC_CALL(src_buf_idx)(mb_block, 0, iw_off); \
+                        int c_off = FUNC_CALL(dst_idx)(mb_block, oc_outer, ow_block); \
+                        for (int i = 0; i < ic_bound2; i++) { \
+                            (C)[c_off] \
+                                    = fma(intel_sub_group_shuffle( \
+                                                  (A)[buf_idx], ic_block + i), \
+                                            B[i], (C)[c_off]); \
+                        } \
+                    } \
+                } \
+            } \
+        } \
+    } while (0)
+
+DATA_T FUNC(shuffle_a_value)(int mb_block, int ic_block, int ow_outer, int ow_inner,
+        int kw, const DATA_T *A) {
+    int iw_off0 = ow_outer * OW_INNER * SW + kw * (1 + DW);
+    int iw_outer0 = iw_off0 / IW_INNER;
+    int buf_idx0 = FUNC_CALL(src_buf_idx)(mb_block, ic_block, iw_outer0);
+    int iw_off = iw_off0 + ow_inner * SW;
+    int iw_outer = iw_off / IW_INNER;
+    DATA4_T A_shuf = 0;
+    for (int i = 0; i < SW + 1; i++) {
+        A_shuf[i] = (iw_outer0 + i < IW_OUTER) ? A[buf_idx0 + i] : 0;
+    }
+    A_shuf = AS_DATA4_T(intel_sub_group_shuffle(
+            AS_BLOCK_DATA4_T(A_shuf), iw_off % IW_INNER));
+    return A_shuf[iw_outer - iw_outer0];
+}
+
+#define read_wei_and_multiply_w_vec(wei, kw, C, A) \
+    do { \
+        for (int oc_outer = 0; oc_outer < OC_OUTER; oc_outer++) { \
+            int ic_bound1 = min(IC_WO_PADDING, IC_BLOCK); \
+            for (int ic_block = 0; ic_block < ic_bound1; ic_block += 8) { \
+                int ic_bound2 = min(8, ic_bound1 - ic_block); \
+                int off = FUNC_CALL(wei_off)(0, oc_outer * 16, ic_block, 0, 0, 0); \
+                DATA_T B[8]; \
+                unrolled_read(ic_bound2, B, &(wei)[off]); \
+                for (int mb_block = 0; mb_block < MB_BLOCK; mb_block++) \
+                    /*  IC_INNER is 1 with W vectorization. */ \
+                    for (int ic_inner = 0; ic_inner < ic_bound2; ic_inner++) \
+                        for (int ow_outer = 0; ow_outer < OW_OUTER; \
+                                ow_outer++) { \
+                            int ow_bound = min( \
+                                    OW_INNER, OW_BLOCK - ow_outer * OW_INNER); \
+                            for (int i = 0; i < ow_bound; i++) { \
+                                DATA_T A_val = FUNC_CALL(shuffle_a_value)(mb_block, \
+                                        ic_block + ic_inner, ow_outer, i, \
+                                        (kw), (A)); \
+                                int c_off = FUNC_CALL(dst_idx)(mb_block, oc_outer, \
+                                        ow_outer * OW_INNER + i); \
+                                (C)[c_off] = fma(A_val, \
+                                        B[ic_block + ic_inner], (C)[c_off]); \
+                            } \
+                        } \
+            } \
+        } \
+    } while (0)
+
+#define read_wei_and_multiply(wei, kw, C, A) \
+    do { \
+        if (W_VEC) \
+            read_wei_and_multiply_w_vec((wei), (kw), (C), (A)); \
+        else \
+            read_wei_and_multiply_c_vec((wei), (kw), (C), (A)); \
+    } while (0)
+
+// Read MB_BLOCK x OC_BLOCK x OW_BLOCK block of dst.
+#define read_dst_block(block, ptr, ow) \
+    do { \
+        int ow_bound \
+                = (OW % OW_BLOCK == 0) ? OW_BLOCK : min(OW_BLOCK, OW - (ow)); \
+        for (int mb_block = 0; mb_block < MB_BLOCK; mb_block++) \
+            for (int oc_outer = 0; oc_outer < OC_OUTER; oc_outer++) \
+                for (int ow_block = 0; ow_block < ow_bound; ow_block++) { \
+                    int off = FUNC_CALL(dst_off)( \
+                            mb_block, oc_outer * 16, 0, 0, ow_block); \
+                    int idx = FUNC_CALL(dst_idx)(mb_block, oc_outer, ow_block); \
+                    (block)[idx] = _BLOCK_READ(&(ptr)[off]); \
+                } \
+    } while (0)
+
+#define write_dst_block(block, ptr, ow) \
+    do { \
+        if (DST_W16C) { \
+            for (int mb_block = 0; mb_block < MB_BLOCK; mb_block++) \
+                for (int oc_outer = 0; oc_outer < OC_OUTER; oc_outer++) { \
+                    int off = FUNC_CALL(dst_off)(mb_block, oc_outer * 16, 0, 0, 0); \
+                    int idx = FUNC_CALL(dst_idx)(mb_block, oc_outer, 0); \
+                    if (OW % OW_BLOCK == 0 || (ow) + OW_BLOCK <= OW) { \
+                        unrolled_write(OW_BLOCK, &(block)[idx], &(ptr)[off]); \
+                    } else { \
+                        unrolled_write( \
+                                OW % OW_BLOCK, &(block)[idx], &(ptr)[off]); \
+                    } \
+                } \
+        } else if (DST_16N16C) { \
+            int ow_bound = (OW % OW_BLOCK == 0) ? OW_BLOCK \
+                                                : min(OW_BLOCK, OW - (ow)); \
+            for (int ow_block = 0; ow_block < ow_bound; ow_block++) \
+                for (int oc_outer = 0; oc_outer < OC_OUTER; oc_outer++) \
+                    for (int mb_block = 0; mb_block < MB_BLOCK; \
+                            mb_block += 16) { \
+                        int off = FUNC_CALL(dst_off)( \
+                                mb_block, oc_outer * 16, 0, 0, ow_block); \
+                        int idx = FUNC_CALL(dst_idx)(mb_block, oc_outer, ow_block); \
+                        unrolled_write(min(16, MB_BLOCK), &(block)[idx], \
+                                &(ptr)[off]); \
+                    } \
+        } else if (DST_32N16C) { \
+            int ow_bound = (OW % OW_BLOCK == 0) ? OW_BLOCK \
+                                                : min(OW_BLOCK, OW - (ow)); \
+            for (int ow_block = 0; ow_block < ow_bound; ow_block++) \
+                for (int oc_outer = 0; oc_outer < OC_OUTER; oc_outer++) \
+                    for (int mb_block = 0; mb_block < MB_BLOCK; \
+                            mb_block += 32) { \
+                        int off = FUNC_CALL(dst_off)( \
+                                mb_block, oc_outer * 16, 0, 0, ow_block); \
+                        int idx = FUNC_CALL(dst_idx)(mb_block, oc_outer, ow_block); \
+                        unrolled_write(min(32, MB_BLOCK), &(block)[idx], \
+                                &(ptr)[off]); \
+                    } \
+        } \
+    } while (0)
+
+#define loop_ic_outermost(src, wei, C, id, ih, iw) \
+    do { \
+        __attribute__((opencl_unroll_hint(1))) /*  attr:no-format */ \
+                for (int ic = 0; ic < IC; ic += IC_BLOCK) { \
+            __attribute__((opencl_unroll_hint(1))) /*  attr:no-format */ \
+                    for (int kd = 0; kd < KD; kd++) { \
+                if (HAS_PAD_D \
+                        && ((id) + kd * (1 + DD) < 0 \
+                                || (id) + kd * (1 + DD) >= ID)) \
+                    continue; \
+                __attribute__((opencl_unroll_hint(1))) /*  attr:no-format */ \
+                        for (int kh = 0; kh < KH; kh++) { \
+                    if (HAS_PAD_H \
+                            && ((ih) + kh * (1 + DH) < 0 \
+                                    || (ih) + kh * (1 + DH) >= IH)) \
+                        continue; \
+                    const __global DATA_T *src1 = (src) \
+                            + FUNC_CALL(src_off)(0, 0, kd * (1 + DD), kh * (1 + DH), 0); \
+                    DATA_T A_buf[MB_BLOCK * IC_OUTER * IW_OUTER] = {0}; \
+                    if (ENABLE_SRC_BUF) read_src_buf(A_buf, src1, (iw)); \
+                    __attribute__( \
+                            (opencl_unroll_hint(KW))) /*  attr:no-format */ \
+                            for (int kw = 0; kw < KW; kw++) { \
+                        const __global DATA_T *wei1 \
+                                = (wei) + FUNC_CALL(wei_off)(0, 0, 0, kd, kh, kw); \
+                        DATA_T B[IC_OUTER * OC_OUTER * IC_INNER]; \
+                        if (ENABLE_SRC_BUF) { \
+                            read_wei_and_multiply(wei1, kw, (C), A_buf); \
+                        } else { \
+                            read_wei_block(B, wei1); \
+                            read_src_and_multiply(src1, (iw), kw, 1, (C), B); \
+                        } \
+                    } \
+                } \
+            } \
+            (src) += FUNC_CALL(src_off)(0, IC_BLOCK, 0, 0, 0); \
+            (wei) += FUNC_CALL(wei_off)(0, 0, IC_BLOCK, 0, 0, 0); \
+        } \
+    } while (0)
+
+#define loop_kdhw_outermost(src, wei, C, id, ih, iw) \
+    do { \
+        for (int kd = 0; kd < KD; kd++) { \
+            if (HAS_PAD_D \
+                    && ((id) + kd * (1 + DD) < 0 \
+                            || (id) + kd * (1 + DD) >= ID)) \
+                continue; \
+            for (int kh = 0; kh < KH; kh++) { \
+                if (HAS_PAD_H \
+                        && ((ih) + kh * (1 + DH) < 0 \
+                                || (ih) + kh * (1 + DH) >= IH)) \
+                    continue; \
+                for (int kw = 0; kw < KW; kw++) { \
+                    if (HAS_PAD_W \
+                            && ((iw) + kw * (1 + DW) < 0 \
+                                    || (iw) + kw * (1 + DW) >= IW)) \
+                        continue; \
+                    /*  XXX: kw offset is applied in read_src_and_multiply(). */ \
+                    const __global DATA_T *src1 = (src) \
+                            + FUNC_CALL(src_off)(0, 0, kd * (1 + DD), kh * (1 + DH), 0); \
+                    const __global DATA_T *wei1 \
+                            = (wei) + FUNC_CALL(wei_off)(0, 0, 0, kd, kh, kw); \
+                    for (int ic = 0; ic < IC; ic += IC_BLOCK) { \
+                        DATA_T B[IC_OUTER * OC_OUTER * IC_INNER]; \
+                        read_wei_block(B, wei1); \
+                        read_src_and_multiply(src1, (iw), kw, 0, (C), B); \
+                        src1 += FUNC_CALL(src_off)(0, IC_BLOCK, 0, 0, 0); \
+                        wei1 += FUNC_CALL(wei_off)(0, 0, IC_BLOCK, 0, 0, 0); \
+                    } \
+                } \
+            } \
+        } \
+    } while (0)
+
+#define APPLY_POST_OPS(accumulator, acc_elem_dt, sum_src, sum_elem_dt, x0, \
+        x0_s, x1, x1_s, x2, x2_s, x3, x3_s, x4, x4_s, x5, x5_s) \
+    {}
+
+__attribute__((reqd_work_group_size(LWS_0, LWS_1, LWS_2)))
+__attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
+KERNEL(gen9_conv_fwd)(const __global DATA_T *src,
+                            __global DATA_T *dst,
+                      const __global DATA_T *wei,
+#if BIAS_TERM
+                      const __global DATA_T *bia,
 #endif
 #if HAS_FUSED_OPS_DECLS
-    FUSED_OPS_DECLS,
+                      FUSED_OPS_DECLS,
 #endif
-    uint split_idx)
-{
-    const half eltwise_alpha = 0;
-    const half eltwise_beta = 0;
-    const half sum_scale_ = 1;
+                      uint split_idx
+) {
 
-    half relu_negative_slope = eltwise_alpha;
-    half sum_scale = sum_scale_;
-    const int output_offset = (OUTPUT_PAD_BEFORE_FEATURE_NUM / OC_BLOCK) * OD_FULL * OH_FULL * OW_FULL * OC_BLOCK * MB_BLOCK +
-                              (OUTPUT_PAD_BEFORE_SIZE_Z) * OH_FULL * OW_FULL * OC_BLOCK * MB_BLOCK +
-                              (OUTPUT_PAD_BEFORE_SIZE_Y) * OW_FULL * OC_BLOCK * MB_BLOCK +
-                              (OUTPUT_PAD_BEFORE_SIZE_X) * OC_BLOCK * MB_BLOCK;
-    const int input_offset = (INPUT0_PAD_BEFORE_FEATURE_NUM / IC_BLOCK) * ID_FULL * IH_FULL * IW_FULL * IC_BLOCK * MB_BLOCK +
-                             (INPUT0_PAD_BEFORE_SIZE_Z) * IH_FULL * IW_FULL * IC_BLOCK * MB_BLOCK +
-                             (INPUT0_PAD_BEFORE_SIZE_Y) * IW_FULL * IC_BLOCK * MB_BLOCK +
-                             (INPUT0_PAD_BEFORE_SIZE_X) * IC_BLOCK * MB_BLOCK;
+    int local_id = get_sub_group_local_id();
+    int g_ocb = get_group_id(0) * (LWS_0 / SUB_GROUP_SIZE) + get_sub_group_id();
+    int g = g_ocb / (OCB / OC_BLOCK);
+    int ocb = g_ocb % (OCB / OC_BLOCK) * OC_BLOCK;
 
-#if IC == 3 && OC % 32 == 0
-#if MB % 2 == 0
-    /* First convovution unrolled by MB2. */
-    const int oc = get_group_id(0) * 2;
-    const int sp = get_group_id(1);
-    const int local_id = get_local_id(0);
-    int mb = get_group_id(2) * 2;
+    int odhw = get_group_id(1) / (OMB / MB_BLOCK);
+    int omb = get_group_id(1) % (OMB / MB_BLOCK) * MB_BLOCK;
 
-#if CASE_3D
-    const int od = sp / (OWB * OHB);
-    const int ohw = sp % (OWB * OHB);
-    const int id = od * SD - PD;
-#else
-    const int od = 0;
-    const int id = 0;
-    const int ohw = sp;
-#endif
-    const int oh = (ohw / OWB) * OH_BLOCK;
-    const int ow = (ohw % OWB) * OW_BLOCK;
+    int ohw = IS_3D ? odhw % (OWB * OHB) : odhw;
+    int od = IS_3D ? odhw / (OWB * OHB) : 0;
+    int oh = (ohw / OWB) * OH_BLOCK;
+    int ow = (ohw % OWB) * OW_BLOCK;
 
-#if OW_BLOCK == 8
-#if WITH_BIAS
-    half8 C00 = bias[oc * OC_BLOCK + local_id];
-    half8 C01 = C00;
-    half8 C10 = bias[(oc + 1) * OC_BLOCK + local_id];
-    half8 C11 = C10;
-#else
-    half8 C00 = 0.0, C01 = 0.0;
-    half8 C10 = 0.0, C11 = 0.0;
-#endif
-#else
-#if WITH_BIAS
-    half C00[OW_BLOCK];
-    half C01[OW_BLOCK];
-    half C10[OW_BLOCK];
-    half C11[OW_BLOCK];
-    for (int i = 0; i < OW_BLOCK; i++) {
-        C00[i] = bias[oc * OC_BLOCK + local_id];
-        C01[i] = bias[oc * OC_BLOCK + local_id];
-        C10[i] = bias[(oc + 1) * OC_BLOCK + local_id];
-        C11[i] = bias[(oc + 1) * OC_BLOCK + local_id];
-    }
-#else
-    half C00[OW_BLOCK] = {0.0}, C01[OW_BLOCK] = {0.0};
-    half C10[OW_BLOCK] = {0.0}, C11[OW_BLOCK] = {0.0};
-#endif
-#endif
+    int ocb_idx_omb_idx = get_group_id(2);
+    int ocb_idx = ocb_idx_omb_idx / (MB / OMB);
+    int omb_idx = ocb_idx_omb_idx % (MB / OMB);
+    int oc = ocb_idx * OCB + ocb;
+    int mb = omb_idx * OMB + omb;
 
     int ih = oh * SH - PH;
     int iw = ow * SW - PW;
-#if NHWC == 1
-    src += input_offset + mb * IC_FULL * IDHW_SIZE + iw * IC_FULL + ih * IW_FULL * IC_FULL + id * IH_FULL * IW_FULL * IC_FULL;
-#else
-    src += input_offset + mb * IC_FULL * IDHW_SIZE + iw + ih * IW_FULL + id * IH_FULL * IW_FULL;
-#endif
+    int id = od * SD - PD;
 
-    wei += oc * OC_BLOCK * IC * KDHW_SIZE;
-
-    for (int kd = 0; kd < KD; ++kd)
-        for (int kh = 0; kh < KH; ++kh) {
-
-#if CASE_3D
-            if (id + kd * (1 + DD) < 0 || id + kd * (1 + DD) >= ID) {
-                continue;
+    DATA_T C[MB_BLOCK * OC_OUTER * OW_BLOCK] = {0};
+    for (int mb_block = 0; mb_block < MB_BLOCK; mb_block++)
+        for (int oc_outer = 0; oc_outer < OC_OUTER; oc_outer++)
+            for (int ow_block = 0; ow_block < OW_BLOCK; ow_block++) {
+                int c_off = FUNC_CALL(dst_idx)(mb_block, oc_outer, ow_block);
+                C[c_off] = WITH_BIAS
+                        ? bia[g * OC + oc + oc_outer * 16 + local_id]
+                        : 0;
             }
-#endif
-            if (ih + kh * (1 + DH) < 0 || ih + kh * (1 + DH) >= IH) {
-                continue;
-            }
-#if NHWC == 1
-            const __global half *src1 = src + kd * (1 + DD) * IH_FULL * IW_FULL * IC_FULL
-                    + kh * (1 + DH) * IW_FULL * IC_FULL + local_id;
-#define SP_OFF IC
-#else
-            const __global half *src1 = src + kd * (1 + DD) * IH_FULL * IW_FULL
-                    + kh * (1 + DH) * IW_FULL + local_id * IDHW_SIZE;
-            const __global half *src2 = src + kd * (1 + DD) * IH_FULL * IW_FULL
-                    + kh * (1 + DH) * IW_FULL + local_id * IDHW_SIZE
-                    + IC_FULL * IDHW_SIZE;
-#define SP_OFF 1
-#endif
 
-            half tempA1[SW * OW_BLOCK + KW * (1 + DW)];
-            half tempA2[SW * OW_BLOCK + KW * (1 + DW)];
-            int k = iw;
-            if (local_id < 3) {
-                if (k < 0 || k + SW * OW_BLOCK + KW * (1 + DW) >= IW) {
-                    __attribute__((opencl_unroll_hint(
-                            SW * OW_BLOCK + KW * (1 + DW)))) // attr:no-format
-                    for (int i = 0; i < SW * OW_BLOCK + KW * (1 + DW); i++) {
-                        if (k >= 0 && k < IW) {
-                            tempA1[i] = src1[i * SP_OFF];
-                            tempA2[i] = src2[i * SP_OFF];
-                        } else {
-                            tempA1[i] = 0.0f;
-                            tempA2[i] = 0.0f;
-                        }
-                        k++;
-                    }
-                } else {
-                    __attribute__((opencl_unroll_hint(
-                            SW * OW_BLOCK + KW * (1 + DW)))) // attr:no-format
-                    for (int i = 0; i < SW * OW_BLOCK + KW; i++) {
-                        tempA1[i] = src1[i * SP_OFF];
-                        tempA2[i] = src2[i * SP_OFF];
-                    }
-                }
-            }
-            __attribute__((opencl_unroll_hint(KW))) // attr:no-format
-            for (int kw = 0; kw < KW; ++kw) {
+    src += FUNC_CALL(src_off)(mb, g * IC, id, ih, iw);
+    wei += FUNC_CALL(wei_off)(g, oc, 0, 0, 0, 0);
+    dst += FUNC_CALL(dst_off)(mb, g * OC + oc, od, oh, ow);
 
-                const __global half *wei1 = wei + kd * KH * KW * OC_BLOCK * IC
-                        + kh * KW * OC_BLOCK * IC + kw * OC_BLOCK * IC;
-
-#define TRANSPOSE_1(_block, _col) (half)(intel_sub_group_shuffle(_block, _col))
-
-#define FMA8(a, b, c) fma((half)(a), (half)b, (half)c)
-
-#define MULTIPLY_BLOCKS_8x8(_result, _blockA, _blockB0, _blockB1, _blockB2) \
-    { \
-        _result = FMA8(_blockB0, TRANSPOSE_1(_blockA, 0), _result); \
-        _result = FMA8(_blockB1, TRANSPOSE_1(_blockA, 1), _result); \
-        _result = FMA8(_blockB2, TRANSPOSE_1(_blockA, 2), _result); \
-    }
-
-                half blockB00 = as_half(intel_sub_group_block_read_us(
-                        (const __global ushort *)wei1));
-                half blockB01 = as_half(intel_sub_group_block_read_us(
-                        (const __global ushort *)(wei1 + OC_BLOCK)));
-                half blockB02 = as_half(intel_sub_group_block_read_us(
-                        (const __global ushort *)(wei1 + 2 * OC_BLOCK)));
-
-                half blockA1[OW_BLOCK] = {0.0f};
-                half blockA2[OW_BLOCK] = {0.0f};
-                if (local_id < 3)
-                    for (int i = 0; i < OW_BLOCK; i++) {
-                        blockA1[i] = tempA1[kw * (1 + DW) + i * SW];
-                        blockA2[i] = tempA2[kw * (1 + DW) + i * SW];
-                    }
-                __attribute__((opencl_unroll_hint(OW_BLOCK))) // attr:no-format
-                for (int i = 0; i < OW_BLOCK; i++) {
-                    MULTIPLY_BLOCKS_8x8(
-                            C00[i], blockA1[i], blockB00, blockB01, blockB02);
-                    MULTIPLY_BLOCKS_8x8(
-                            C01[i], blockA2[i], blockB00, blockB01, blockB02);
-                }
-
-                blockB00 = as_half(intel_sub_group_block_read_us((const __global
-                                ushort *)&wei1[IC * KDHW_SIZE * OC_BLOCK]));
-                blockB01 = as_half(intel_sub_group_block_read_us(
-                        (const __global ushort *)(wei1
-                                + IC * KDHW_SIZE * OC_BLOCK + OC_BLOCK)));
-                blockB02 = as_half(intel_sub_group_block_read_us(
-                        (const __global ushort *)(wei1
-                                + IC * KDHW_SIZE * OC_BLOCK + 2 * OC_BLOCK)));
-
-                __attribute__((opencl_unroll_hint(OW_BLOCK))) // attr:no-format
-                for (int i = 0; i < OW_BLOCK; i++) {
-                    MULTIPLY_BLOCKS_8x8(
-                            C10[i], blockA1[i], blockB00, blockB01, blockB02);
-                    MULTIPLY_BLOCKS_8x8(
-                            C11[i], blockA2[i], blockB00, blockB01, blockB02);
-                }
-
-#undef TRANSPOSE_BLOCK_1
-#undef MULTIPLY_BLOCKS_8x8
-            }
-        }
-    __global half *dst_write0 = dst + output_offset
-            + (mb / MB_BLOCK) * OC_FULL * ODHW_SIZE * MB_BLOCK
-            + oc * OC_BLOCK * MB_BLOCK * ODHW_SIZE
-            + od * OH_FULL * OW_FULL * OC_BLOCK * MB_BLOCK + oh * OW_FULL * OC_BLOCK * MB_BLOCK
-            + ow * OC_BLOCK * MB_BLOCK + (mb % MB_BLOCK) * OC_BLOCK;
-    __global half *dst_write1 = dst + output_offset
-            + ((mb + 1) / MB_BLOCK) * OC_FULL * ODHW_SIZE * MB_BLOCK
-            + oc * OC_BLOCK * MB_BLOCK * ODHW_SIZE
-            + od * OH_FULL * OW_FULL * OC_BLOCK * MB_BLOCK + oh * OW_FULL * OC_BLOCK * MB_BLOCK
-            + ow * OC_BLOCK * MB_BLOCK + ((mb + 1) % MB_BLOCK) * OC_BLOCK;
-
-#if WITH_SUM == 1
-    half8 blockS00, blockS01, blockS10, blockS11;
-    if (ow == OW_LAST) {
-        for (int i = 0; i < OW - OW_LAST; i++) {
-            blockS00[i] = as_half(intel_sub_group_block_read_us((const __global
-                            ushort *)&dst_write0[i * OC_BLOCK * MB_BLOCK]));
-            blockS10[i] = as_half(intel_sub_group_block_read_us((const __global
-                            ushort *)&dst_write0[OC_BLOCK * MB_BLOCK * ODHW_SIZE
-                    + i * OC_BLOCK * MB_BLOCK]));
-            blockS01[i] = as_half(intel_sub_group_block_read_us((const __global
-                            ushort *)&dst_write1[i * OC_BLOCK * MB_BLOCK]));
-            blockS11[i] = as_half(intel_sub_group_block_read_us((const __global
-                            ushort *)&dst_write1[OC_BLOCK * MB_BLOCK * ODHW_SIZE
-                    + i * OC_BLOCK * MB_BLOCK]));
-        }
+    if (OW_BLOCK == 1) {
+        loop_kdhw_outermost(src, wei, C, id, ih, iw);
     } else {
-        for (int i = 0; i < OW_BLOCK; i++) {
-            blockS00[i] = as_half(intel_sub_group_block_read_us((const __global
-                            ushort *)&dst_write0[i * OC_BLOCK * MB_BLOCK]));
-            blockS10[i] = as_half(intel_sub_group_block_read_us((const __global
-                            ushort *)&dst_write0[OC_BLOCK * MB_BLOCK * ODHW_SIZE
-                    + i * OC_BLOCK * MB_BLOCK]));
-            blockS01[i] = as_half(intel_sub_group_block_read_us((const __global
-                            ushort *)&dst_write1[i * OC_BLOCK * MB_BLOCK]));
-            blockS11[i] = as_half(intel_sub_group_block_read_us((const __global
-                            ushort *)&dst_write1[OC_BLOCK * MB_BLOCK * ODHW_SIZE
-                    + i * OC_BLOCK * MB_BLOCK]));
-        }
-    }
-    for (int i = 0; i < OW_BLOCK; i++) {
-#if SUM_SCALE == 1
-        C00[i] += blockS00[i];
-        C10[i] += blockS10[i];
-        C01[i] += blockS01[i];
-        C11[i] += blockS11[i];
-#else
-        C00[i] = fma(blockS00[i], (half)sum_scale, C00[i]);
-        C10[i] = fma(blockS10[i], (half)sum_scale, C10[i]);
-        C01[i] = fma(blockS01[i], (half)sum_scale, C01[i]);
-        C11[i] = fma(blockS11[i], (half)sum_scale, C11[i]);
-#endif
-    }
-#endif // with_sum
-
-#if WITH_ELTWISE == 1
-    DO_ELTWISE(C00, OW_BLOCK, eltwise_alpha, eltwise_beta);
-    DO_ELTWISE(C10, OW_BLOCK, eltwise_alpha, eltwise_beta);
-    DO_ELTWISE(C01, OW_BLOCK, eltwise_alpha, eltwise_beta);
-    DO_ELTWISE(C11, OW_BLOCK, eltwise_alpha, eltwise_beta);
-#endif
-
-    if (ow == OW_LAST) {
-        for (int i = 0; i < OW - OW_LAST; i++) {
-            intel_sub_group_block_write_us(
-                    (__global ushort *)(&dst_write0[i * OC_BLOCK * MB_BLOCK]),
-                    as_ushort(C00[i]));
-            intel_sub_group_block_write_us(
-                    (__global ushort *)(&dst_write0[OC_BLOCK * MB_BLOCK
-                                    * ODHW_SIZE
-                            + i * OC_BLOCK * MB_BLOCK]),
-                    as_ushort(C10[i]));
-
-            intel_sub_group_block_write_us(
-                    (__global ushort *)(&dst_write1[i * OC_BLOCK * MB_BLOCK]),
-                    as_ushort(C01[i]));
-            intel_sub_group_block_write_us(
-                    (__global ushort *)(&dst_write1[OC_BLOCK * MB_BLOCK
-                                    * ODHW_SIZE
-                            + i * OC_BLOCK * MB_BLOCK]),
-                    as_ushort(C11[i]));
-        }
-    } else {
-        for (int i = 0; i < OW_BLOCK; i++) {
-            intel_sub_group_block_write_us(
-                    (__global ushort *)(&dst_write0[i * OC_BLOCK * MB_BLOCK]),
-                    as_ushort(C00[i]));
-            intel_sub_group_block_write_us(
-                    (__global ushort *)(&dst_write0[OC_BLOCK * MB_BLOCK
-                                    * ODHW_SIZE
-                            + i * OC_BLOCK * MB_BLOCK]),
-                    as_ushort(C10[i]));
-            intel_sub_group_block_write_us(
-                    (__global ushort *)(&dst_write1[i * OC_BLOCK * MB_BLOCK]),
-                    as_ushort(C01[i]));
-            intel_sub_group_block_write_us(
-                    (__global ushort *)(&dst_write1[OC_BLOCK * MB_BLOCK
-                                    * ODHW_SIZE
-                            + i * OC_BLOCK * MB_BLOCK]),
-                    as_ushort(C11[i]));
-        }
+        loop_ic_outermost(src, wei, C, id, ih, iw);
     }
 
-#else
-    /* First convolution. */
-    const int oc = get_group_id(0) * 2;
-    const int sp = get_group_id(1);
-    const int local_id = get_local_id(0);
-    int mb = get_group_id(2);
+    DATA_T S[MB_BLOCK * OC_OUTER * OW_BLOCK];
 
-#if CASE_3D
-    const int od = sp / (OWB * OHB);
-    const int ohw = sp % (OWB * OHB);
-    const int id = od * SD - PD;
-#else
-    const int od = 0;
-    const int id = 0;
-    const int ohw = sp;
-#endif
-    const int oh = (ohw / OWB) * OH_BLOCK;
-    const int ow = (ohw % OWB) * OW_BLOCK;
+    if (WITH_SUM) { read_dst_block(S, dst, ow); }
 
-#if OW_BLOCK == 8
-#if WITH_BIAS
-    half8 C00 = bias[oc * OC_BLOCK + local_id];
-    half8 C10 = bias[(oc + 1) * OC_BLOCK + local_id];
-#else
-    half8 C00 = 0.0;
-    half8 C10 = 0.0;
-#endif
-#else
-#if WITH_BIAS
-    half C00[OW_BLOCK];
-    half C10[OW_BLOCK];
-    for (int i = 0; i < OW_BLOCK; i++) {
-        C00[i] = bias[oc * OC_BLOCK + local_id];
-        C10[i] = bias[(oc + 1) * OC_BLOCK + local_id];
-    }
-#else
-    half C00[OW_BLOCK] = {0.0};
-    half C10[OW_BLOCK] = {0.0};
-#endif
-#endif
-
-    int ih = oh * SH - PH;
-    int iw = ow * SW - PW;
-#if NHWC == 1
-    src += input_offset + mb * IC_FULL * IDHW_SIZE + iw * IC_FULL + ih * IW_FULL * IC_FULL + id * IH_FULL * IW_FULL * IC_FULL;
-#else
-    src += input_offset + mb * IC_FULL * IDHW_SIZE + iw + ih * IW_FULL + id * IH_FULL * IW_FULL;
-#endif
-
-    wei += oc * OC_BLOCK * IC * KDHW_SIZE;
-
-    for (int kd = 0; kd < KD; ++kd)
-        for (int kh = 0; kh < KH; ++kh) {
-
-#if CASE_3D
-            if (id + kd * (1 + DD) < 0 || id + kd * (1 + DD) >= ID) {
-                continue;
-            }
-#endif
-            if (ih + kh * (1 + DH) < 0 || ih + kh * (1 + DH) >= IH) {
-                continue;
-            }
-#if NHWC == 1
-            const __global half *src1 = src + kd * (1 + DD) * IH_FULL * IW_FULL * IC_FULL
-                    + kh * (1 + DH) * IW_FULL * IC_FULL + local_id;
-#define SP_OFF IC
-#else
-            const __global half *src1 = src + kd * (1 + DD) * IH_FULL * IW_FULL
-                    + kh * (1 + DH) * IW_FULL + local_id * IDHW_SIZE;
-#define SP_OFF 1
-#endif
-
-            half tempA1[SW * OW_BLOCK + KW * (1 + DW)];
-            int k = iw;
-            if (local_id < 3) {
-                if (k < 0 || k + SW * OW_BLOCK + KW * (1 + DW) >= IW) {
-                    for (int i = 0; i < SW * OW_BLOCK + KW * (1 + DW); i++) {
-                        if (k >= 0 && k < IW) {
-                            tempA1[i] = src1[i * SP_OFF];
-                        } else {
-                            tempA1[i] = 0.0f;
-                        }
-                        k++;
-                    }
-                } else {
-                    for (int i = 0; i < SW * OW_BLOCK + KW * (1 + DW); i++) {
-                        tempA1[i] = src1[i * SP_OFF];
-                    }
-                }
-            }
-
-            for (int kw = 0; kw < KW; ++kw) {
-
-                const __global half *wei1 = wei + kd * KH * KW * IC * OC_BLOCK
-                        + kh * KW * OC_BLOCK * IC + kw * OC_BLOCK * IC;
-
-#define TRANSPOSE_1(_block, _col) (half)(intel_sub_group_shuffle(_block, _col))
-
-#define FMA8(a, b, c) fma((half)(a), (half)b, (half)c)
-
-#define MULTIPLY_BLOCKS_8x8(_result, _blockA, _blockB0, _blockB1, _blockB2) \
-    { \
-        _result = FMA8(_blockB0, TRANSPOSE_1(_blockA, 0), _result); \
-        _result = FMA8(_blockB1, TRANSPOSE_1(_blockA, 1), _result); \
-        _result = FMA8(_blockB2, TRANSPOSE_1(_blockA, 2), _result); \
+    for (int didx = 0; didx < MB_BLOCK * OC_OUTER * OW_BLOCK; ++didx) {
+        DATA_T accum = C[didx];
+        DATA_T sum = S[didx];
+        const int po_mb = (mb + didx / (OC_OUTER * OW_BLOCK)) % MB;
+        const int po_oc = (g * OC + oc + local_id
+                                  + (((didx / OW_BLOCK) % OC_OUTER) * 16))
+                % (OC * G);
+        APPLY_POST_OPS(accum, DATA_T, sum, DATA_T, po_mb, 1, po_oc, 1, od, 1,
+                oh, 1, ow, 1, 0, 1);
+        C[didx] = accum;
     }
 
-                half blockB00 = as_half(intel_sub_group_block_read_us(
-                        (const __global ushort *)wei1));
-                half blockB01 = as_half(intel_sub_group_block_read_us(
-                        (const __global ushort *)(wei1 + OC_BLOCK)));
-                half blockB02 = as_half(intel_sub_group_block_read_us(
-                        (const __global ushort *)(wei1 + 2 * OC_BLOCK)));
-
-                half8 blockA1 = 0.0f;
-                if (local_id < 3)
-                    for (int i = 0; i < OW_BLOCK; i++) {
-                        blockA1[i] = tempA1[kw * (1 + DW) + i * SW];
-                    }
-                __attribute__((opencl_unroll_hint(OW_BLOCK))) // attr:no-format
-                for (int i = 0; i < OW_BLOCK; i++) {
-                    MULTIPLY_BLOCKS_8x8(
-                            C00[i], blockA1[i], blockB00, blockB01, blockB02);
-                }
-
-                blockB00 = as_half(intel_sub_group_block_read_us(
-                        (const __global ushort *)(wei1
-                                + KDHW_SIZE * IC * OC_BLOCK)));
-                blockB01 = as_half(intel_sub_group_block_read_us(
-                        (const __global ushort *)(wei1
-                                + KDHW_SIZE * IC * OC_BLOCK + OC_BLOCK)));
-                blockB02 = as_half(intel_sub_group_block_read_us(
-                        (const __global ushort *)(wei1
-                                + KDHW_SIZE * IC * OC_BLOCK + 2 * OC_BLOCK)));
-                __attribute__((opencl_unroll_hint(OW_BLOCK))) // attr:no-format
-                for (int i = 0; i < OW_BLOCK; i++) {
-                    MULTIPLY_BLOCKS_8x8(
-                            C10[i], blockA1[i], blockB00, blockB01, blockB02);
-                }
-
-#undef TRANSPOSE_BLOCK_1
-#undef MULTIPLY_BLOCKS_8x8
-            }
-        }
-    __global half *dst_write0 = dst + output_offset + mb * OC_FULL * ODHW_SIZE
-            + oc * OC_BLOCK * ODHW_SIZE + od * OH_FULL * OW_FULL * OC_BLOCK
-            + oh * OW_FULL * OC_BLOCK + ow * OC_BLOCK;
-
-#if WITH_SUM == 1
-    half8 blockS00, blockS10;
-    if (ow == OW_LAST) {
-        for (int i = 0; i < OW - OW_LAST; i++) {
-            blockS00[i] = as_half(intel_sub_group_block_read_us(
-                    (const __global ushort *)&dst_write0[i * OC_BLOCK]));
-            blockS10[i] = as_half(intel_sub_group_block_read_us(
-                    (const __global ushort *)&dst_write0[ODHW_SIZE * OC_BLOCK
-                            + i * OC_BLOCK]));
-        }
-    } else {
-        for (int i = 0; i < OW_BLOCK; i++) {
-            blockS00[i] = as_half(intel_sub_group_block_read_us(
-                    (const __global ushort *)&dst_write0[i * OC_BLOCK]));
-            blockS10[i] = as_half(intel_sub_group_block_read_us(
-                    (const __global ushort *)&dst_write0[ODHW_SIZE * OC_BLOCK
-                            + i * OC_BLOCK]));
-        }
-    }
-    for (int i = 0; i < OW_BLOCK; i++) {
-#if SUM_SCALE == 1
-        C00[i] += blockS00[i];
-        C10[i] += blockS10[i];
-#else
-        C00[i] = fma(blockS00[i], (half)sum_scale, C00[i]);
-        C10[i] = fma(blockS10[i], (half)sum_scale, C10[i]);
-#endif
-    }
-#endif
-#if WITH_ELTWISE == 1
-    DO_ELTWISE(C00, OW_BLOCK, eltwise_alpha, eltwise_beta);
-    DO_ELTWISE(C10, OW_BLOCK, eltwise_alpha, eltwise_beta);
-#endif
-
-    if (ow == OW_LAST) {
-        for (int i = 0; i < OW - OW_LAST; i++) {
-            intel_sub_group_block_write_us(
-                    (__global ushort *)(&dst_write0[i * OC_BLOCK]),
-                    as_ushort(C00[i]));
-            intel_sub_group_block_write_us(
-                    (__global ushort *)(&dst_write0[ODHW_SIZE * OC_BLOCK
-                            + i * OC_BLOCK]),
-                    as_ushort(C10[i]));
-        }
-    } else {
-        for (int i = 0; i < OW_BLOCK; i++) {
-            intel_sub_group_block_write_us(
-                    (__global ushort *)(&dst_write0[i * OC_BLOCK]),
-                    as_ushort(C00[i]));
-            intel_sub_group_block_write_us(
-                    (__global ushort *)(&dst_write0[ODHW_SIZE * OC_BLOCK
-                            + i * OC_BLOCK]),
-                    as_ushort(C10[i]));
-        }
-    }
-
-#endif
-#endif
-#if VER_16MB16C == 1 && MB % 32 == 0
-
-    /*
-  For now USE_32OC_UNROLL is always 0.
-  TODO: Find a proper cross point for both cases
-*/
-#if OC % 32 == 0
-#define USE_32OC_UNROLL 0
-#else
-#define USE_32OC_UNROLL 0
-#endif
-
-    /* Regular convolution unrolled by MB32. */
-#if USE_32OC_UNROLL
-    const int oc = get_group_id(0) * 2;
-#else
-#if GROUPED
-    const int g = (int)get_group_id(0) / OC;
-    const int oc = (int)get_group_id(0) % OC;
-#else
-    const int g = 0;
-    const int oc = get_group_id(0);
-#endif
-#endif
-    const int sp = get_group_id(1);
-    int mb = get_group_id(2) * MB_BLOCK * 2;
-
-    const int goc = oc;
-
-#if CASE_3D
-    const int od = sp / (OW * OH);
-    const int ohw = sp % (OW * OH);
-    const int id = od * SD - PD;
-#else
-    const int od = 0;
-    const int id = 0;
-    const int ohw = sp;
-#endif
-    const int oh = ohw / OW;
-    const int ow = ohw % OW;
-
-#if WITH_BIAS
-    const int local_id = get_local_id(0);
-    half8 C00 = bias[oc * OC_BLOCK + local_id + g * OC];
-    half8 C01 = C00, C02 = C00, C03 = C00;
-#if USE_32OC_UNROLL
-    half8 C10 = bias[(oc + 1) * OC_BLOCK + local_id];
-    half8 C11 = C10, C12 = C10, C13 = C10;
-#endif
-#else
-    half8 C00 = 0.0f, C01 = 0.0f, C02 = 0.0f, C03 = 0.0f;
-#if USE_32OC_UNROLL
-    half8 C10 = 0.0f, C11 = 0.0f, C12 = 0.0f, C13 = 0.0f;
-#endif
-#endif
-
-    int ih = oh * SH - PH;
-    int iw = ow * SW - PW;
-    src += input_offset + mb * IC_FULL * IDHW_SIZE + id * IH_FULL * IW_FULL * IC_BLOCK * MB_BLOCK
-            + ih * IW_FULL * IC_BLOCK * MB_BLOCK + iw * IC_BLOCK * MB_BLOCK
-            + g * IC * IDHW_SIZE * MB_BLOCK;
-
-    wei += goc * KDHW_SIZE * OC_BLOCK * FILTER_IFM_NUM + g * FILTER_GROUPS_PITCH;
-
-#if ((HAS_PAD_D && KD == 1) || (HAS_PAD_H && KH == 1) || (HAS_PAD_W && KW == 1))
-    if (!(id < 0 || id >= ID || ih < 0 || ih >= IH || iw < 0 || iw >= IW)) {
-#endif
-#if KH != 1 || KW != 1 || KD != 1
-        for (int kd = 0; kd < KD; ++kd)
-            for (int kh = 0; kh < KH; ++kh)
-                for (int kw = 0; kw < KW; ++kw) {
-
-                    if (ih + kh * (1 + DH) < 0 || ih + kh * (1 + DH) >= IH
-                            || iw + kw * (1 + DW) < 0
-                            || iw + kw * (1 + DW) >= IW
-#if CASE_3D
-                            || id + kd * (1 + DD) < 0
-                            || id + kd * (1 + DD) >= ID) {
-#else
-                    ) {
-#endif
-                        continue;
-                    }
-
-                    const __global half *src1 = src
-                            + kd * (1 + DD) * IH_FULL * IW_FULL * IC_BLOCK * MB_BLOCK
-                            + kh * (1 + DH) * IW_FULL * IC_BLOCK * MB_BLOCK
-                            + kw * (1 + DW) * IC_BLOCK * MB_BLOCK;
-                    const __global half *wei1 = wei
-                            + kd * KH * KW * OC_BLOCK * IC_BLOCK
-                            + kh * KW * OC_BLOCK * IC_BLOCK
-                            + kw * OC_BLOCK * IC_BLOCK;
-
-#else
-    const __global half *src1 = src;
-    const __global half *wei1 = wei;
-#endif
-                    for (int icb = 0; icb < IC / IC_BLOCK; icb++) {
-
-#define TRANSPOSE_8(_block, _col) \
-    as_half8(intel_sub_group_shuffle(as_ushort8(_block), _col))
-
-#define FMA8(a, b, c) fma((half8)(a), (half8)b, (half8)c)
-
-#define MULTIPLY_BLOCKS_8x16(_result, _blockA, _blockB) \
-    { \
-        _result = FMA8(_blockB[0], TRANSPOSE_8(_blockA, 0), _result); \
-        _result = FMA8(_blockB[1], TRANSPOSE_8(_blockA, 1), _result); \
-        _result = FMA8(_blockB[2], TRANSPOSE_8(_blockA, 2), _result); \
-        _result = FMA8(_blockB[3], TRANSPOSE_8(_blockA, 3), _result); \
-        _result = FMA8(_blockB[4], TRANSPOSE_8(_blockA, 4), _result); \
-        _result = FMA8(_blockB[5], TRANSPOSE_8(_blockA, 5), _result); \
-        _result = FMA8(_blockB[6], TRANSPOSE_8(_blockA, 6), _result); \
-        _result = FMA8(_blockB[7], TRANSPOSE_8(_blockA, 7), _result); \
-        _result = FMA8(_blockB[8], TRANSPOSE_8(_blockA, 8), _result); \
-        _result = FMA8(_blockB[9], TRANSPOSE_8(_blockA, 9), _result); \
-        _result = FMA8(_blockB[10], TRANSPOSE_8(_blockA, 10), _result); \
-        _result = FMA8(_blockB[11], TRANSPOSE_8(_blockA, 11), _result); \
-        _result = FMA8(_blockB[12], TRANSPOSE_8(_blockA, 12), _result); \
-        _result = FMA8(_blockB[13], TRANSPOSE_8(_blockA, 13), _result); \
-        _result = FMA8(_blockB[14], TRANSPOSE_8(_blockA, 14), _result); \
-        _result = FMA8(_blockB[15], TRANSPOSE_8(_blockA, 15), _result); \
-    }
-                        half16 W0 = as_half16(intel_sub_group_block_read8(
-                                (const __global uint *)wei1));
-#if USE_32OC_UNROLL
-                        half16 W1 = as_half16(intel_sub_group_block_read8(
-                                (const __global uint *)&wei1[IC * KDHW_SIZE
-                                        * OC_BLOCK]));
-#endif
-
-                        half8 A0 = as_half8(intel_sub_group_block_read_us8(
-                                (const __global ushort *)src1));
-                        MULTIPLY_BLOCKS_8x16(C00, A0, W0);
-#if USE_32OC_UNROLL
-                        MULTIPLY_BLOCKS_8x16(C10, A0, W1);
-#endif
-
-                        A0 = as_half8(intel_sub_group_block_read_us8(
-                                (const __global ushort *)&src1[8 * IC_BLOCK]));
-                        MULTIPLY_BLOCKS_8x16(C01, A0, W0);
-#if USE_32OC_UNROLL
-                        MULTIPLY_BLOCKS_8x16(C11, A0, W1);
-#endif
-
-                        A0 = as_half8(intel_sub_group_block_read_us8(
-                                (const __global ushort *)&src1[MB_BLOCK * IC_FULL
-                                        * IDHW_SIZE]));
-                        MULTIPLY_BLOCKS_8x16(C02, A0, W0);
-#if USE_32OC_UNROLL
-                        MULTIPLY_BLOCKS_8x16(C12, A0, W1);
-#endif
-
-                        A0 = as_half8(intel_sub_group_block_read_us8(
-                                (const __global ushort *)&src1[MB_BLOCK * IC_FULL
-                                                * IDHW_SIZE
-                                        + 8 * IC_BLOCK]));
-                        MULTIPLY_BLOCKS_8x16(C03, A0, W0);
-#if USE_32OC_UNROLL
-                        MULTIPLY_BLOCKS_8x16(C13, A0, W1);
-#endif
-                        src1 += IC_BLOCK * IDHW_SIZE * MB_BLOCK;
-                        wei1 += IC_BLOCK * KDHW_SIZE * OC_BLOCK;
-                    }
-#if KH != 1 || KW != 1 || KD != 1
-                }
-#endif
-#if ((HAS_PAD_D && KD == 1) || (HAS_PAD_H && KH == 1) || (HAS_PAD_W && KW == 1))
-    }
-#endif
-    __global half *dst_write0 = dst + output_offset + mb * OC_FULL * ODHW_SIZE
-            + goc * ODHW_SIZE * OC_BLOCK * MB_BLOCK
-            + g * OC * ODHW_SIZE * MB_BLOCK + od * OH_FULL * OW_FULL * OC_BLOCK * MB_BLOCK
-            + oh * OW_FULL * OC_BLOCK * MB_BLOCK + ow * OC_BLOCK * MB_BLOCK;
-#if USE_32OC_UNROLL
-    __global half *dst_write1 = dst_write0 + OC_BLOCK * ODHW_SIZE * MB_BLOCK;
-#endif
-
-#if WITH_SUM == 1
-    half8 blockS00 = as_half8(intel_sub_group_block_read_us8(
-            (const __global ushort *)dst_write0));
-    half8 blockS01 = as_half8(intel_sub_group_block_read_us8(
-            (const __global ushort *)(dst_write0 + 8 * OC_BLOCK)));
-#if USE_32OC_UNROLL
-    half8 blockS10 = as_half8(intel_sub_group_block_read_us8(
-            (const __global ushort *)dst_write1));
-    half8 blockS11 = as_half8(intel_sub_group_block_read_us8(
-            (const __global ushort *)(dst_write1 + 8 * OC_BLOCK)));
-#endif
-#if SUM_SCALE == 1
-    C00 += blockS00;
-    C01 += blockS01;
-#if USE_32OC_UNROLL
-    C10 += blockS10;
-    C11 += blockS11;
-#endif
-#else
-    C00 = fma(blockS00, (half8)sum_scale, C00);
-    C01 = fma(blockS01, (half8)sum_scale, C01);
-#if USE_32OC_UNROLL
-    C10 = fma(blockS10, (half8)sum_scale, C10);
-    C11 = fma(blockS11, (half8)sum_scale, C11);
-#endif
-#endif
-#endif
-
-#if WITH_ELTWISE == 1
-    DO_ELTWISE(C00, 8, eltwise_alpha, eltwise_beta);
-    DO_ELTWISE(C01, 8, eltwise_alpha, eltwise_beta);
-#if USE_32OC_UNROLL
-    DO_ELTWISE(C10, 8, eltwise_alpha, eltwise_beta);
-    DO_ELTWISE(C11, 8, eltwise_alpha, eltwise_beta);
-#endif
-#endif
-
-#if HAS_FUSED_OPS
-    { FUSED_OPS_VEC0; C00 = FUSED_OPS_RESULT_VEC0; }
-    { FUSED_OPS_VEC1; C01 = FUSED_OPS_RESULT_VEC1; }
-#endif
-
-    intel_sub_group_block_write_us8(
-            (__global ushort *)dst_write0, as_ushort8(C00));
-    intel_sub_group_block_write_us8(
-            (__global ushort *)&dst_write0[8 * OC_BLOCK], as_ushort8(C01));
-#if USE_32OC_UNROLL
-    intel_sub_group_block_write_us8(
-            (__global ushort *)&dst_write1[0], as_ushort8(C10));
-    intel_sub_group_block_write_us8(
-            (__global ushort *)&dst_write1[8 * OC_BLOCK], as_ushort8(C11));
-#endif
-
-#if WITH_SUM == 1
-    half8 blockS02 = as_half8(
-            intel_sub_group_block_read_us8((const __global ushort *)(dst_write0
-                    + MB_BLOCK * OC_FULL * G * ODHW_SIZE)));
-    half8 blockS03 = as_half8(
-            intel_sub_group_block_read_us8((const __global ushort *)(dst_write0
-                    + MB_BLOCK * OC_FULL * G * ODHW_SIZE + 8 * OC_BLOCK)));
-#if USE_32OC_UNROLL
-    half8 blockS12 = as_half8(
-            intel_sub_group_block_read_us8((const __global ushort *)(dst_write1
-                    + MB_BLOCK * OC_FULL * G * ODHW_SIZE)));
-    half8 blockS13 = as_half8(
-            intel_sub_group_block_read_us8((const __global ushort *)(dst_write1
-                    + MB_BLOCK * OC_FULL * G * ODHW_SIZE + 8 * OC_BLOCK)));
-#endif
-#if SUM_SCALE == 1
-    C02 += blockS02;
-    C03 += blockS03;
-#if USE_32OC_UNROLL
-    C12 += blockS12;
-    C13 += blockS13;
-#endif
-#else
-    C02 = fma(blockS02, (half8)sum_scale, C02);
-    C03 = fma(blockS03, (half8)sum_scale, C03);
-#if USE_32OC_UNROLL
-    C12 = fma(blockS12, (half8)sum_scale, C12);
-    C13 = fma(blockS13, (half8)sum_scale, C13);
-#endif
-#endif
-#endif
-#if WITH_ELTWISE == 1
-    DO_ELTWISE(C02, 8, eltwise_alpha, eltwise_beta);
-    DO_ELTWISE(C03, 8, eltwise_alpha, eltwise_beta);
-#if USE_32OC_UNROLL
-    DO_ELTWISE(C12, 8, eltwise_alpha, eltwise_beta);
-    DO_ELTWISE(C13, 8, eltwise_alpha, eltwise_beta);
-#endif
-#endif
-
-#if HAS_FUSED_OPS
-    { FUSED_OPS_VEC2; C02 = FUSED_OPS_RESULT_VEC2; }
-    { FUSED_OPS_VEC3; C03 = FUSED_OPS_RESULT_VEC3; }
-#endif
-
-    intel_sub_group_block_write_us8(
-            (__global ushort *)&dst_write0[MB_BLOCK * OC_FULL * ODHW_SIZE],
-            as_ushort8(C02));
-    intel_sub_group_block_write_us8(
-            (__global ushort *)&dst_write0[MB_BLOCK * OC_FULL * ODHW_SIZE
-                    + 8 * OC_BLOCK],
-            as_ushort8(C03));
-#if USE_32OC_UNROLL
-    intel_sub_group_block_write_us8(
-            (__global ushort *)&dst_write1[MB_BLOCK * OC_FULL * ODHW_SIZE],
-            as_ushort8(C12));
-    intel_sub_group_block_write_us8(
-            (__global ushort *)&dst_write1[MB_BLOCK * OC_FULL * ODHW_SIZE
-                    + 8 * OC_BLOCK],
-            as_ushort8(C13));
-#endif
-#endif
-
-#if VER_8OW16C == 1 && (IC % 16 == 0 || (IC == 8 && G != 1))
-    /* Regular convolution. */
-    const int sp = get_group_id(1);
-    const int local_id = get_local_id(0);
-#if GROUPED
-    const int ocb_mb_g = get_group_id(2);
-#if OC == 8
-    const int g = ocb_mb_g / MB;
-    const int ocb_mb = ocb_mb_g % MB;
-#else
-    const int g = ocb_mb_g / (MB * (OC / OCB));
-    const int ocb_mb = ocb_mb_g % (MB * (OC / OCB));
-#endif
-#else
-    const int ocb_mb = get_group_id(2);
-    const int g = 0;
-#endif
-    const int ocb = ocb_mb / (MB);
-    const int mb = ocb_mb % (MB);
-    const int oc = (ocb * OCB) / OC_BLOCK + get_group_id(0);
-    const int goc = oc;
-
-#if CASE_3D
-    const int od = sp / (OWB * OHB);
-    const int ohw = sp % (OWB * OHB);
-    const int id = od * SD - PD;
-#else
-    const int od = 0;
-    const int id = 0;
-    const int ohw = sp;
-#endif
-    const int oh = (ohw / OWB) * OH_BLOCK;
-    const int ow = (ohw % OWB) * OW_BLOCK;
-
-#if WITH_BIAS
-#if OW_BLOCK != 8 && OW_BLOCK != 16
-    half blockC00[OW_BLOCK];
-    for (int i = 0; i < OW_BLOCK; i++)
-        blockC00[i] = bias[oc * OC_BLOCK + local_id + g * OC];
-#else
-    half8 blockC00 = bias[oc * OC_BLOCK + local_id + g * OC];
-#if OW_BLOCK == 16
-    half8 blockC01 = blockC00;
-#endif
-#endif
-#else
-#if OW_BLOCK != 8 && OW_BLOCK != 16
-    half blockC00[OW_BLOCK] = {0.0f};
-#else
-    half8 blockC00 = 0.0f;
-#if OW_BLOCK == 16
-    half8 blockC01 = 0.0f;
-#endif
-#endif
-#endif
-
-    int ih = oh * SH - PH;
-    int iw = ow * SW - PW;
-
-    /* shift input pointers */
-#if IC == 8 && G != 1
-    src += input_offset + mb * IC_FULL * IDHW_SIZE + iw * IC_BLOCK + ih * IW_FULL * IC_BLOCK
-            + id * IH_FULL * IW_FULL * IC_BLOCK + (g / 2) * IDHW_SIZE * IC * 2;
-#else
-    src += input_offset + mb * IC_FULL * IDHW_SIZE + iw * IC_BLOCK + ih * IW_FULL * IC_BLOCK
-            + id * IH_FULL * IW_FULL * IC_BLOCK + g * IC * IDHW_SIZE;
-#endif
-    wei += goc * KDHW_SIZE * IC * OC_BLOCK + g * FILTER_GROUPS_PITCH;
-
-#if ((HAS_PAD_D && KD == 1) || (HAS_PAD_H && KH == 1))
-    if (!(id < 0 || id >= ID || ih < 0 || ih >= IH)) {
-#endif
-        int icb = 0;
-        do {
-#if KH != 1 || KW != 1 || KD != 1
-            for (int kd = 0; kd < KD; ++kd)
-                for (int kh = 0; kh < KH; ++kh) {
-
-#if CASE_3D
-                    if (id + kd * (1 + DD) < 0 || id + kd * (1 + DD) >= ID)
-                        continue;
-#endif
-                    if (ih + kh * (1 + DH) < 0 || ih + kh * (1 + DH) >= IH)
-                        continue;
-
-                    const __global half *src1 = src
-                            + kd * (1 + DD) * IH_FULL * IW_FULL * IC_BLOCK
-                            + kh * (1 + DH) * IW_FULL * IC_BLOCK;
-
-                    half tempA[SW * OW_BLOCK + KW * (1 + DW)];
-                    int k = iw;
-#if OW % OW_BLOCK != 0 || HAS_PAD_W
-                    if (k < 0 || k + SW * OW_BLOCK + KW * (1 + DW) >= IW) {
-                        __attribute__((opencl_unroll_hint(SW * OW_BLOCK
-                                + KW * (1 + DW)))) // attr:no-format
-                        for (int i = 0; i < SW * OW_BLOCK + KW * (1 + DW);
-                                i++) {
-                            if (k >= 0 && k < IW)
-                                tempA[i] = as_half(
-                                        intel_sub_group_block_read_us((
-                                                const __global ushort *)(&src1[i
-                                                * IC_BLOCK])));
-                            else
-                                tempA[i] = 0.0h;
-                            k++;
-                        }
-                    } else {
-#endif
-                        __attribute__((opencl_unroll_hint(SW * OW_BLOCK
-                                + KW * (1 + DW)))) // attr:no-format
-                        for (int i = 0; i < SW * OW_BLOCK + KW * (1 + DW);
-                                i++) {
-                            tempA[i] = as_half(intel_sub_group_block_read_us(
-                                    (const __global ushort
-                                                    *)(&src1[i * IC_BLOCK])));
-                        }
-#if OW % OW_BLOCK != 0 || HAS_PAD_W
-                    }
-#endif
-
-                    __attribute__((opencl_unroll_hint(KW))) // attr:no-format
-                    for (int kw = 0; kw < KW; ++kw) {
-
-                        const __global half *wei1 = wei
-                                + kd * KH * KW * IC_BLOCK * OC_BLOCK
-                                + kh * KW * IC_BLOCK * OC_BLOCK
-                                + kw * IC_BLOCK * OC_BLOCK;
-
-#else
-        const __global half *src1 = src;
-        const __global half *wei1 = wei;
-#endif
-#define TRANSPOSE_1(_block, _col) (half)intel_sub_group_shuffle(_block, _col)
-
-#define FMA8(a, b, c) fma((half)(a), (half)b, (half)c)
-
-#define MULTIPLY_BLOCKS_8x16(_result, _blockA, _blockB, _blockB1) \
-    { \
-        _result = FMA8(_blockB.s0, TRANSPOSE_1(_blockA, 0), _result); \
-        _result = FMA8(_blockB.s1, TRANSPOSE_1(_blockA, 1), _result); \
-        _result = FMA8(_blockB.s2, TRANSPOSE_1(_blockA, 2), _result); \
-        _result = FMA8(_blockB.s3, TRANSPOSE_1(_blockA, 3), _result); \
-        _result = FMA8(_blockB.s4, TRANSPOSE_1(_blockA, 4), _result); \
-        _result = FMA8(_blockB.s5, TRANSPOSE_1(_blockA, 5), _result); \
-        _result = FMA8(_blockB.s6, TRANSPOSE_1(_blockA, 6), _result); \
-        _result = FMA8(_blockB.s7, TRANSPOSE_1(_blockA, 7), _result); \
-        _result = FMA8(_blockB1.s0, TRANSPOSE_1(_blockA, 8), _result); \
-        _result = FMA8(_blockB1.s1, TRANSPOSE_1(_blockA, 9), _result); \
-        _result = FMA8(_blockB1.s2, TRANSPOSE_1(_blockA, 10), _result); \
-        _result = FMA8(_blockB1.s3, TRANSPOSE_1(_blockA, 11), _result); \
-        _result = FMA8(_blockB1.s4, TRANSPOSE_1(_blockA, 12), _result); \
-        _result = FMA8(_blockB1.s5, TRANSPOSE_1(_blockA, 13), _result); \
-        _result = FMA8(_blockB1.s6, TRANSPOSE_1(_blockA, 14), _result); \
-        _result = FMA8(_blockB1.s7, TRANSPOSE_1(_blockA, 15), _result); \
-    }
-
-#define MULTIPLY_BLOCKS_FIRST_HALF(_result, _blockA, _blockB)         \
-    { \
-        _result = FMA8(_blockB.s0, TRANSPOSE_1(_blockA, 0), _result); \
-        _result = FMA8(_blockB.s1, TRANSPOSE_1(_blockA, 1), _result); \
-        _result = FMA8(_blockB.s2, TRANSPOSE_1(_blockA, 2), _result); \
-        _result = FMA8(_blockB.s3, TRANSPOSE_1(_blockA, 3), _result); \
-        _result = FMA8(_blockB.s4, TRANSPOSE_1(_blockA, 4), _result); \
-        _result = FMA8(_blockB.s5, TRANSPOSE_1(_blockA, 5), _result); \
-        _result = FMA8(_blockB.s6, TRANSPOSE_1(_blockA, 6), _result); \
-        _result = FMA8(_blockB.s7, TRANSPOSE_1(_blockA, 7), _result); \
-    }
-
-#define MULTIPLY_BLOCKS_SECOND_HALF(_result, _blockA, _blockB)         \
-    { \
-        _result = FMA8(_blockB.s0, TRANSPOSE_1(_blockA, 8), _result);  \
-        _result = FMA8(_blockB.s1, TRANSPOSE_1(_blockA, 9), _result);  \
-        _result = FMA8(_blockB.s2, TRANSPOSE_1(_blockA, 10), _result); \
-        _result = FMA8(_blockB.s3, TRANSPOSE_1(_blockA, 11), _result); \
-        _result = FMA8(_blockB.s4, TRANSPOSE_1(_blockA, 12), _result); \
-        _result = FMA8(_blockB.s5, TRANSPOSE_1(_blockA, 13), _result); \
-        _result = FMA8(_blockB.s6, TRANSPOSE_1(_blockA, 14), _result); \
-        _result = FMA8(_blockB.s7, TRANSPOSE_1(_blockA, 15), _result); \
-    }
-
-#if IC == 8 && G != 1
-                        half8 blockB00
-                                = as_half8(intel_sub_group_block_read_us8(
-                                        (const __global ushort *)wei1));
-#else
-                        half8 blockB00
-                                = as_half8(intel_sub_group_block_read_us8(
-                                        (const __global ushort *)wei1));
-                        half8 blockB01
-                                = as_half8(intel_sub_group_block_read_us8(
-                                        (const __global ushort *)(wei1
-                                                + 8 * OC_BLOCK)));
-#endif
-
-#if KH != 1 || KW != 1 || KD != 1
-                        half blockA[OW_BLOCK];
-                        __attribute__((
-                                opencl_unroll_hint(OW_BLOCK))) // attr:no-format
-                        for (int i = 0; i < OW_BLOCK; i++) {
-                            blockA[i] = tempA[kw * (1 + DW) + SW * i];
-                        }
-#else
-#if OW_BLOCK != 8 || HAS_PAD_W
-        half blockA[OW_BLOCK];
-#else
-        half8 blockA;
-#endif
-#if OW % OW_BLOCK != 0 || HAS_PAD_W
-        if (ow == OW_LAST) {
-            for (int i = 0; i < OW - OW_LAST; i++) {
-#if HAS_PAD_W
-                if (iw + i * SW < 0 || iw + i * SW >= IW) {
-                    blockA[i] = 0.0f;
-                } else {
-#endif
-                    blockA[i] = as_half(
-                            intel_sub_group_block_read_us((const __global ushort
-                                            *)(&src1[i * IC_BLOCK * SW])));
-#if HAS_PAD_W
-                }
-#endif
-            }
-            for (int i = OW - OW_LAST; i < OW_BLOCK; i++)
-                blockA[i] = 0.0f;
-        } else {
-#endif
-#if SW != 1 || OW_BLOCK != 8 || HAS_PAD_W
-            __attribute__((opencl_unroll_hint(OW_BLOCK))) // attr:no-format
-            for (int i = 0; i < OW_BLOCK; i++) {
-#if HAS_PAD_W
-                if (iw + i * SW < 0 || iw + i * SW >= IW) {
-                    blockA[i] = 0.0f;
-                } else {
-#endif
-                    blockA[i] = as_half(
-                            intel_sub_group_block_read_us((const __global ushort
-                                            *)(&src1[i * IC_BLOCK * SW])));
-#if HAS_PAD_W
-                }
-#endif
-            }
-#else
-        blockA = as_half8(intel_sub_group_block_read_us8(
-                (const __global ushort *)(&src1[0])));
-#endif
-#if OW % OW_BLOCK != 0 || HAS_PAD_W
-        }
-#endif
-#endif
-#if OW_BLOCK != 16
-                        __attribute__((
-                                opencl_unroll_hint(OW_BLOCK))) // attr:no-format
-                        for (int i = 0; i < OW_BLOCK; i++) {
-#if IC == 8 && G != 1
-                            if (g % 2 == 0) {
-                                MULTIPLY_BLOCKS_FIRST_HALF(blockC00[i], blockA[i], blockB00);
-                            } else {
-                                MULTIPLY_BLOCKS_SECOND_HALF(blockC00[i], blockA[i], blockB00);
-                            }
-#else
-                            MULTIPLY_BLOCKS_8x16(
-                                    blockC00[i], blockA[i], blockB00, blockB01);
-#endif
-                        }
-#else
-        __attribute__((opencl_unroll_hint(8))) // attr:no-format
-        for (int i = 0; i < 8; i++) {
-#if IC == 8 && G != 1
-            if (g % 2 == 0) {
-                MULTIPLY_BLOCKS_FIRST_HALF(blockC00[i], blockA[i], blockB00);
-                MULTIPLY_BLOCKS_FIRST_HALF(blockC01[i], blockA[i + 8], blockB00);
-            } else {
-                MULTIPLY_BLOCKS_SECOND_HALF(blockC00[i], blockA[i], blockB00);
-                MULTIPLY_BLOCKS_SECOND_HALF(blockC01[i], blockA[i + 8], blockB00);
-            }
-#else
-            MULTIPLY_BLOCKS_8x16(blockC00[i], blockA[i], blockB00, blockB01);
-            MULTIPLY_BLOCKS_8x16(
-                    blockC01[i], blockA[i + 8], blockB00, blockB01);
-#endif
-        }
-#endif
-
-#undef TRANSPOSE_1
-#undef MULTIPLY_BLOCKS_8x16
-#undef MULTIPLY_BLOCKS_FIRST_HALF
-#undef MULTIPLY_BLOCKS_SECOND_HALF
-#if KH != 1 || KW != 1 || KD != 1
-                    }
-                }
-#endif
-            src += IDHW_SIZE * IC_BLOCK;
-            wei += OC_BLOCK * KDHW_SIZE * IC_BLOCK;
-            icb += IC_BLOCK;
-        } while (icb < IC);
-#if ((HAS_PAD_D && KD == 1) || (HAS_PAD_H && KH == 1))
-    }
-#endif
-
-#if OC == 8 && G != 1
-    __global half *dst_write0 = dst + output_offset + mb * OC_FULL * ODHW_SIZE
-            + goc * ODHW_SIZE * OC_BLOCK + (g / 2) * OC_BLOCK * ODHW_SIZE + (g % 2) * OC
-            + od * OH_FULL * OW_FULL * OC_BLOCK + oh * OW_FULL * OC_BLOCK + ow * OC_BLOCK;
-#else
-    __global half *dst_write0 = dst + output_offset + mb * OC_FULL * ODHW_SIZE
-            + goc * ODHW_SIZE * OC_BLOCK + g * OC * ODHW_SIZE
-            + od * OH_FULL * OW_FULL * OC_BLOCK + oh * OW_FULL * OC_BLOCK + ow * OC_BLOCK;
-#endif
-
-#if WITH_SUM == 1
-#if OW_BLOCK != 8 && OW_BLOCK != 16
-    half blockS00[OW_BLOCK];
-#else
-    half8 blockS00;
-#if OW_BLOCK == 16
-    half8 blockS01;
-#endif
-#endif
-#if OW % OW_BLOCK != 0
-    if (ow == OW_LAST) {
-        for (int i = 0; i < OW - OW_LAST; i++) {
-            blockS00[i] = as_half(intel_sub_group_block_read_us(
-                    (const __global ushort *)&dst_write0[i * OC_BLOCK]));
-        }
-    } else {
-#endif
-#if OW_BLOCK != 8 && OW_BLOCK != 16
-        for (int i = 0; i < OW_BLOCK; i++) {
-            blockS00[i] = as_half(intel_sub_group_block_read_us(
-                    (const __global ushort *)&dst_write0[i * OC_BLOCK]));
-        }
-#else
-    blockS00 = as_half8(intel_sub_group_block_read_us8(
-            (const __global ushort *)dst_write0));
-#if OW_BLOCK == 16
-    blockS01 = as_half8(intel_sub_group_block_read_us8(
-            (const __global ushort *)&dst_write0[8 * OC_BLOCK]));
-#endif
-#endif
-#if OW % OW_BLOCK != 0
-    }
-#endif
-
-#if OW_BLOCK != 16
-    for (int i = 0; i < OW_BLOCK; i++) {
-#if SUM_SCALE == 1
-        blockC00[i] += blockS00[i];
-#else
-        blockC00[i] = fma(blockS00[i], (half)sum_scale, blockC00[i]);
-#endif
-    }
-#else
-#if SUM_SCALE == 1
-    blockC00 += blockS00;
-    blockC01 += blockS01;
-#else
-    blockC00 = fma(blockS00, (half8)sum_scale, blockC00);
-    blockC01 = fma(blockS01, (half8)sum_scale, blockC01);
-#endif
-#endif
-#endif
-
-#if WITH_ELTWISE == 1
-#if OW_BLOCK != 16
-    DO_ELTWISE(blockC00, OW_BLOCK, eltwise_alpha, eltwise_beta);
-#else
-    DO_ELTWISE(blockC00, 8, eltwise_alpha, eltwise_beta);
-    DO_ELTWISE(blockC01, 8, eltwise_alpha, eltwise_beta);
-#endif
-#endif
-
-#if OW % OW_BLOCK != 0
-    if (ow + OW_BLOCK > OW) {
-        for (int i = 0; i < OW - OW_LAST; i++) {
-
-#if HAS_FUSED_OPS
-            { FUSED_OPS_SCALAR0; blockC00[i] = FUSED_OPS_RESULT_SCALAR0; }
-#endif
-
-#if OC == 8 && G != 1
-            if (local_id < 8)
-                dst_write0[i * OC_BLOCK + local_id] = blockC00[i];
-#else
-            intel_sub_group_block_write_us(
-                    (__global ushort *)(&dst_write0[i * OC_BLOCK]),
-                    as_ushort(blockC00[i]));
-#endif
-        }
-    } else {
-#endif
-
-#if OW_BLOCK != 8 && OW_BLOCK != 16
-        __attribute__((opencl_unroll_hint(OW_BLOCK))) // attr:no-format
-        for (int i = 0; i < OW_BLOCK; i++) {
-
-#if HAS_FUSED_OPS
-            { FUSED_OPS_SCALAR0; blockC00[i] = FUSED_OPS_RESULT_SCALAR0; }
-#endif
-
-#if OC == 8 && G != 1
-            if (local_id < 8)
-                dst_write0[i * OC_BLOCK + local_id] = blockC00[i];
-#else
-            intel_sub_group_block_write_us(
-                    (__global ushort *)(&dst_write0[i * OC_BLOCK]),
-                    as_ushort(blockC00[i]));
-#endif //  OC == 8 && G != 1
-        }
-#else
-
-#if OC == 8 && G != 1
-    for (int i = 0; i < 8; i++) {
-#if HAS_FUSED_OPS
-        { FUSED_OPS_SCALAR0; blockC00[i] = FUSED_OPS_RESULT_SCALAR0; }
-#endif
-
-        if (local_id < 8)
-            dst_write0[i * OC_BLOCK + local_id] = blockC00[i];
-    }
-#else
-#if HAS_FUSED_OPS
-    { FUSED_OPS_VEC0; blockC00 = FUSED_OPS_RESULT_VEC0; }
-#endif
-
-    intel_sub_group_block_write_us8(
-            (__global ushort *)(&dst_write0[0]), as_ushort8(blockC00));
-#endif //  OC == 8 && G != 1
-#if OW_BLOCK == 16
-
-#if OC == 8 && G != 1
-    for (int i = 0; i < 8; i++) {
-#if HAS_FUSED_OPS
-        { FUSED_OPS_SCALAR1; blockC01[i] = FUSED_OPS_RESULT_SCALAR1; }
-#endif
-
-        if (local_id < 8)
-            dst_write0[(i + 8) * OC_BLOCK + local_id] = blockC01[i];
-    }
-#else
-#if HAS_FUSED_OPS
-    { FUSED_OPS_VEC1; blockC01 = FUSED_OPS_RESULT_VEC1; }
-#endif
-
-    intel_sub_group_block_write_us8(
-            (__global ushort *)(&dst_write0[8 * OC_BLOCK]),
-            as_ushort8(blockC01));
-#endif //  OC == 8 && G != 1
-#endif
-#endif
-#if OW % OW_BLOCK != 0
-    }
-#endif
-#endif
+    write_dst_block(C, dst, ow);
 }

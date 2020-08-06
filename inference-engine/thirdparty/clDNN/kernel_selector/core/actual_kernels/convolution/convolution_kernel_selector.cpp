@@ -77,11 +77,11 @@ convolution_kernel_selector::convolution_kernel_selector() {
 
     // b_fs_yx_fsv16 and b_fs_zyx_fsv16
     Attach<ConvolutionKernel_b_fs_yx_fsv16_depthwise>();
-    Attach<ConvolutionKernel_b_fs_yx_fsv16_1x1>();
-    Attach<ConvolutionKernel_b_fs_yx_fsv16>();
+    // Attach<ConvolutionKernel_b_fs_yx_fsv16_1x1>();
+    // Attach<ConvolutionKernel_b_fs_yx_fsv16>();
     Attach<ConvolutionKernel_bfyx_to_bfyx_f16>();
     Attach<ConvolutionKernel_b_fs_zyx_fsv16_fp32>();
-    Attach<ConvolutionKernel_b_fs_zyx_fsv16_fp16>();
+    // Attach<ConvolutionKernel_b_fs_zyx_fsv16_fp16>();
 
     // bs_fs_yx_bsv16_fsv16
     Attach<ConvolutionKernel_bfyx_to_bfyx_bsv16_fsv16>();
