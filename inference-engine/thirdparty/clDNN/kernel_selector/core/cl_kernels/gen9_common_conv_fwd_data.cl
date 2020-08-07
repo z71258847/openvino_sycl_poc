@@ -58,6 +58,8 @@
 #define OW_OUTER ((OW_BLOCK + OW_INNER - 1) / OW_INNER)
 #define IW_OUTER ((IW_BLOCK + IW_INNER - 1) / IW_INNER)
 
+#define C_SIZE (MB_BLOCK * OC_OUTER * OW_BLOCK)
+
 #if OW_BLOCK >= 32
 #error "Block is too big for unrolled_read and unrolled_write."
 #endif
@@ -93,19 +95,6 @@ int FUNC(off_NCdhw16n16c)(
     off += h * W * 16 * 16;
     off += w * 16 * 16;
     off += (n % 16) * 16;
-    off += (c % 16);
-    return off;
-}
-
-int FUNC(off_NCdhw32n16c)(
-        int n, int c, int d, int h, int w, int C, int D, int H, int W) {
-    int off = 0;
-    off += (n / 32) * (C / 16) * D * H * W * 32 * 16;
-    off += (c / 16) * D * H * W * 32 * 16;
-    off += d * H * W * 32 * 16;
-    off += h * W * 32 * 16;
-    off += w * 32 * 16;
-    off += (n % 32) * 16;
     off += (c % 16);
     return off;
 }
@@ -170,7 +159,6 @@ int FUNC(wei_off)(int g, int o, int i, int d, int h, int w) {
 int FUNC(dst_off)(int n, int c, int d, int h, int w) {
     if (DST_W16C) return FUNC_CALL(off_nCdhw16c)(n, c, d, h, w, G * OC, OD, OH, OW);
     if (DST_16N16C) return FUNC_CALL(off_NCdhw16n16c)(n, c, d, h, w, G * OC, OD, OH, OW);
-    if (DST_32N16C) return FUNC_CALL(off_NCdhw32n16c)(n, c, d, h, w, G * OC, OD, OH, OW);
     return 0;
 }
 
@@ -229,7 +217,7 @@ int FUNC(wei_idx)(int oc_outer, int ic_outer) {
 // - cwn[16c] for NCdhw16n16c (16c is mapped to sub-group)
 // - ncw[16c] for nCdhw16c (16c is mapped to sub-group)
 int FUNC(dst_idx)(int mb_block, int oc_outer, int ow_block) {
-    if (DST_16N16C || DST_32N16C)
+    if (DST_16N16C)
         return oc_outer * OW_BLOCK * MB_BLOCK + ow_block * MB_BLOCK + mb_block;
     return mb_block * OC_OUTER * OW_BLOCK + oc_outer * OW_BLOCK + ow_block;
 }
@@ -267,7 +255,7 @@ int FUNC(dst_idx)(int mb_block, int oc_outer, int ow_block) {
         if ((n) == 16 && (stride) == 1) { \
             (block)[0] = _BLOCK_READ((ptr)); \
         } else { \
-            int local_id = get_sub_group_local_id(); \
+            int local_id = get_local_id(0); \
             (block)[0] = (local_id < (n)) ? (ptr)[local_id * (stride)] : 0; \
         } \
     } while (0)
@@ -335,6 +323,7 @@ int FUNC(dst_idx)(int mb_block, int oc_outer, int ow_block) {
                     && ((iw) + iw_off < 0 || (iw) + iw_off >= IW)) \
                 continue; \
             for (int ic_outer = 0; ic_outer < IC_OUTER; ic_outer++) \
+                __attribute__((opencl_unroll_hint)) \
                 for (int mb_block = 0; mb_block < MB_BLOCK; mb_block += 8) { \
                     int mb_bound = min(8, MB_BLOCK - mb_block); \
                     DATA_T A[8]; \
@@ -400,7 +389,7 @@ int FUNC(dst_idx)(int mb_block, int oc_outer, int ow_block) {
 #define read_src_buf(buf, ptr, iw) \
     do { \
         for (int iw_outer = 0; iw_outer < IW_OUTER; iw_outer++) { \
-            int iw_inner = (C_VEC ? 0 : get_sub_group_local_id()); \
+            int iw_inner = (C_VEC ? 0 : get_local_id(0)); \
             int iw_block = iw_outer * IW_INNER + iw_inner; \
             if (HAS_PAD_W && ((iw) + iw_block < 0 || (iw) + iw_block >= IW)) \
                 continue; \
@@ -556,19 +545,6 @@ DATA_T FUNC(shuffle_a_value)(int mb_block, int ic_block, int ow_outer, int ow_in
                         unrolled_write(min(16, MB_BLOCK), &(block)[idx], \
                                 &(ptr)[off]); \
                     } \
-        } else if (DST_32N16C) { \
-            int ow_bound = (OW % OW_BLOCK == 0) ? OW_BLOCK \
-                                                : min(OW_BLOCK, OW - (ow)); \
-            for (int ow_block = 0; ow_block < ow_bound; ow_block++) \
-                for (int oc_outer = 0; oc_outer < OC_OUTER; oc_outer++) \
-                    for (int mb_block = 0; mb_block < MB_BLOCK; \
-                            mb_block += 32) { \
-                        int off = FUNC_CALL(dst_off)( \
-                                mb_block, oc_outer * 16, 0, 0, ow_block); \
-                        int idx = FUNC_CALL(dst_idx)(mb_block, oc_outer, ow_block); \
-                        unrolled_write(min(32, MB_BLOCK), &(block)[idx], \
-                                &(ptr)[off]); \
-                    } \
         } \
     } while (0)
 
@@ -646,8 +622,7 @@ DATA_T FUNC(shuffle_a_value)(int mb_block, int ic_block, int ow_outer, int ow_in
         } \
     } while (0)
 
-#define APPLY_POST_OPS(accumulator, acc_elem_dt, sum_src, sum_elem_dt, x0, \
-        x0_s, x1, x1_s, x2, x2_s, x3, x3_s, x4, x4_s, x5, x5_s) \
+#define APPLY_POST_OPS(accumulator, acc_elem_dt, sum_src, sum_elem_dt) \
     {}
 
 __attribute__((reqd_work_group_size(LWS_0, LWS_1, LWS_2)))
@@ -663,9 +638,8 @@ KERNEL(gen9_conv_fwd)(const __global DATA_T *src,
 #endif
                       uint split_idx
 ) {
-
-    int local_id = get_sub_group_local_id();
-    int g_ocb = get_group_id(0) * (LWS_0 / SUB_GROUP_SIZE) + get_sub_group_id();
+    int local_id = get_local_id(0);
+    int g_ocb = get_group_id(0);
     int g = g_ocb / (OCB / OC_BLOCK);
     int ocb = g_ocb % (OCB / OC_BLOCK) * OC_BLOCK;
 
@@ -687,15 +661,33 @@ KERNEL(gen9_conv_fwd)(const __global DATA_T *src,
     int iw = ow * SW - PW;
     int id = od * SD - PD;
 
-    DATA_T C[MB_BLOCK * OC_OUTER * OW_BLOCK] = {0};
-    for (int mb_block = 0; mb_block < MB_BLOCK; mb_block++)
-        for (int oc_outer = 0; oc_outer < OC_OUTER; oc_outer++)
-            for (int ow_block = 0; ow_block < OW_BLOCK; ow_block++) {
-                int c_off = FUNC_CALL(dst_idx)(mb_block, oc_outer, ow_block);
-                C[c_off] = WITH_BIAS
-                        ? bia[g * OC + oc + oc_outer * 16 + local_id]
-                        : 0;
+    // Vector type variables have less chance of being spilled for half data
+    // type.
+#if DT_F16 && C_SIZE == 8
+    DATA8_T C = 0;
+#elif DT_F16 && C_SIZE == 16
+    DATA16_T C = 0;
+#else
+    DATA_T C[C_SIZE] = {0};
+#endif
+
+    #if (WITH_BIAS)
+    {
+        for (int mb_block = 0; mb_block < MB_BLOCK; mb_block++) {
+            for (int oc_outer = 0; oc_outer < OC_OUTER; oc_outer++) {
+                for (int ow_block = 0; ow_block < OW_BLOCK; ow_block++) {
+                    const int c_off = FUNC_CALL(dst_idx)(mb_block, oc_outer, ow_block);
+                    const int bg_off = g * OC;
+                    const int bc_off = oc + oc_outer * 16 + local_id;
+                    C[c_off] = (OC_WO_PADDING % OC_BLOCK == 0
+                                       || bc_off < OC_WO_PADDING)
+                            ? bia[bg_off + bc_off]
+                            : DATA_ZERO;
+                }
             }
+        }
+    }
+    #endif
 
     src += FUNC_CALL(src_off)(mb, g * IC, id, ih, iw);
     wei += FUNC_CALL(wei_off)(g, oc, 0, 0, 0, 0);
@@ -711,17 +703,7 @@ KERNEL(gen9_conv_fwd)(const __global DATA_T *src,
 
     if (WITH_SUM) { read_dst_block(S, dst, ow); }
 
-    for (int didx = 0; didx < MB_BLOCK * OC_OUTER * OW_BLOCK; ++didx) {
-        DATA_T accum = C[didx];
-        DATA_T sum = S[didx];
-        const int po_mb = (mb + didx / (OC_OUTER * OW_BLOCK)) % MB;
-        const int po_oc = (g * OC + oc + local_id
-                                  + (((didx / OW_BLOCK) % OC_OUTER) * 16))
-                % (OC * G);
-        APPLY_POST_OPS(accum, DATA_T, sum, DATA_T, po_mb, 1, po_oc, 1, od, 1,
-                oh, 1, ow, 1, 0, 1);
-        C[didx] = accum;
-    }
+    APPLY_POST_OPS(C, DATA_T, S, DATA_T);
 
-    write_dst_block(C, dst, ow);
+    write_dst_block((DATA_T *)(&C), dst, ow);
 }

@@ -49,8 +49,7 @@
 #include "deformable_convolution_kernel_bfyx_ref.h"
 #include "deformable_convolution_kernel_bfyx_conv.h"
 #include "deformable_convolution_kernel_bfyx_interp.h"
-#include "convolution_kernel_b_fs_zyx_fsv16_fp32.h"
-#include "convolution_kernel_b_fs_zyx_fsv16_fp16.h"
+#include "convolution_kernel_b_fs_zyx_fsv16.h"
 #include "convolution_kernel_imad_byxf_af32_1x1.h"
 #include "convolution_kernel_imad_b_fs_yx_fsv4_1x1.h"
 #include "convolution_kernel_imad_b_fs_yx_fsv4_dw.hpp"
@@ -80,8 +79,7 @@ convolution_kernel_selector::convolution_kernel_selector() {
     // Attach<ConvolutionKernel_b_fs_yx_fsv16_1x1>();
     // Attach<ConvolutionKernel_b_fs_yx_fsv16>();
     Attach<ConvolutionKernel_bfyx_to_bfyx_f16>();
-    Attach<ConvolutionKernel_b_fs_zyx_fsv16_fp32>();
-    // Attach<ConvolutionKernel_b_fs_zyx_fsv16_fp16>();
+    Attach<ConvolutionKernel_b_fs_zyx_fsv16>();
 
     // bs_fs_yx_bsv16_fsv16
     Attach<ConvolutionKernel_bfyx_to_bfyx_bsv16_fsv16>();

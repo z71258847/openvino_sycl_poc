@@ -25,9 +25,7 @@ class ConvolutionKernel_b_fs_zyx_fsv16 : public ConvolutionKernelBase {
 public:
     using Parent = ConvolutionKernelBase;
 
-    explicit ConvolutionKernel_b_fs_zyx_fsv16(Datatype use_data_type) :
-        ConvolutionKernelBase(use_data_type == Datatype::F32 ? "gen9_common_conv_fwd_data_f32" : "gen9_common_conv_fwd_data_f16"),
-        use_data_type(use_data_type) {}
+    explicit ConvolutionKernel_b_fs_zyx_fsv16() : ConvolutionKernelBase("gen9_common_conv_fwd_data") {}
 
     virtual ~ConvolutionKernel_b_fs_zyx_fsv16() {}
 
@@ -38,25 +36,25 @@ protected:
     WeightsLayout GetPreferredWeightsLayout(const convolution_params& params) const override {
         bool is_3d_case = params.inputs[0].Dimentions() == 5;
         if (params.inputs[0].Feature().v == 3) {
-            // if (is_3d_case)
+            if (is_3d_case)
                 return WeightsLayout::os_zyxi_osv16;
-            // else
-                // return WeightsLayout::os_yxi_osv16;
-        } else if (use_data_type == Datatype::F32 && params.inputs[0].Batch().v % 16 == 0) {
+            else
+                return WeightsLayout::os_yxi_osv16;
+        } else if (params.inputs[0].GetDType() == Datatype::F32 && params.inputs[0].Batch().v % 16 == 0) {
             if (is_3d_case)
                 return (params.groups > 1) ? WeightsLayout::g_is_os_zyx_osv16_isv16 : WeightsLayout::is_os_zyx_osv16_isv16;
             else
                 return (params.groups > 1) ? WeightsLayout::g_is_os_yx_osv16_isv16 : WeightsLayout::is_os_yx_osv16_isv16;
-        } else if (use_data_type == Datatype::F16 && params.inputs[0].Batch().v % 32 == 0) {
+        } else if (params.inputs[0].GetDType() == Datatype::F16 && params.inputs[0].Batch().v % 32 == 0) {
             if (is_3d_case)
                 return (params.groups > 1) ? WeightsLayout::g_os_is_zyx_isv8_osv16_isv2 : WeightsLayout::os_is_zyx_isv8_osv16_isv2;
             else
                 return (params.groups > 1) ? WeightsLayout::g_os_is_yx_isv8_osv16_isv2 : WeightsLayout::os_is_yx_isv8_osv16_isv2;
         } else {
-            // if (is_3d_case)
+            if (is_3d_case)
                 return (params.groups > 1) ? WeightsLayout::g_os_is_zyx_isv16_osv16 : WeightsLayout::os_is_zyx_isv16_osv16;
-            // else
-                // return (params.groups > 1) ? WeightsLayout::g_os_is_yx_isv16_osv16 : WeightsLayout::os_is_yx_isv16_osv16;
+            else
+                return (params.groups > 1) ? WeightsLayout::g_os_is_yx_isv16_osv16 : WeightsLayout::os_is_yx_isv16_osv16;
         }
     }
     bool Validate(const Params& p, const optional_params& o) const override;
@@ -69,8 +67,5 @@ protected:
                  FusedOpType::SCALE,
                  FusedOpType::ACTIVATION };
     }
-
-    // This class is base one for FP16 and FP32 classes
-    Datatype use_data_type;
 };
 }  // namespace kernel_selector
