@@ -144,6 +144,106 @@ public:
 };
 
 /**
+ * @interface ILayerImplOCL
+ * @brief This class provides interface for the OpenCL implementations for custom layers
+ */
+class INFERENCE_ENGINE_API_CLASS(ILayerImplOCL): public ILayerImpl {
+public:
+    typedef std::shared_ptr<ILayerImplOCL> Ptr;
+    /**
+     * @brief Base descriptor for kernel arguments
+     */
+    class ArgumentDesciptor {
+    public:
+        typedef std::shared_ptr<ArgumentDesciptor> Ptr;
+        virtual ~ArgumentDesciptor() = default;
+    };
+
+    class InputTensor : public ArgumentDesciptor {
+    public:
+        typedef std::shared_ptr<InputTensor> Ptr;
+        InputTensor(size_t index, std::vector<DataConfig> configs) : index(index), configs(configs) {}
+        size_t index;
+        std::vector<DataConfig> configs;
+    };
+
+    class OutputTensor : public ArgumentDesciptor {
+    public:
+        typedef std::shared_ptr<OutputTensor> Ptr;
+        OutputTensor(size_t index, std::vector<DataConfig> configs) : index(index), configs(configs) {}
+        size_t index;
+        std::vector<DataConfig> configs;
+    };
+
+    template<typename T>
+    class Scalar : public ArgumentDesciptor {
+    public:
+        Scalar(T value) : value(value) {}
+        T value;
+    };
+
+    /**
+     * @brief A structure that contains additional information for correct kernel build and run.
+     */
+    struct RuntimeInfo {
+        std::vector<size_t> gws;                        //!< Global workgroup size
+        std::vector<size_t> lws;                        //!< Local workgroup size
+        std::string kernelName;                         //!< Entry point
+        std::string buildOptions;                       //!< Build options for OCL kernel
+        std::vector<ArgumentDesciptor::Ptr> arguments;  //!< Descriptors for kernel arguments
+    };
+
+    /**
+     * @brief Helper structure to store user's macro definitions
+     */
+    struct JitConstant {
+        std::string name;   //!< Macro name
+        std::string value;  //!< Macro value
+    };
+
+    explicit ILayerImplOCL(const std::shared_ptr<ngraph::Node>& op) : op(op) {}
+    /**
+     * @brief Returns runtime info for given operation.
+     * @param op ngraph node that is supposed to be executed by this custom layer.
+     * @return runtime info for given operation.
+     */
+    virtual RuntimeInfo getRuntimeInfo() const = 0;
+
+    /**
+     * @brief Returns the list of devices compatible with the implementation
+     * @param op ngraph node that is supposed to be executed by this custom layer
+     * @return vector of device names compatible with the implementation
+     */
+    virtual std::vector<std::string> getCompatibleDevices() const = 0;
+
+    /**
+     * @brief Returns string with opencl code to execute given ngraph operation
+     * @param op ngraph node that is supposed to be executed by this custom layer
+     * @return string with kernel code
+     */
+    virtual std::string getKernel() const;
+
+protected:
+    /**
+     * @brief Returns string with a template code of opencl operation
+     * @param op ngraph node that is supposed to be executed by this custom layer
+     * @return string with kernel template
+     */
+    virtual std::string getKernelTemplate() const = 0;
+    /**
+     * @brief Returns a vector of jit constant that should be additionaly defined in the kernel's source code
+     * @param op ngraph node that is supposed to be executed by this custom layer
+     * @return vector of jit constants
+     */
+    virtual std::vector<JitConstant> getJitConstants() const { return {}; };
+
+    /**
+     * @brief Shared pointer to ngraph Node for the custom layer
+     */
+    std::shared_ptr<ngraph::Node> op;
+};
+
+/**
  * @brief This class is the main extension interface
  */
 class INFERENCE_ENGINE_API_CLASS(IExtension) : public InferenceEngine::details::IRelease {

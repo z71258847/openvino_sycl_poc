@@ -19,6 +19,7 @@
 
 #include "debug_options.h"
 #include "cldnn_custom_layer.h"
+#include "cldnn_extension_manager.h"
 #include "cldnn_config.h"
 
 #include <api/engine.hpp>
@@ -85,7 +86,10 @@ public:
 
 class Program {
 public:
-    Program(InferenceEngine::ICNNNetwork &network, std::shared_ptr<const cldnn::engine> engine, const Config& config);
+    Program(InferenceEngine::ICNNNetwork &network,
+            std::shared_ptr<const cldnn::engine> engine,
+            const Config& config,
+            GPUExtensionManager::Ptr extensionManager);
     std::shared_ptr<cldnn::program> getCompiledProgram(int program_id = 0);
 
     std::map<std::string, cldnn::primitive_id> primitiveIDs;
@@ -104,6 +108,8 @@ public:
     int m_curBatch;
 
     InferenceEngine::OutputsDataMap p_currentOutputs;
+
+    GPUExtensionManager::Ptr m_extensionManager;
 
     std::vector<cldnn::primitive_id> GetPrevLayersPrimitives(const InferenceEngine::CNNLayerPtr layer) const;
     const std::map<std::string, cldnn::layout>& getInputLayouts() const { return inputLayouts; }
@@ -388,6 +394,12 @@ private:
     void CreateEmbeddingBagOffsetsSumPrimitive(cldnn::topology& topology, InferenceEngine::CNNLayerPtr& layer);
     void CreateEmbeddingSegmentsSumPrimitive(cldnn::topology& topology, InferenceEngine::CNNLayerPtr& layer);
     void CreateExtractImagePatchesPrimitive(cldnn::topology& topology, InferenceEngine::CNNLayerPtr &layer);
+    void CreateNewCustomLayerPrimitive(cldnn::topology& topology,
+                                       InferenceEngine::CNNLayerPtr &layer,
+                                       InferenceEngine::ILayerImpl::Ptr customLayer);
+    void CreateCustomOCLPrimitive(cldnn::topology& topology,
+                                  InferenceEngine::CNNLayerPtr &layer,
+                                  InferenceEngine::ILayerImplOCL::Ptr customLayer);
 };
 
 }  // namespace CLDNNPlugin

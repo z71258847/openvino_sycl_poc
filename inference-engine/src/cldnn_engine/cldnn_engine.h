@@ -10,6 +10,7 @@
 #include <api/engine.hpp>
 #include <cpp_interfaces/impl/ie_plugin_internal.hpp>
 #include "cldnn_remote_context.h"
+#include "cldnn_extension_manager.h"
 
 namespace CLDNNPlugin {
 
@@ -25,6 +26,8 @@ class clDNNEngine : public InferenceEngine::InferencePluginInternal,
     std::mutex engine_mutex;
 
     CLDNNRemoteCLContext::Ptr m_defaultContext;
+
+    GPUExtensionManager::Ptr m_extensionManager;
 
     cldnn::device_info GetDeviceInfo(const std::map<std::string, std::string> &config) const;
     InferenceEngine::ICNNNetwork::Ptr CloneAndTransformNetwork(const InferenceEngine::ICNNNetwork& network) const;
@@ -46,6 +49,8 @@ public:
 
     InferenceEngine::RemoteContext::Ptr CreateContext(const InferenceEngine::ParamMap& params) override;
     InferenceEngine::RemoteContext::Ptr GetDefaultContext() override;
+
+    void AddExtension(InferenceEngine::IExtensionPtr extension) override;
 };
 
 };  // namespace CLDNNPlugin

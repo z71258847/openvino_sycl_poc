@@ -219,12 +219,16 @@ bool Program::CanProcessDynBatch(InferenceEngine::ICNNNetwork &network) const {
     return check_result;
 }
 
-Program::Program(InferenceEngine::ICNNNetwork& network, std::shared_ptr<const cldnn::engine> engine, const Config& config)
+Program::Program(InferenceEngine::ICNNNetwork& network,
+                 std::shared_ptr<const cldnn::engine> engine,
+                 const Config& config,
+                 GPUExtensionManager::Ptr extensionManager)
     : m_config(config)
     , m_defaultFormat(cldnn::format::bfyx)
     , m_engine(engine)
     , m_curBatch(-1)
-    , p_currentOutputs({}) {
+    , p_currentOutputs({})
+    , m_extensionManager(extensionManager) {
     InitFormat(network);
 
     if (config.enableInt8) {
@@ -1115,6 +1119,13 @@ void Program::CreateSingleLayerPrimitive(cldnn::topology& topology, InferenceEng
     // Initialize a profiling entry
     InitProfileInfo(layer->name, layer->type);
 
+    if (auto node = layer->getNode()) {
+        if (auto impl = m_extensionManager->CreateImplementation(node)) {
+            std::cerr << "Create custom layer for: " << node->get_friendly_name() << std::endl;
+            CreateNewCustomLayerPrimitive(topology, layer, impl);
+            return;
+        }
+    }
     // First check for custom layer
     auto customLayer = m_config.customLayers.find(layer->type);
     if (customLayer != m_config.customLayers.end()) {
@@ -2000,6 +2011,99 @@ void Program::CreatePSROIPoolingPrimitive(cldnn::topology& topology, InferenceEn
         topology.add(psROIPoolingPrim);
     }
     AddPrimitiveToProfiler(psROIPoolingLayerName, layer);
+}
+
+void Program::CreateCustomOCLPrimitive(cldnn::topology& topology,
+                                       InferenceEngine::CNNLayerPtr& layer,
+                                       InferenceEngine::ILayerImplOCL::Ptr extLayer) {
+    auto genericLayer = as<InferenceEngine::GenericLayer*> (layer);
+    auto inputPrimitives = GetPrevLayersPrimitives(layer);
+    auto outputPrimitives = GetNextLayers(layer);
+
+    // reserve
+    std::vector<cldnn::primitive_id> reorderedInputs;
+    reorderedInputs.resize(inputPrimitives.size());
+
+    // Handle Blobs
+    std::map<std::string, size_t> blobIndex;
+    for (auto& blob : genericLayer->blobs) {
+        const auto blobDims = blob.second->getTensorDesc().getDims();
+        // create primitive from blob (always 1d)
+        cldnn::primitive_id blobId = genericLayer->name + "_" + blob.first;
+        if (blobDims.size() != 1) {
+            THROW_CLDNN_EXCEPTION("Invalid dimensions for blob " << blob.first << " in layer " << genericLayer->name);
+        }
+        cldnn::layout genericBlobLayout(DataTypeFromPrecision(blob.second->getTensorDesc().getPrecision()),
+                                        m_defaultFormat,
+                                        cldnn::tensor(1, 1, TensorValue(blobDims.back()), 1));
+        blobId = CreatePrimitiveFromBlob(topology, blobId, blob.second, genericBlobLayout);
+        // save index in blobIndex
+        blobIndex[blob.first] = reorderedInputs.size();
+        // add to reorderedInputs
+        reorderedInputs.push_back(blobId);
+    }
+
+    // Handle kernel parameters
+    std::vector<cldnn::custom_gpu_primitive::arg_desc> kernelParameters;
+    cldnn::format outputFormat(cldnn::format::bfyx);
+
+    // TODO: Fix count of inputs/output and handle reorders
+    for (size_t i = 0; i < 1; i++) {
+        auto idx = static_cast<cldnn::custom_gpu_primitive::arg_index>(i);
+        kernelParameters.push_back({cldnn::custom_gpu_primitive::arg_input, idx});
+    }
+
+    for (size_t i = 0; i < 1; i++) {
+        auto idx = static_cast<cldnn::custom_gpu_primitive::arg_index>(1 + i);
+        kernelParameters.push_back({cldnn::custom_gpu_primitive::arg_output, idx});
+    }
+
+    cldnn::tensor outputTensor = CldnnTensorFromIEDims(genericLayer->outData[0]->getTensorDesc().getDims());
+    cldnn::layout outputLayout = cldnn::layout(DataTypeFromPrecision(genericLayer->precision), outputFormat, outputTensor);
+
+    auto runInfo = extLayer->getRuntimeInfo();
+    std::string genericLayerName = layer_type_name_ID(layer);
+    auto customPrim = cldnn::custom_gpu_primitive(
+        genericLayerName,
+        inputPrimitives,
+        {extLayer->getKernel()},
+        runInfo.kernelName,
+        kernelParameters,
+        runInfo.buildOptions,
+        outputLayout,
+        runInfo.gws,
+        runInfo.lws);
+
+    auto prevLayerName = genericLayerName;
+    if (outputLayout.format != cldnn::format::any &&
+        p_currentOutputs.find(genericLayerName) == p_currentOutputs.end()) {
+        // Handle output reorder
+        auto reorderPrimName = genericLayerName + m_postCustomLayerTag;
+        topology.add(
+            cldnn::reorder(
+                reorderPrimName,
+                genericLayerName,
+                m_defaultFormat,
+                customPrim.output_layout.data_type));
+        prevLayerName = reorderPrimName;
+        AddInnerPrimitiveToProfiler(reorderPrimName, layer_type_name_ID(layer), layer);
+    }
+    topology.add(customPrim);
+    AddPrimitiveToProfiler(genericLayerName, layer);
+    primitiveIDs[genericLayerName] = prevLayerName;
+}
+
+void Program::CreateNewCustomLayerPrimitive(cldnn::topology& topology,
+                                            InferenceEngine::CNNLayerPtr& layer,
+                                            InferenceEngine::ILayerImpl::Ptr extLayer) {
+    ValidateLayer(layer, 0);
+    if (auto extCasted = std::dynamic_pointer_cast<InferenceEngine::ILayerImplOCL>(extLayer)) {
+        std::cerr << "OCL custom layer\n";
+        CreateCustomOCLPrimitive(topology, layer, extCasted);
+        return;
+    }
+
+    THROW_IE_EXCEPTION << "Invalid custom layer impl type";
 }
 
 void Program::CreateCustomLayerPrimitive(cldnn::topology& topology, InferenceEngine::CNNLayerPtr& layer, CLDNNCustomLayerPtr customLayer) {

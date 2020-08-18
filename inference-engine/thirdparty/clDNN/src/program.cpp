@@ -1231,7 +1231,7 @@ void program_impl::set_layout_optimizer_attributes(layout_optimizer& lo) {
         lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::b_fs_zyx_fsv32_network, 1);
 
     if (should_use_b_fs_yx_fsv16_conv)
-        lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::b_fs_yx_fsv16_network, 1);
+        lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::b_fs_yx_fsv16_network, 0);
 
     if (lo.get_optimized_conv_count({format::b_fs_zyx_fsv16, false}) >= 1 || opt_deconv_layers_b_fs_zyx_fsv16 >= 1)
         lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::b_fs_zyx_fsv16_network, 1);
