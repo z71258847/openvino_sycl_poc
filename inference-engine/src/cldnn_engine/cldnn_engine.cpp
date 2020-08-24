@@ -58,7 +58,7 @@ using namespace InferenceEngine::details;
 
 class ClampOCL : public InferenceEngine::ILayerImplOCL {
 public:
-    ClampOCL(const std::shared_ptr<ngraph::Node>& op) : InferenceEngine::ILayerImplOCL(op) {}
+    ClampOCL(const std::shared_ptr<ngraph::Node>& op, std::string device) : InferenceEngine::ILayerImplOCL(op, device) {}
 
     std::string getKernelTemplate() const override {
         std::string kernel =
@@ -96,10 +96,6 @@ public:
         JitConstant max{"CLAMP_MAX", std::to_string(casted->get_max())};
         return {min, max};
     };
-
-    std::vector<std::string> getCompatibleDevices() const override {
-        return {"GPU"};
-    }
 };
 
 namespace CLDNNPlugin {
@@ -217,7 +213,7 @@ clDNNEngine::clDNNEngine() : m_defaultContext(nullptr) {
     m_extensionManager = std::make_shared<GPUExtensionManager>();
 
     auto ext = std::make_shared<Extensions::Gpu::GPUExtensions>();
-    ext->RegisterExtensionLayer<ClampOCL>("Clamp");
+    ext->RegisterExtensionLayer<ClampOCL>("Clamp", "OCL:GPU");
     m_extensionManager->AddExtension(ext);
 }
 

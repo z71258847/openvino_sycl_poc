@@ -201,38 +201,35 @@ public:
         std::string value;  //!< Macro value
     };
 
-    explicit ILayerImplOCL(const std::shared_ptr<ngraph::Node>& op) : op(op) {}
+    explicit ILayerImplOCL(const std::shared_ptr<ngraph::Node>& op, std::string device) : op(op), device(device) {}
     /**
      * @brief Returns runtime info for given operation.
-     * @param op ngraph node that is supposed to be executed by this custom layer.
      * @return runtime info for given operation.
      */
     virtual RuntimeInfo getRuntimeInfo() const = 0;
 
     /**
-     * @brief Returns the list of devices compatible with the implementation
-     * @param op ngraph node that is supposed to be executed by this custom layer
-     * @return vector of device names compatible with the implementation
-     */
-    virtual std::vector<std::string> getCompatibleDevices() const = 0;
-
-    /**
      * @brief Returns string with opencl code to execute given ngraph operation
-     * @param op ngraph node that is supposed to be executed by this custom layer
      * @return string with kernel code
      */
-    virtual std::string getKernel() const;
+    virtual std::string getKernelSource() const;
+
+    /**
+     * @brief Returns precompiled byte code with opencl kernel to execute given ngraph operation
+     * Can be unimplemented in derived claases if cl source code is defined
+     * @return byte array with the kernel object
+     */
+    virtual std::vector<char> getKernelBinary() const { return {}; }
 
 protected:
     /**
      * @brief Returns string with a template code of opencl operation
-     * @param op ngraph node that is supposed to be executed by this custom layer
+     * Can be unimplemented in derived classes if precompiled binary is used
      * @return string with kernel template
      */
     virtual std::string getKernelTemplate() const = 0;
     /**
      * @brief Returns a vector of jit constant that should be additionaly defined in the kernel's source code
-     * @param op ngraph node that is supposed to be executed by this custom layer
      * @return vector of jit constants
      */
     virtual std::vector<JitConstant> getJitConstants() const { return {}; };
@@ -241,6 +238,11 @@ protected:
      * @brief Shared pointer to ngraph Node for the custom layer
      */
     std::shared_ptr<ngraph::Node> op;
+
+    /**
+     * @brief Name of the device that impl was instantiated for.
+     */
+    std::string device;
 };
 
 /**

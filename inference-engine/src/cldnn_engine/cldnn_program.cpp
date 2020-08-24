@@ -2066,7 +2066,7 @@ void Program::CreateCustomOCLPrimitive(cldnn::topology& topology,
     auto customPrim = cldnn::custom_gpu_primitive(
         genericLayerName,
         inputPrimitives,
-        {extLayer->getKernel()},
+        {extLayer->getKernelSource()},
         runInfo.kernelName,
         kernelParameters,
         runInfo.buildOptions,

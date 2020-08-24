@@ -10,19 +10,28 @@ namespace Extensions {
 namespace Gpu {
 
 std::vector<std::string> GPUExtensions::getImplTypes(const std::shared_ptr<ngraph::Node>& node) {
-    if (extensionLayers.find(node->get_type_name()) != extensionLayers.end()) {
-        std::cerr << "FOUND CUSTOM IMPL FOR: " << node->get_friendly_name() << " (" << node->get_type_name() << ")" << std::endl;
-        return {"OCL"};
-    } else {
-        return {};
+    std::vector<std::string> implTypes = {};
+    for (auto kv : extensionLayers) {
+        if (kv.first == node->get_type_name()) {
+            auto type = kv.second.first;
+
+            if (std::find(implTypes.begin(), implTypes.end(), type) == implTypes.end()) {
+                implTypes.push_back(type);
+            }
+        }
     }
+
+    return implTypes;
 }
 
 ILayerImpl::Ptr GPUExtensions::getImplementation(const std::shared_ptr<ngraph::Node>& node, const std::string& implType) {
     std::vector<decltype(extensionLayers)::value_type> matches;
     std::copy_if(extensionLayers.begin(), extensionLayers.end(), std::back_inserter(matches),
-    [&](const std::pair<std::string, FactoryType>& e) {
+    [&](const std::pair<std::string, std::pair<std::string, FactoryType>>& e) {
         if (e.first != node->get_type_name())
+            return false;
+
+        if (e.second.first != implType)
             return false;
 
         return true;
@@ -31,7 +40,9 @@ ILayerImpl::Ptr GPUExtensions::getImplementation(const std::shared_ptr<ngraph::N
     if (matches.empty())
         return nullptr;
 
-    return matches.front().second(node);
+    auto bestMatch = matches.front();
+
+    return bestMatch.second.second(node, implType);
 }
 
 }  // namespace Gpu

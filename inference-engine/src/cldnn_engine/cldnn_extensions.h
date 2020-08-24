@@ -19,7 +19,7 @@ namespace Gpu {
 class GPUExtensions : public IExtension {
 public:
     GPUExtensions() {}
-    typedef std::function<std::shared_ptr<ILayerImpl>(const std::shared_ptr<ngraph::Node>&)> FactoryType;
+    typedef std::function<std::shared_ptr<ILayerImpl>(const std::shared_ptr<ngraph::Node>&, std::string)> FactoryType;
 
     void GetVersion(const InferenceEngine::Version*& versionInfo) const noexcept override {
         static Version ExtensionDescription = {
@@ -38,18 +38,26 @@ public:
     }
 
     template<typename ExtLayerType>
+    void RegisterExtensionLayer(std::string layerType, std::string implType) {
+        extensionLayers.insert({layerType, {implType,
+        [](const std::shared_ptr<ngraph::Node>& op, std::string implType) -> std::shared_ptr<ExtLayerType> {
+            return std::make_shared<ExtLayerType>(op, implType);
+        }}});
+    }
+
+    template<typename ExtLayerType>
     void RegisterExtensionLayer(std::string layerType) {
-        extensionLayers.insert({layerType,
-        [](const std::shared_ptr<ngraph::Node>& op) -> std::shared_ptr<ExtLayerType> {
+        extensionLayers.insert({layerType, {"",
+        [](const std::shared_ptr<ngraph::Node>& op, std::string implType = "") -> std::shared_ptr<ExtLayerType> {
             return std::make_shared<ExtLayerType>(op);
-        }});
+        }}});
     }
 
     std::vector<std::string> getImplTypes(const std::shared_ptr<ngraph::Node>& node) override;
     ILayerImpl::Ptr getImplementation(const std::shared_ptr<ngraph::Node>& node, const std::string& implType) override;
 
 private:
-    std::multimap<std::string, FactoryType> extensionLayers;
+    std::multimap<std::string, std::pair<std::string, FactoryType>> extensionLayers;
 };
 
 }  // namespace Gpu

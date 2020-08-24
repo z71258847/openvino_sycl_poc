@@ -8,7 +8,11 @@
 
 namespace InferenceEngine {
 
-std::string ILayerImplOCL::getKernel() const {
+std::string ILayerImplOCL::getKernelSource() const {
+    auto kernelTemplate = getKernelTemplate();
+    if (kernelTemplate.empty())
+        return "";
+
     auto jit = getJitConstants();
 
     auto getDefineString = [](const JitConstant& jitConst) -> std::string {
