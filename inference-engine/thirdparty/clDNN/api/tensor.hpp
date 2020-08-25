@@ -161,7 +161,9 @@ struct format {
         image_2d_weights_winograd_6x3_s1_xfbyb,       ///< image format used for weights for winograd fused
                                                       ///< convolution, F(6,3) -- filter 3x3 with stride 1
         os_is_yx_isa8_osv8_isv4,                      ///< format for weights for MMAD convolution
+        os_is_yx_isa8_osv16_isv4,                      ///< format for weights for MMAD convolution
         os_is_zyx_isa8_osv8_isv4,                     ///< format for weights for MMAD convolution
+        os_is_zyx_isa8_osv16_isv4,                     ///< format for weights for MMAD convolution
         os_is_yx_isa8_osv8_isv4_swizzled_by_4,        ///< format for weights for MMAD convolution
         os_is_yx_osa4_isa8_osv8_isv4_swizzled_by_4,   ///< format for weights for MMAD fsv32 convolution
         os_is_zyx_osa4_isa8_osv8_isv4_swizzled_by_4,  ///< format for weights for MMAD fsv32 convolution
@@ -258,9 +260,11 @@ struct format {
                 { image_2d_weights_c4_fyx_b,                   { 1, 1, 2, 0, 0, "bfyx",   "bfxy?",      {}}},
                 { image_2d_weights_c1_b_fyx,                   { 1, 1, 2, 0, 0, "bfyx",   "bfxy?",      {}}},
                 { lstm_weights_dio,                            { 1, 1, 2, 0, 0, "bfxy",   "bfxy?",      {}}},
-                { os_is_yx_isa8_osv8_isv4,                     { 1, 1, 2, 0, 0, "bfyx",   "bfxy?",      {}}},
+                { os_is_yx_isa8_osv8_isv4,                     { 1, 1, 2, 0, 0, "bfyx",   "bfxy?",       {{1, 8}, {0, 16}, {1, 4}}}},
+                { os_is_yx_isa8_osv16_isv4,                     { 1, 1, 2, 0, 0, "bfyx",   "bfxy?",      {}}},
                 { os_is_yx_isa8_osv8_isv4_swizzled_by_4,       { 1, 1, 2, 0, 0, "bfyx",   "bfxy?",      {}}},
                 { os_is_zyx_isa8_osv8_isv4,                    { 1, 1, 3, 0, 0, "bfzyx",  "bfxyz",      {{1, 8}, {0, 8}, {1, 4}}}},
+                { os_is_zyx_isa8_osv16_isv4,                    { 1, 1, 3, 0, 0, "bfzyx",  "bfxyz",      {{1, 8}, {0, 16}, {1, 4}}}},
                 { os_is_yx_osa4_isa8_osv8_isv4_swizzled_by_4,  { 1, 1, 2, 0, 0, "bfyx",   "bfxy?",      {{0, 32}, {1, 32}}}},
                 { os_is_zyx_osa4_isa8_osv8_isv4_swizzled_by_4, { 1, 1, 3, 0, 0, "bfzyx",  "bfxyz",      {{0, 32}, {1, 32}}}},
                 { is_o_yx_isv32,                               { 1, 1, 2, 0, 0, "byxf",   "bfxy?",      {{1, 32}}}},

@@ -18,7 +18,7 @@
 namespace kernel_selector {
 
 namespace {
-    static const size_t sub_group_size = 8;
+    static const size_t sub_group_size = 16;
 }  // namespace
 
 ParamsKey FullyConnectedKernelMMAD::GetSupportedKey() const {
@@ -95,9 +95,9 @@ JitConstants FullyConnectedKernelMMAD::GetJitConstants(const fully_connected_par
 
     jit.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", sub_group_size));
     if (input.GetDims().size() == 5) {
-        jit.AddConstant(MakeJitConstant("FILTER_GET_OFFSET(f)", "GET_FILTER_OS_IS_YX_ISA8_OSV8_ISV4_INDEX(FILTER, f, 0, 0, 0)"));
+        jit.AddConstant(MakeJitConstant("FILTER_GET_OFFSET(f)", "GET_FILTER_OS_IS_YX_ISA8_OSV16_ISV4_INDEX(FILTER, f, 0, 0, 0)"));
     } else {
-        jit.AddConstant(MakeJitConstant("FILTER_GET_OFFSET(f)", "GET_FILTER_OS_IS_ZYX_ISA8_OSV8_ISV4_INDEX(FILTER, f, 0, 0, 0, 0)"));
+        jit.AddConstant(MakeJitConstant("FILTER_GET_OFFSET(f)", "GET_FILTER_OS_IS_ZYX_ISA8_OSV16_ISV4_INDEX(FILTER, f, 0, 0, 0, 0)"));
     }
 
     Datatype input_packed_type = Datatype::INT32;
@@ -119,7 +119,7 @@ JitConstants FullyConnectedKernelMMAD::GetJitConstants(const fully_connected_par
     jit.Merge(MakeTypeJitConstants(filter_packed_type, "FILTER_PACKED"));
 
     auto filter_spatial_size = weights.X().v * weights.Y().v * weights.Z().v;
-    int filter_spatial_pitch = 4 * 8 * 8;
+    int filter_spatial_pitch = 4 * 8 * 16;
 
     jit.AddConstant(MakeJitConstant("FILTER_SPATIAL_SIZE", filter_spatial_size));
     jit.AddConstant(MakeJitConstant("MMAD_FILTER_SPATIAL_PITCH", filter_spatial_pitch));
@@ -170,9 +170,9 @@ KernelsData FullyConnectedKernelMMAD::GetKernelsData(const Params& params, const
     auto fc_params = static_cast<const fully_connected_params&>(params);
     auto& input = fc_params.inputs[0];
 
-    auto w_layout = WeightsLayout::os_is_yx_isa8_osv8_isv4;
+    auto w_layout = WeightsLayout::os_is_yx_isa8_osv16_isv4;
     if (input.GetDims().size() == 5) {
-        w_layout = WeightsLayout::os_is_zyx_isa8_osv8_isv4;
+        w_layout = WeightsLayout::os_is_zyx_isa8_osv16_isv4;
     }
 
     KernelsData res = {};
