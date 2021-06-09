@@ -81,10 +81,10 @@ TEST(concat_gpu, mixed_input_types) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(y_size, 3);
     EXPECT_EQ(x_size, 4);
@@ -153,11 +153,11 @@ TEST(concat_gpu, mixed_input_types_5d) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int z_size = output_layout.size.spatial[2];
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int z_size = output_layout.size.spatial(2);
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfzyx);
     EXPECT_EQ(z_size, 3);
     EXPECT_EQ(y_size, 4);
@@ -226,10 +226,10 @@ TEST(concat_gpu, i8_optimization_with_pool) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<int8_t> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[0];
-    int x_size = output_layout.size.spatial[1];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(0);
+    int x_size = output_layout.size.spatial(1);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::yxfb);
     EXPECT_EQ(y_size, 7);
     EXPECT_EQ(x_size, 2);
@@ -329,10 +329,10 @@ TEST(concat_gpu, i8_optimization_with_conv) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<int8_t> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(y_size, 2);
     EXPECT_EQ(x_size, 3);
@@ -429,10 +429,10 @@ TEST(concat_gpu, i8_optimization_with_pool_conv) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<int8_t> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[0];
-    int x_size = output_layout.size.spatial[1];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(0);
+    int x_size = output_layout.size.spatial(1);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(y_size, 3);
     EXPECT_EQ(x_size, 1);
@@ -537,10 +537,10 @@ public:
         std::vector<memory::ptr> in_memory;
         std::vector<primitive_id> input_ids;
         for (size_t i = 0; i < in_features.size(); i++) {
-            auto size = tensor(static_cast<int32_t>(batch_num),
-                               static_cast<int32_t>(in_features[i]),
-                               static_cast<int32_t>(input_x),
-                               static_cast<int32_t>(input_y));
+            auto size = tensor({TensorValue(batch_num),
+                               TensorValue(in_features[i]),
+                               TensorValue(input_x),
+                               TensorValue(input_y)});
             auto data = generate_random_4d<Type>(batch_num, in_features[i], input_y, input_x, -1, 1);
             auto in_lay = layout(data_type, fmt, size);
             auto data_flat = std::vector<Type>(in_lay.get_linear_size(), 0);
@@ -549,7 +549,7 @@ public:
                 for (size_t fi = 0; fi < in_features[i]; ++fi) {
                     for (size_t yi = 0; yi < input_y; ++yi) {
                         for (size_t xi = 0; xi < input_x; ++xi) {
-                            auto coords = tensor(batch(bi), feature(fi), spatial(xi, yi, 0, 0));
+                            auto coords = tensor({bi, fi, yi, xi});
                             auto in_offset = in_lay.get_linear_offset(coords);
 
                             data_flat[in_offset] = data[bi][fi][yi][xi];
@@ -588,7 +588,8 @@ public:
                 for (size_t fi = 0; fi < in_features[in_i]; fi++) {
                     for (size_t yi = 0; yi < input_y; yi++) {
                         for (size_t xi = 0; xi < input_x; xi++) {
-                            auto output_coords = tensor(batch(bi), feature(f_sum + fi), spatial(xi, yi, 0, 0));
+                            auto output_coords = tensor({static_cast<tensor::value_type>(bi), static_cast<tensor::value_type>(f_sum + fi),
+                            static_cast<tensor::value_type>(yi), static_cast<tensor::value_type>(xi)});
                             auto output_offset = out_mem->get_layout().get_linear_offset(output_coords);
 
                             auto ref_val = in_data[in_i][bi][fi][yi][xi];
@@ -661,10 +662,10 @@ public:
         std::vector<memory::ptr> in_memory;
         std::vector<primitive_id> input_ids;
         for (size_t i = 0; i < in_features.size(); i++) {
-            auto size = tensor(static_cast<int32_t>(batch_num),
-                               static_cast<int32_t>(in_features[i]),
-                               static_cast<int32_t>(input_x),
-                               static_cast<int32_t>(input_y));
+            auto size = tensor({batch_num,
+                               in_features[i],
+                               input_y,
+                               input_x});
             auto data = generate_random_4d<Type>(batch_num, in_features[i], input_y, input_x, -128, 128);
             auto in_lay = layout(data_type, fmt, size);
             auto data_flat = std::vector<Type>(in_lay.get_linear_size(), 0);
@@ -673,7 +674,7 @@ public:
                 for (size_t fi = 0; fi < in_features[i]; ++fi) {
                     for (size_t yi = 0; yi < input_y; ++yi) {
                         for (size_t xi = 0; xi < input_x; ++xi) {
-                            auto coords = tensor(batch(bi), feature(fi), spatial(xi, yi, 0, 0));
+                            auto coords = tensor({bi, fi, yi, xi});
                             auto in_offset = in_lay.get_linear_offset(coords);
 
                             data_flat[in_offset] = data[bi][fi][yi][xi];
@@ -693,14 +694,14 @@ public:
 
         topology.add(concatenation("concat", input_ids, concatenation::concatenation_axis::along_f));
         // Add identity convolution
-        auto weights_lay = cldnn::layout(data_type, cldnn::format::bfyx, tensor(batch(output_f), feature(output_f)));
+        auto weights_lay = cldnn::layout(data_type, cldnn::format::bfyx, tensor({output_f, output_f}));
         auto weights_mem = engine.allocate_memory(weights_lay);
         weights_mem->fill(get_test_stream());
         get_test_stream().finish();
         {
             cldnn::mem_lock<Type> weights_ptr(weights_mem, get_test_stream());
             for (size_t fi = 0; fi < output_f; ++fi) {
-                auto coords = tensor(batch(fi), feature(fi), spatial(0, 0, 0, 0));
+                auto coords = tensor({static_cast<tensor::value_type>(fi), static_cast<tensor::value_type>(fi), 0, 0, 0});
                 auto offset = weights_lay.get_linear_offset(coords);
                 weights_ptr[offset] = static_cast<Type>(1.f);
             }
@@ -730,7 +731,8 @@ public:
                 for (size_t fi = 0; fi < in_features[in_i]; fi++) {
                     for (size_t yi = 0; yi < input_y; yi++) {
                         for (size_t xi = 0; xi < input_x; xi++) {
-                            auto output_coords = tensor(batch(bi), feature(f_sum + fi), spatial(xi, yi, 0, 0));
+                            auto output_coords = tensor({static_cast<tensor::value_type>(bi), static_cast<tensor::value_type>(f_sum + fi),
+                            static_cast<tensor::value_type>(yi), static_cast<tensor::value_type>(xi)});
                             auto output_offset = out_mem->get_layout().get_linear_offset(output_coords);
 
                             auto ref_val = in_data[in_i][bi][fi][yi][xi];

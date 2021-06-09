@@ -230,14 +230,14 @@ void dump_buffer(memory::ptr mem, std::string const& name) {
     out << "Upper padding: " << mem->get_layout().data_padding.upper_size() << "\n";
     out << "\n";
 
-    for (int b = 0; b < size.batch[0]; ++b) {
+    for (int b = 0; b < size.batch(0); ++b) {
         out << " ================ BATCH " << b << " =================\n\n";
-        for (int f = 0; f < size.feature[0]; ++f) {
+        for (int f = 0; f < size.feature(0); ++f) {
             out << "feature " << f << ":\n";
-            for (int z = 0; z < size.spatial[2]; ++z) {
-                for (int y = 0; y < size.spatial[1]; ++y) {
-                    for (int x = 0; x < size.spatial[0]; ++x) {
-                        size_t idx = b * pitches.batch[0] + f * pitches.feature[0] + z * pitches.spatial[2] + y * pitches.spatial[1] + x * pitches.spatial[0];
+            for (int z = 0; z < size.spatial(2); ++z) {
+                for (int y = 0; y < size.spatial(1); ++y) {
+                    for (int x = 0; x < size.spatial(0); ++x) {
+                        size_t idx = b * pitches.batch(0) + f * pitches.feature(0) + z * pitches.spatial(2) + y * pitches.spatial(1) + x * pitches.spatial(0);
                         out << ptr[idx] << " ";
                     }
                     out << "\n";
@@ -368,10 +368,10 @@ TEST(deformable_convolution_f32_fw_gpu, basic_deformable_convolution_def_group1_
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(y_size, 4);
     EXPECT_EQ(x_size, 4);
@@ -500,10 +500,10 @@ TEST(deformable_convolution_f32_fw_gpu, basic_deformable_convolution_def_group1)
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(y_size, 4);
     EXPECT_EQ(x_size, 4);
@@ -664,10 +664,10 @@ TEST(deformable_convolution_f32_fw_gpu, basic_deformable_convolution) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(y_size, 4);
     EXPECT_EQ(x_size, 4);
@@ -726,10 +726,10 @@ TEST(convolution_f32_fw_gpu, basic_convolution_no_bias) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::yxfb);
     EXPECT_EQ(y_size, 2);
     EXPECT_EQ(x_size, 3);
@@ -803,10 +803,10 @@ TEST(convolution_f32_fw_gpu, basic_convolution_int8_no_bias) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(y_size, 2);
     EXPECT_EQ(x_size, 3);
@@ -855,11 +855,11 @@ TEST(convolution_f32_fw_gpu, basic_convolution3D_no_bias) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int z_size = output_layout.size.spatial[2];
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int z_size = output_layout.size.spatial(2);
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(z_size, 1);
     EXPECT_EQ(y_size, 2);
@@ -991,11 +991,11 @@ TEST(convolution_f32_fw_gpu, basic_convolution3D) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int z_size = output_layout.size.spatial[2];
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int z_size = output_layout.size.spatial(2);
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfzyx);
     EXPECT_EQ(z_size, 3);
     EXPECT_EQ(y_size, 3);
@@ -1016,8 +1016,8 @@ TEST(convolution_f32_fw_gpu, basic_convolution3D_split2) {
     //  data is similar as in basic_convolution3D
     auto& engine = get_test_engine();
     auto input = engine.allocate_memory({ data_types::f32, format::bfzyx,{ 1, 2, 4, 4, 4 } });
-    auto weights_1 = engine.allocate_memory({ data_types::f32, format::goizyx, tensor(cldnn::group(2), cldnn::batch(1), cldnn::feature(1), cldnn::spatial(2, 2, 2))});
-    auto biases_1 = engine.allocate_memory({ data_types::f32, format::bfyx, tensor(feature(2)) });
+    auto weights_1 = engine.allocate_memory({ data_types::f32, format::goizyx, tensor({2, 1, 1, 2, 2, 2})});
+    auto biases_1 = engine.allocate_memory({ data_types::f32, format::bfyx, tensor({1, 2}) });
 
     set_values(input, {
         1.0f,  0.0f,  1.0f,  0.0f,
@@ -1121,11 +1121,11 @@ TEST(convolution_f32_fw_gpu, basic_convolution3D_split2) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int z_size = output_layout.size.spatial[2];
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int z_size = output_layout.size.spatial(2);
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfzyx);
     EXPECT_EQ(z_size, 3);
     EXPECT_EQ(y_size, 3);
@@ -1253,11 +1253,11 @@ TEST(convolution_f32_fw_gpu, basic_convolution3D_group2) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int z_size = output_layout.size.spatial[2];
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int z_size = output_layout.size.spatial(2);
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfzyx);
     EXPECT_EQ(b_size, 1);
     EXPECT_EQ(f_size, 2);
@@ -1343,10 +1343,10 @@ TEST(convolution_f32_fw_gpu, three_convolutions_same_weights) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
 
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(y_size, 2);
@@ -1414,10 +1414,10 @@ TEST(convolution_f32_fw_gpu, basic_convolution) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::yxfb);
     EXPECT_EQ(y_size, 2);
     EXPECT_EQ(x_size, 3);
@@ -1481,10 +1481,10 @@ TEST(convolution_f32_fw_gpu, basic_convolution_bfyx_weights_as_input_layout) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(y_size, 2);
     EXPECT_EQ(x_size, 3);
@@ -1572,10 +1572,10 @@ TEST(convolution_f32_fw_gpu, basic_convolution_input_padding) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::yxfb);
     EXPECT_EQ(y_size, 6);
     EXPECT_EQ(x_size, 5);
@@ -1674,10 +1674,10 @@ TEST(convolution_f32_fw_gpu, basic_convolution_sym_input_padding) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::yxfb);
     EXPECT_EQ(y_size, 6);
     EXPECT_EQ(x_size, 5);
@@ -1771,10 +1771,10 @@ TEST(convolution_f32_fw_gpu, basic_convolution_asym_input_padding) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::yxfb);
     EXPECT_EQ(y_size, 7);
     EXPECT_EQ(x_size, 6);
@@ -1878,10 +1878,10 @@ TEST(convolution_f32_fw_gpu, basic_convolution_sym_input_padding_with_input_offs
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::yxfb);
     EXPECT_EQ(y_size, 10);
     EXPECT_EQ(x_size, 7);
@@ -1988,10 +1988,10 @@ TEST(convolution_f32_fw_gpu, basic_convolution_asym_input_padding_with_input_off
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::yxfb);
     EXPECT_EQ(y_size, 11);
     EXPECT_EQ(x_size, 8);
@@ -2087,10 +2087,10 @@ TEST(convolution_f32_fw_gpu, basic_convolution_input_and_output_padding) {
     auto output_size = output_layout.get_buffer_size();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_size.spatial[1];
-    int x_size = output_size.spatial[0];
-    int f_size = output_size.feature[0];
-    int b_size = output_size.batch[0];
+    int y_size = output_size.spatial(1);
+    int x_size = output_size.spatial(0);
+    int f_size = output_size.feature(0);
+    int b_size = output_size.batch(0);
     EXPECT_EQ(output_layout.format, format::yxfb);
     EXPECT_EQ(y_size, 8);
     EXPECT_EQ(x_size, 9);
@@ -2693,7 +2693,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x1_nopad_split2) {
 
     auto input = engine.allocate_memory({ data_types::f32, format::yxfb, { 1, 2, 4, 4 } });
     //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 2 } });
-    auto weights1 = engine.allocate_memory({ data_types::f32, format::goiyx, tensor(group(2), batch(1), feature(1), spatial(2,2))});
+    auto weights1 = engine.allocate_memory({ data_types::f32, format::goiyx, tensor({2, 1, 1, 2, 2})});
     auto biases1 = engine.allocate_memory({ data_types::f32, format::bfyx, { 1, 2, 1, 1 } });
 
     set_values(input, {
@@ -2791,7 +2791,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2) {
 
     auto input = engine.allocate_memory({ data_types::f32, format::yxfb, { 2, 2, 4, 4 } });
     //auto output = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 2, 2 }, 2 } });
-    auto weights1 = engine.allocate_memory({ data_types::f32, format::goiyx, tensor(group(2), batch(1), feature(1), spatial(2,2)) });
+    auto weights1 = engine.allocate_memory({ data_types::f32, format::goiyx, tensor({2, 1, 1, 2, 2}) });
     auto biases1 = engine.allocate_memory({ data_types::f32, format::bfyx, { 1, 2, 1, 1 } });
 
     set_values(input, {
@@ -2852,7 +2852,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x1_nopad_group2) {
     auto& engine = get_test_engine();
 
     auto input = engine.allocate_memory({ data_types::f32, format::yxfb,{ 1, 2, 4, 4 } });
-    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx ,tensor(group(2), batch(1), feature(1), spatial(2,2)) });
+    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx ,tensor({2, 1, 1, 2, 2}) });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 2, 1, 1 } });
 
     set_values(input, {
@@ -2909,7 +2909,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x1_nopad_group2_bfyx) 
     auto& engine = get_test_engine();
 
     auto input = engine.allocate_memory({ data_types::f32, format::yxfb,{ 1, 2, 4, 4 } });
-    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx ,tensor(group(2), batch(1), feature(1), spatial(2,2)) });
+    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx ,tensor({2, 1, 1, 2, 2}) });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 2, 1, 1 } });
 
     set_values(input, {
@@ -2967,7 +2967,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_group2) {
     auto& engine = get_test_engine();
 
     auto input = engine.allocate_memory({ data_types::f32, format::yxfb,{ 2, 2, 4, 4 } });
-    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx ,tensor(group(2), batch(1), feature(1), spatial(2,2)) });
+    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx ,tensor({2, 1, 1, 2, 2}) });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 2, 1, 1 } });
 
     set_values(input, {
@@ -3053,7 +3053,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2_depthw
         -0.5f, -0.5f,  3.0f,  3.0f, -0.5f, -0.5f,  3.0f,  3.0f, -0.5f, -0.5f,  3.0f,  3.0f, -0.5f, -0.5f,  3.0f,  3.0f, -0.5f, -0.5f,  3.0f,  3.0f, -0.5f, -0.5f,  3.0f,  3.0f, -0.5f, -0.5f,  3.0f,  3.0f, -0.5f, -0.5f,  3.0f,  3.0f,
     });
 
-    auto weights1 = engine.allocate_memory({ data_types::f32, format::goiyx ,tensor(group(16), batch(1), feature(1), spatial(2,2)) });
+    auto weights1 = engine.allocate_memory({ data_types::f32, format::goiyx ,tensor({16, 1, 1, 2, 2}) });
     auto biases1 = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 16, 1, 1 } });
 
     set_values(weights1, { -2.0f, 0.5f, 3.5f, 1.5f,  -1.2f, 1.5f, 0.5f, -0.5f,
@@ -3142,7 +3142,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2_depthw
         0.5f, 1.5f, 2.3f, -0.4f, 2.0f, -4.0f, 1.0f, 3.0f, 0.5f, 1.5f, 2.3f, -0.4f, 2.0f, -4.0f, 1.0f, 3.0f,
     });
 
-    auto weights1 = engine.allocate_memory({ data_types::f32, format::goiyx ,tensor(group(16), batch(1), feature(1), spatial(2,2)) });
+    auto weights1 = engine.allocate_memory({ data_types::f32, format::goiyx ,tensor({16, 1, 1, 2, 2}) });
     auto biases1 = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 16, 1, 1 } });
 
     set_values(weights1, { -2.0f, 0.5f, 3.5f, 1.5f,  -1.2f, 1.5f, 0.5f, -0.5f,
@@ -3238,7 +3238,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_group16) {
 
     topology topology(input_layout("input", input->get_layout()));
 
-    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx ,tensor(group(16), batch(1), feature(1), spatial(2,2)) });
+    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx ,tensor({16, 1, 1, 2, 2}) });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 16, 1, 1 } });
 
     set_values(weights,
@@ -3332,7 +3332,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_group16_bfyx)
 
     topology topology(input_layout("input", input->get_layout()));
 
-    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx ,tensor(group(16), batch(1), feature(1), spatial(2,2)) });
+    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx ,tensor({16, 1, 1, 2, 2}) });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 16, 1, 1 } });
 
     set_values(weights,
@@ -3857,10 +3857,10 @@ TEST(convolution_gpu, DISABLED_two_1x1_kernels_after_each_other) {
     cldnn::mem_lock<float> output_ptr(output_prim, get_test_stream());
     auto output_layout = output_prim->get_layout();
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     int f_offset = y_size * x_size;
     int b_offset = f_size * f_offset;
     for (int b = 0; b < b_size; ++b) {
@@ -3903,9 +3903,9 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxfb_2_2_b16_if2_of16_st2_2_p0_sp1_fp32)
 
     auto& engine = get_test_engine();
 
-    auto input_size = tensor( batch_size, input_feature_count, input_x, input_y );
+    auto input_size = tensor( {batch_size, input_feature_count, input_y, input_x} );
     auto input = engine.allocate_memory({ data_types::f32, input_format, input_size });
-    auto weights_size = tensor( output_feature_count, input_feature_count, weights_x, weights_y );
+    auto weights_size = tensor({output_feature_count, input_feature_count, weights_y, weights_x} );
     auto weights = engine.allocate_memory({ data_types::f32, weights_format, weights_size });
     auto biases = engine.allocate_memory({ data_types::f32, biases_format, {1,output_feature_count,1,1}});
 
@@ -4139,10 +4139,10 @@ TEST(convolution_f32_fw_gpu, byte_activation) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(y_size, 2);
     EXPECT_EQ(x_size, 3);
@@ -4205,10 +4205,10 @@ TEST(convolution_int8_fw_gpu, quantized_convolution_u8s8f32_symmetric) {
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
     auto output_layout = output_memory->get_layout();
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(y_size, 2);
     EXPECT_EQ(x_size, 3);
@@ -4279,10 +4279,10 @@ TEST(convolution_int8_fw_gpu, quantized_convolution_u8s8f32_asymmetric_weight_an
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
     auto output_layout = output_memory->get_layout();
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(y_size, 2);
     EXPECT_EQ(x_size, 3);
@@ -4350,10 +4350,10 @@ TEST(convolution_int8_fw_gpu, quantized_convolution_u8s8f32_asymmetric_activatio
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
     auto output_layout = output_memory->get_layout();
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(y_size, 2);
     EXPECT_EQ(x_size, 3);
@@ -4435,10 +4435,10 @@ TEST(convolution_int8_fw_gpu, quantized_convolution_u8s8f32_asymmetric_activatio
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
     auto output_layout = output_memory->get_layout();
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(y_size, 2);
     EXPECT_EQ(x_size, 3);
@@ -4536,10 +4536,10 @@ TEST(convolution_int8_fw_gpu, quantized_convolution_u8s8f32_asymmetric_activatio
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
     auto output_layout = output_memory->get_layout();
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(y_size, 2);
     EXPECT_EQ(x_size, 3);
@@ -4607,10 +4607,10 @@ TEST(convolution_int8_fw_gpu, quantized_convolution_u8s8f32_asymmetric_weights_p
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
     auto output_layout = output_memory->get_layout();
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(y_size, 2);
     EXPECT_EQ(x_size, 3);
@@ -4660,13 +4660,13 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxfb_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
     const int32_t output_x = (input_x - weights_x) / stride_x + 1;
     const int32_t output_y = (input_y - weights_y) / stride_y + 1;
 
-    auto input_size = tensor( batch_size, input_feature_count, input_x, input_y );
+    auto input_size = tensor( {batch_size, input_feature_count, input_y, input_x});
     auto input = engine.allocate_memory({ data_types::f32, input_format, input_size });
-    auto weights_size = tensor( output_feature_count, input_feature_count, weights_x, weights_y );
+    auto weights_size = tensor( {output_feature_count, input_feature_count, weights_y, weights_x} );
     auto weights = engine.allocate_memory({ data_types::f32, weights_format, weights_size });
-    auto biases_size = tensor( 1,output_feature_count,1,1 );
+    auto biases_size = tensor( {1,output_feature_count,1,1} );
     auto biases = engine.allocate_memory({ data_types::f32, biases_format, biases_size });
-    auto output_size = tensor( batch_size, output_feature_count, output_x, output_y );
+    auto output_size = tensor( {batch_size, output_feature_count, output_y, output_x} );
     //auto output = memory::allocate({output_format, {batch_size, {output_x, output_y}, output_feature_count}});
 
     //auto input_cvtd = engine.allocate_memory({ data_types::f16, input_size });
@@ -5042,13 +5042,13 @@ TEST_P(convolution_gpu_fs_byx_fsv32, fs_byx_fsv32)
 
     const int output_xy = 1 + (input_xy + 2 * (-input_offset) - filter_xy) / stride + 2 * output_padding;
 
-    auto input_size = tensor(batch_num, input_f, input_xy, input_xy);
+    auto input_size = tensor({batch_num, input_f, input_xy, input_xy});
     auto input_data = generate_random_4d<FLOAT16>(batch_num, input_f, input_xy, input_xy, -1, 1);
     auto input_data_bfyx = flatten_4d(format::bfyx, input_data);
     auto input_mem = engine.allocate_memory({ data_types::f16, format::bfyx, input_size });
     set_values(input_mem, input_data_bfyx);
 
-    auto weights_size = tensor(output_f, input_f, filter_xy, filter_xy);
+    auto weights_size = tensor({output_f, input_f, filter_xy, filter_xy});
     auto weights_data = generate_random_4d<FLOAT16>(output_f, input_f, filter_xy, filter_xy, -1, 1);
     auto weights_data_bfyx = flatten_4d(format::bfyx, weights_data);
     auto weights_mem = engine.allocate_memory({ data_types::f16, format::bfyx, weights_size });
@@ -5067,7 +5067,7 @@ TEST_P(convolution_gpu_fs_byx_fsv32, fs_byx_fsv32)
     if (with_bias)
     {
         // Generate bias data
-        auto biases_size = tensor(1, output_f, 1, 1);
+        auto biases_size = tensor({1, output_f, 1, 1});
         auto biases_data = generate_random_1d<FLOAT16>(output_f, -1, 1);
         auto biases_mem = engine.allocate_memory({ data_types::f16, format::bfyx, biases_size });
         set_values(biases_mem, biases_data);
@@ -5172,13 +5172,13 @@ TEST(convolution_f16_fsv_gpu, convolution_f16_fsv_gpu_padding) {
     const int stride = 1;
     const int output_xy = 1 + (input_xy - filter_xy) / stride;
 
-    auto input_size = tensor(batch_num, input_f, input_xy, input_xy);
+    auto input_size = tensor({batch_num, input_f, input_xy, input_xy});
     auto input_data = generate_random_4d<FLOAT16>(batch_num, input_f, input_xy, input_xy, -1, 1);
     auto input_data_bfyx = flatten_4d(format::bfyx, input_data);
     auto input_mem = engine.allocate_memory({ data_types::f16, format::bfyx, input_size });
     set_values(input_mem, input_data_bfyx);
 
-    auto weights_size = tensor(output_f, input_f, filter_xy, filter_xy);
+    auto weights_size = tensor({output_f, input_f, filter_xy, filter_xy});
     auto weights_data = generate_random_4d<FLOAT16>(output_f, input_f, filter_xy, filter_xy, -1, 1);
     auto weights_data_bfyx = flatten_4d(format::bfyx, weights_data);
     auto weights_mem = engine.allocate_memory({ data_types::f16, format::bfyx, weights_size });
@@ -5196,7 +5196,7 @@ TEST(convolution_f16_fsv_gpu, convolution_f16_fsv_gpu_padding) {
     topology.add(reorder("input_fsv", "input", w_pad));
 
     // Generate bias data
-    auto biases_size = tensor(1, output_f, 1, 1);
+    auto biases_size = tensor({1, output_f, 1, 1});
     auto biases_data = generate_random_1d<FLOAT16>(output_f, -1, 1);
     auto biases_mem = engine.allocate_memory({ data_types::f16, format::bfyx, biases_size });
     set_values(biases_mem, biases_data);
@@ -5307,7 +5307,7 @@ TEST_P(convolution_gpu_fs_byx_fsv32_crop, fs_byx_fsv32_crop)
     const int input_offset = -(filter_xy / 2);
     const int output_xy = 1 + (input_xy + 2 * (-input_offset) - filter_xy) / stride + 2 * output_padding;
 
-    auto weights_size = tensor(output_f, input_f, filter_xy, filter_xy);
+    auto weights_size = tensor({output_f, input_f, filter_xy, filter_xy});
     auto weights_data = generate_random_4d<FLOAT16>(output_f, input_f, filter_xy, filter_xy, -1, 1);
     auto weights_data_bfyx = flatten_4d(format::bfyx, weights_data);
     auto weights_mem = engine.allocate_memory({ data_types::f16, format::bfyx, weights_size });
@@ -5333,7 +5333,7 @@ TEST_P(convolution_gpu_fs_byx_fsv32_crop, fs_byx_fsv32_crop)
     }
 
     auto input_data_bfyx = flatten_4d(format::bfyx, input_data);
-    auto input_size = tensor(batch_num, input_f * 2, input_xy, input_xy);
+    auto input_size = tensor({batch_num, input_f * 2, input_xy, input_xy});
     auto input_mem = engine.allocate_memory({ data_types::f16, format::bfyx, input_size });
     set_values(input_mem, input_data_bfyx);
 
@@ -5358,7 +5358,7 @@ TEST_P(convolution_gpu_fs_byx_fsv32_crop, fs_byx_fsv32_crop)
     if (with_bias)
     {
         // Generate bias data
-        auto biases_size = tensor(1, output_f, 1, 1);
+        auto biases_size = tensor({1, output_f, 1, 1});
         auto biases_data = generate_random_1d<FLOAT16>(output_f, -1, 1);
         auto biases_mem = engine.allocate_memory({ data_types::f16, format::bfyx, biases_size });
         set_values(biases_mem, biases_data);
@@ -5474,20 +5474,20 @@ TEST(convolution_f32_fw_gpu, convolution_int8_b_fs_yx_fsv4_to_bfyx) {
 
     auto& engine = get_test_engine();
 
-    auto input_size = tensor(batch_num, input_f, input_size_x, input_size_y);
+    auto input_size = tensor({batch_num, input_f, input_size_y, input_size_x});
     auto input_data = generate_random_4d<float>(batch_num, input_f, input_size_y, input_size_x, -10, 10);
 
     auto input_data_bfyx = flatten_4d(format::bfyx, input_data);
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, input_size });
     set_values(input, input_data_bfyx);
 
-    auto weights_size = tensor(output_f, input_f, filter_xy, filter_xy);
+    auto weights_size = tensor({output_f, input_f, filter_xy, filter_xy});
     auto weights_data = generate_random_4d<int8_t>(output_f, input_f, filter_xy, filter_xy, -10, 10);
     auto weights_data_bfyx = flatten_4d(format::bfyx, weights_data);
     auto weights = engine.allocate_memory({ data_types::i8, format::bfyx, weights_size });
     set_values(weights, weights_data_bfyx);
 
-    auto biases_size = tensor(1, output_f, 1, 1);
+    auto biases_size = tensor({1, output_f, 1, 1});
     auto biases_data = generate_random_4d<int8_t>(1, output_f, 1, 1, -10, 10);
     auto biases_data_bfyx = flatten_4d(format::bfyx, biases_data);
     auto biases = engine.allocate_memory({ data_types::i8, format::bfyx, biases_size });
@@ -5538,10 +5538,10 @@ TEST(convolution_f32_fw_gpu, convolution_int8_b_fs_yx_fsv4_to_bfyx) {
     auto output_memory_act = outputs_act.at("output").get_memory();
     cldnn::mem_lock<float> output_act_ptr(output_memory_act, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(y_size, 720);
     EXPECT_EQ(x_size, 1280);
@@ -5585,14 +5585,14 @@ TEST(convolution_gpu, bfyx_iyxo_5x5_fp16)
 
     const int output_y = 1 + (input_size_y + 2 * (-input_offset) - filter_xy) / stride + 2 * output_padding;
 
-    auto input_size = tensor(batch_num, input_f, input_size_x, input_size_y);
+    auto input_size = tensor({batch_num, input_f, input_size_y, input_size_x});
     auto input_data = generate_random_4d<FLOAT16>(batch_num, input_f, input_size_y, input_size_x, -1, 1);
 
     auto input_data_bfyx = flatten_4d(format::bfyx, input_data);
     auto input_mem = engine.allocate_memory({ data_types::f16, format::bfyx, input_size });
     set_values(input_mem, input_data_bfyx);
 
-    auto weights_size = tensor(output_f, input_f, filter_xy, filter_xy);
+    auto weights_size = tensor({output_f, input_f, filter_xy, filter_xy});
     auto weights_data = generate_random_4d<FLOAT16>(output_f, input_f, filter_xy, filter_xy, -1, 1);
     auto weights_data_bfyx = flatten_4d(format::bfyx, weights_data);
     auto weights_mem = engine.allocate_memory({ data_types::f16, format::bfyx, weights_size });
@@ -5610,7 +5610,7 @@ TEST(convolution_gpu, bfyx_iyxo_5x5_fp16)
     if (with_bias)
     {
         // Generate bias data
-        auto biases_size = tensor(1, output_f, 1, 1);
+        auto biases_size = tensor({1, output_f, 1, 1});
         auto biases_data = generate_random_1d<FLOAT16>(output_f, -1, 1);
         auto biases_mem = engine.allocate_memory({ data_types::f16, format::bfyx, biases_size });
         set_values(biases_mem, biases_data);
@@ -5707,14 +5707,14 @@ void blockedFormatZeroCheck(cldnn::memory::ptr out_mem) {
     const int block_size = 16;
 
     auto output_tensor = out_mem->get_layout().get_buffer_size();
-    const int b = output_tensor.batch[0];
-    const int f = output_tensor.feature[0];
-    const int spatials = std::accumulate(output_tensor.spatial.begin(), output_tensor.spatial.end(), 1, std::multiplies<int>());
-    const int f_mod = output_tensor.feature[0] % block_size;
+    const int b = output_tensor.batch(0);
+    const int f = output_tensor.feature(0);
+    const int spatials = output_tensor.count() / output_tensor.feature(0) / output_tensor.batch(0);
+    const int f_mod = output_tensor.feature(0) % block_size;
     const size_t batch_skip = batch_blocked ? b / block_size : b;
     const size_t number_of_zeroes = f_mod == 0 ? 0 : (block_size - f_mod) * spatials * b;
 
-    size_t to_skip = (output_tensor.feature[0] / block_size) * block_size * spatials;
+    size_t to_skip = (output_tensor.feature(0) / block_size) * block_size * spatials;
     to_skip *= batch_blocked ? block_size : 1;
     size_t zero_ind = to_skip + f_mod;
 
@@ -5811,13 +5811,13 @@ TEST_P(convolution_gpu_block_layout3D, bfzyx_bsv16_fsv16_fp32)
     if (batch_num % 16 == 0)
         input_format = format::bs_fs_zyx_bsv16_fsv16;
 
-    auto input_size = tensor(batch_num, input_f, input_xy, input_xy, 1);
+    auto input_size = tensor({batch_num, input_f, input_xy, input_xy, 1});
     auto input_data = generate_random_4d<float>(batch_num, input_f, input_xy, input_xy, 1, 10);
     auto input_data_bfyx = flatten_4d(format::bfyx, input_data);
     auto input_mem = engine.allocate_memory({ data_types::f32, format::bfzyx, input_size });
     set_values(input_mem, input_data_bfyx);
 
-    auto weights_size = tensor(output_f, input_f, filter_xy, filter_xy, 1);
+    auto weights_size = tensor({output_f, input_f, filter_xy, filter_xy, 1});
     auto weights_data = generate_random_4d<float>(output_f, input_f, filter_xy, filter_xy, -1, 1);
 
     auto weights_data_bfyx = flatten_4d(format::bfyx, weights_data);
@@ -5838,7 +5838,7 @@ TEST_P(convolution_gpu_block_layout3D, bfzyx_bsv16_fsv16_fp32)
     if (with_bias)
     {
         // Generate bias data
-        auto biases_size = tensor(1, output_f, 1, 1, 1);
+        auto biases_size = tensor({1, output_f, 1, 1, 1});
         auto biases_data = generate_random_1d<float>(output_f, -1, 1);
         auto biases_mem = engine.allocate_memory({ data_types::f32, format::bfzyx, biases_size });
         set_values(biases_mem, biases_data);
@@ -5947,14 +5947,14 @@ TEST_P(convolution_gpu_block_layout3D, bfzyx_bsv16_fsv16_fp16)
     if (batch_num % 32 == 0)
         input_format = format::bs_fs_zyx_bsv16_fsv16;
 
-    auto input_size = tensor(batch_num, input_f, input_xy, input_xy, 1);
+    auto input_size = tensor({batch_num, input_f, input_xy, input_xy, 1});
     auto input_data = generate_random_4d<FLOAT16>(batch_num, input_f, input_xy, input_xy, 0, 1);
     auto input_data_bfyx = flatten_4d(format::bfyx, input_data);
 
     auto input_mem = engine.allocate_memory({ data_types::f16, format::bfzyx, input_size });
     set_values(input_mem, input_data_bfyx);
 
-    auto weights_size = tensor(output_f, input_f, filter_xy, filter_xy, 1);
+    auto weights_size = tensor({output_f, input_f, filter_xy, filter_xy, 1});
     auto weights_data = generate_random_4d<FLOAT16>(output_f, input_f, filter_xy, filter_xy, 0, 1);
 
     auto weights_data_bfyx = flatten_4d(format::bfyx, weights_data);
@@ -5975,7 +5975,7 @@ TEST_P(convolution_gpu_block_layout3D, bfzyx_bsv16_fsv16_fp16)
     if (with_bias)
     {
         // Generate bias data
-        auto biases_size = tensor(1, output_f, 1, 1, 1);
+        auto biases_size = tensor({1, output_f, 1, 1, 1});
         auto biases_data = generate_random_1d<FLOAT16>(output_f, -1, 1);
         auto biases_mem = engine.allocate_memory({ data_types::f16, format::bfzyx, biases_size });
         set_values(biases_mem, biases_data);
@@ -6077,13 +6077,13 @@ TEST_P(convolution_gpu_block_layout3D, bfzyx_bsv16_fsv16_fp32_fused_ops)
     if (batch_num % 16 == 0)
         input_format = format::bs_fs_zyx_bsv16_fsv16;
 
-    auto input_size = tensor(batch_num, input_f, input_xy, input_xy, 1);
+    auto input_size = tensor({batch_num, input_f, input_xy, input_xy, 1});
     auto input_data = generate_random_4d<float>(batch_num, input_f, input_xy, input_xy, 1, 10);
     auto input_data_bfyx = flatten_4d(format::bfyx, input_data);
     auto input_mem = engine.allocate_memory({ data_types::f32, format::bfzyx, input_size });
     set_values(input_mem, input_data_bfyx);
 
-    auto weights_size = tensor(output_f, input_f, filter_xy, filter_xy, 1);
+    auto weights_size = tensor({output_f, input_f, filter_xy, filter_xy, 1});
     auto weights_data = generate_random_4d<float>(output_f, input_f, filter_xy, filter_xy, -1, 1);
 
     auto weights_data_bfyx = flatten_4d(format::bfyx, weights_data);
@@ -6104,7 +6104,7 @@ TEST_P(convolution_gpu_block_layout3D, bfzyx_bsv16_fsv16_fp32_fused_ops)
     if (with_bias)
     {
         // Generate bias data
-        auto biases_size = tensor(1, output_f, 1, 1, 1);
+        auto biases_size = tensor({1, output_f, 1, 1, 1});
         auto biases_data = generate_random_1d<float>(output_f, -1, 1);
         auto biases_mem = engine.allocate_memory({ data_types::f32, format::bfzyx, biases_size });
         set_values(biases_mem, biases_data);
@@ -6245,13 +6245,13 @@ TEST_P(convolution_gpu_block_layout, bfyx_bsv16_fsv16_fp32)
         return;
     }
 
-    auto input_size = tensor(batch_num, input_f, input_xy, input_xy);
+    auto input_size = tensor({batch_num, input_f, input_xy, input_xy});
     auto input_data = generate_random_4d<float>(batch_num, input_f, input_xy, input_xy, 1, 10);
     auto input_data_bfyx = flatten_4d(format::bfyx, input_data);
     auto input_mem = engine.allocate_memory({ data_types::f32, format::bfyx, input_size });
     set_values(input_mem, input_data_bfyx);
 
-    auto weights_size = tensor(output_f, input_f, filter_xy, filter_xy);
+    auto weights_size = tensor({output_f, input_f, filter_xy, filter_xy});
     auto weights_data = generate_random_4d<float>(output_f, input_f, filter_xy, filter_xy, -1, 1);
 
     auto weights_data_bfyx = flatten_4d(format::bfyx, weights_data);
@@ -6272,7 +6272,7 @@ TEST_P(convolution_gpu_block_layout, bfyx_bsv16_fsv16_fp32)
     if (with_bias)
     {
         // Generate bias data
-        auto biases_size = tensor(1, output_f, 1, 1);
+        auto biases_size = tensor({1, output_f, 1, 1});
         auto biases_data = generate_random_1d<float>(output_f, -1, 1);
         auto biases_mem = engine.allocate_memory({ data_types::f32, format::bfyx, biases_size });
         set_values(biases_mem, biases_data);
@@ -6384,14 +6384,14 @@ TEST_P(convolution_gpu_block_layout, bfyx_bsv16_fsv16_fp16)
         return;
     }
 
-    auto input_size = tensor(batch_num, input_f, input_xy, input_xy);
+    auto input_size = tensor({batch_num, input_f, input_xy, input_xy});
     auto input_data = generate_random_4d<FLOAT16>(batch_num, input_f, input_xy, input_xy, 0, 1);
     auto input_data_bfyx = flatten_4d(format::bfyx, input_data);
 
     auto input_mem = engine.allocate_memory({ data_types::f16, format::bfyx, input_size });
     set_values(input_mem, input_data_bfyx);
 
-    auto weights_size = tensor(output_f, input_f, filter_xy, filter_xy);
+    auto weights_size = tensor({output_f, input_f, filter_xy, filter_xy});
     auto weights_data = generate_random_4d<FLOAT16>(output_f, input_f, filter_xy, filter_xy, 0, 1);
 
     auto weights_data_bfyx = flatten_4d(format::bfyx, weights_data);
@@ -6412,7 +6412,7 @@ TEST_P(convolution_gpu_block_layout, bfyx_bsv16_fsv16_fp16)
     if (with_bias)
     {
         // Generate bias data
-        auto biases_size = tensor(1, output_f, 1, 1);
+        auto biases_size = tensor({1, output_f, 1, 1});
         auto biases_data = generate_random_1d<FLOAT16>(output_f, -1, 1);
         auto biases_mem = engine.allocate_memory({ data_types::f16, format::bfyx, biases_size });
         set_values(biases_mem, biases_data);
@@ -6516,13 +6516,13 @@ TEST_P(convolution_gpu_block_layout, bfyx_bsv16_fsv16_fp32_fused_ops)
     const bool with_bias = testing::get<6>(GetParam());
     const int input_offset = -(filter_xy / 2);
 
-    auto input_size = tensor(batch_num, input_f, input_xy, input_xy);
+    auto input_size = tensor({batch_num, input_f, input_xy, input_xy});
     auto input_data = generate_random_4d<float>(batch_num, input_f, input_xy, input_xy, 1, 10);
     auto input_data_bfyx = flatten_4d(format::bfyx, input_data);
     auto input_mem = engine.allocate_memory({ data_types::f32, format::bfyx, input_size });
     set_values(input_mem, input_data_bfyx);
 
-    auto weights_size = tensor(output_f, input_f, filter_xy, filter_xy, 1);
+    auto weights_size = tensor({output_f, input_f, filter_xy, filter_xy, 1});
     auto weights_data = generate_random_4d<float>(output_f, input_f, filter_xy, filter_xy, -1, 1);
 
     auto weights_data_bfyx = flatten_4d(format::bfyx, weights_data);
@@ -6543,7 +6543,7 @@ TEST_P(convolution_gpu_block_layout, bfyx_bsv16_fsv16_fp32_fused_ops)
     if (with_bias)
     {
         // Generate bias data
-        auto biases_size = tensor(1, output_f, 1, 1, 1);
+        auto biases_size = tensor({1, output_f, 1, 1, 1});
         auto biases_data = generate_random_1d<float>(output_f, -1, 1);
         auto biases_mem = engine.allocate_memory({ data_types::f32, format::bfyx, biases_size });
         set_values(biases_mem, biases_data);
@@ -6697,13 +6697,13 @@ TEST_P(convolution_depthwise_gpu, depthwise_conv_fs_b_yx_fsv32)
     const int output_y = 1 + (input_xy + 2 * (-input_offset_y) - filter_y) / stride + 2 * output_padding;
     const int output_x = 1 + (input_xy + 2 * (-input_offset_x) - filter_x) / stride + 2 * output_padding;
 
-    auto input_size = tensor(batch_num, input_f, input_xy, input_xy);
+    auto input_size = tensor({batch_num, input_f, input_xy, input_xy});
     auto input_data = generate_random_4d<FLOAT16>(batch_num, input_f, input_xy, input_xy, -1, 1);
     auto input_data_bfyx = flatten_4d(format::bfyx, input_data);
     auto input_mem = engine.allocate_memory({ data_types::f16, format::bfyx, input_size });
     set_values(input_mem, input_data_bfyx);
 
-    auto weights_size = tensor(group(groups), batch(1), feature(1), spatial(filter_x, filter_y));
+    auto weights_size = tensor({groups, 1, 1, filter_y, filter_x});
     auto weights_data = generate_random_4d<FLOAT16>(output_f, 1, filter_y, filter_x, -1, 1);
     auto weights_data_bfyx = flatten_4d(format::bfyx, weights_data);
     auto weights_mem = engine.allocate_memory({ data_types::f16, format::goiyx, weights_size });
@@ -6840,13 +6840,13 @@ TEST_P(convolution_depthwise_gpu_fsv16, depthwise_conv_b_fs_yx_fsv16)
     const int output_y = 1 + (input_xy + 2 * (-input_offset_y) - filter_y) / stride + 2 * output_padding;
     const int output_x = 1 + (input_xy + 2 * (-input_offset_x) - filter_x) / stride + 2 * output_padding;
 
-    auto input_size = tensor(batch_num, input_f, input_xy, input_xy);
+    auto input_size = tensor({batch_num, input_f, input_xy, input_xy});
     auto input_data = generate_random_4d<FLOAT16>(batch_num, input_f, input_xy, input_xy, -1, 1);
     auto input_data_bfyx = flatten_4d(format::bfyx, input_data);
     auto input_mem = engine.allocate_memory({ data_types::f16, format::bfyx, input_size });
     set_values(input_mem, input_data_bfyx);
 
-    auto weights_size = tensor(group(output_f), batch(1), feature(1), spatial(filter_x, filter_y));
+    auto weights_size = tensor({output_f, 1, 1, filter_y, filter_x});
     auto weights_data = generate_random_4d<FLOAT16>(output_f, 1, filter_y, filter_x, -1, 1);
     auto weights_data_bfyx = flatten_4d(format::bfyx, weights_data);
     auto weights_mem = engine.allocate_memory({ data_types::f16, format::goiyx, weights_size });
@@ -6931,14 +6931,14 @@ TEST(convolution_depthwise_gpu_fsv16, depthwise_conv_b_fs_yx_fsv16_in_feature_pa
 
     auto num_groups = 32;
     auto input_size = tensor{ 1, num_groups, 1, 2 };
-    auto weights_size = tensor(group(num_groups), batch(1), feature(1), spatial(1, 1));
+    auto weights_size = tensor({num_groups, 1, 1, 1, 1});
     auto bias_size = tensor{ 1, num_groups, 1, 1 };
     auto stride = tensor{ 1, 1, 1, 1 };
     auto input_offset = tensor{ 0, 0, 0, 0 };
     auto dilation = tensor{ 1, 1, 1, 1 };
     auto output_size = tensor{ 1, num_groups, 1, 2};
-    auto input_lower_sizes = { 0, 16, 0, 0 };
-    auto input_upper_sizes = { 0, 64, 0, 0 };
+    std::vector<tensor::value_type> input_lower_sizes = { 0, 16, 0, 0 };
+    std::vector<tensor::value_type> input_upper_sizes = { 0, 64, 0, 0 };
 
     auto& engine = get_test_engine();
 
@@ -6995,17 +6995,17 @@ TEST(convolution_depthwise_gpu_fsv16, depthwise_conv_b_fs_yx_fsv16_in_feature_pa
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
 
     EXPECT_EQ(output_layout.format, format::bfyx);
 
-    EXPECT_EQ(y_size, output_size.spatial[1]);
-    EXPECT_EQ(x_size, output_size.spatial[0]);
-    EXPECT_EQ(f_size, output_size.feature[0]);
-    EXPECT_EQ(b_size, output_size.batch[0]);
+    EXPECT_EQ(y_size, output_size.spatial(1));
+    EXPECT_EQ(x_size, output_size.spatial(0));
+    EXPECT_EQ(f_size, output_size.feature(0));
+    EXPECT_EQ(b_size, output_size.batch(0));
 
     for (int b = 0; b < b_size; ++b) {
         for (int f = 0; f < f_size; ++f) {
@@ -7050,13 +7050,13 @@ TEST_P(convolution_depthwise_gpu_bfyx, depthwise_conv_bfyx)
     const int output_y = 1 + (input_xy + 2 * (-input_offset_y) - filter_y) / stride + 2 * output_padding;
     const int output_x = 1 + (input_xy + 2 * (-input_offset_x) - filter_x) / stride + 2 * output_padding;
 
-    auto input_size = tensor(batch_num, input_f, input_xy, input_xy);
+    auto input_size = tensor({batch_num, input_f, input_xy, input_xy});
     auto input_data = generate_random_4d<FLOAT16>(batch_num, input_f, input_xy, input_xy, -1, 1);
     auto input_data_bfyx = flatten_4d(format::bfyx, input_data);
     auto input_mem = engine.allocate_memory({ data_types::f16, format::bfyx, input_size });
     set_values(input_mem, input_data_bfyx);
 
-    auto weights_size = tensor(group(output_f), batch(1), feature(1), spatial(filter_x, filter_y));
+    auto weights_size = tensor({output_f, 1, 1, filter_y, filter_x});
     auto weights_data = generate_random_4d<FLOAT16>(output_f, 1, filter_y, filter_x, -1, 1);
     auto weights_data_bfyx = flatten_4d(format::bfyx, weights_data);
     auto weights_mem = engine.allocate_memory({ data_types::f16, format::goiyx, weights_size });
@@ -7256,7 +7256,7 @@ TEST_P(convolution_grouped_gpu, base) {
 
     auto num_in_spatial_dims = input_data_format.spatial_num();
 
-    auto input_size = tensor(batch(batch_num), feature(input_f), spatial(input_x, input_y, input_z));
+    auto input_size = tensor({batch_num, input_f, input_z, input_y, input_x});
     auto input_rnd = generate_random_5d<int8_t>(batch_num, input_f, input_z, input_y, input_x, -127, 127);
 
     auto input_lay = layout(data_types::i8, format::bfzyx, input_size);
@@ -7269,7 +7269,7 @@ TEST_P(convolution_grouped_gpu, base) {
             for (int z = 0; z < input_z; z++)
                 for (int y = 0; y < input_y; y++)
                     for (int x = 0; x < input_x; x++) {
-                        tensor coords = tensor(batch(b), feature(f), spatial(x, y, z, 0));
+                        tensor coords = tensor({b, f, z, y, x});
                         size_t offset = input_lay.get_linear_offset(coords);
                         input_flat[offset] = input_rnd[b][f][z][y][x];
                     }
@@ -7282,11 +7282,11 @@ TEST_P(convolution_grouped_gpu, base) {
         input_zp_rnd = generate_random_1d<int8_t>(input_f, -127, 127);
         input_zp_prim_name = { "input_zp" };
     }
-    auto input_zp_lay = layout(data_types::i8, format::bfyx, tensor(feature(input_f)));
+    auto input_zp_lay = layout(data_types::i8, format::bfyx, tensor({input_f}));
     auto input_zp = engine.allocate_memory(input_zp_lay);
     set_values(input_zp, input_zp_rnd);
 
-    auto weights_size = tensor(group(groups), batch(output_f / groups), feature(input_f / groups), spatial(filter_x, filter_y, filter_z));
+    auto weights_size = tensor({groups, output_f / groups, input_f / groups, filter_z, filter_y, filter_x});
 
     VVVVVVF<int8_t> weights_rnd = generate_random_6d<int8_t>(groups, output_f / groups, input_f / groups, filter_z, filter_y, filter_x, -127, 127);
     auto weights_lay = layout(data_types::i8, format::goizyx, weights_size);
@@ -7300,7 +7300,7 @@ TEST_P(convolution_grouped_gpu, base) {
                 for (int kzi = 0; kzi < filter_z; ++kzi)
                     for (int kyi = 0; kyi < filter_y; ++kyi)
                         for (int kxi = 0; kxi < filter_x; ++kxi) {
-                            tensor coords = tensor(group(gi), batch(ofi), feature(ifi), spatial(kxi, kyi, kzi, 0));
+                            tensor coords = tensor({gi, ofi, ifi, kzi, kyi, kxi});
                             size_t offset = weights_lay.get_linear_offset(coords);
                             weights_flat[offset] = weights_rnd[gi][ofi][ifi][kzi][kyi][kxi];
                         }
@@ -7313,7 +7313,7 @@ TEST_P(convolution_grouped_gpu, base) {
         weights_zp_rnd = generate_random_1d<int8_t>(output_f, -127, 127);
         weights_zp_prim_name = { "weights_zp" };
     }
-    auto weights_zp_lay = layout(data_types::i8, format::bfyx, tensor(batch(output_f)));
+    auto weights_zp_lay = layout(data_types::i8, format::bfyx, tensor({output_f}));
     auto weights_zp = engine.allocate_memory(weights_zp_lay);
     set_values(weights_zp, weights_zp_rnd);
 
@@ -7341,11 +7341,11 @@ TEST_P(convolution_grouped_gpu, base) {
                     weights_zp_rnd[gi * (int)weights_rnd[0].size() + ofi]); // weights zero points
             }
 
-    auto ref_conv_out_size = tensor(batch(expected_result.size()),
-                                    feature(expected_result[0].size()),
-                                    spatial(expected_result[0][0][0][0].size(),
-                                            expected_result[0][0][0].size(),
-                                            expected_result[0][0].size()));
+    auto ref_conv_out_size = tensor({TensorValue(expected_result.size()),
+                                     TensorValue(expected_result[0].size()),
+                                     TensorValue(expected_result[0][0].size()),
+                                     TensorValue(expected_result[0][0][0].size()),
+                                     TensorValue(expected_result[0][0][0][0].size())});
 
     auto comp_val = std::vector<float>(output_f);
     auto comp_prim_name = std::vector<primitive_id>(0);
@@ -7373,13 +7373,13 @@ TEST_P(convolution_grouped_gpu, base) {
         }
         comp_prim_name = { "compensation" };
     }
-    auto comp_lay = layout(data_types::f32, format::bfyx, tensor(batch(output_f)));
+    auto comp_lay = layout(data_types::f32, format::bfyx, tensor({output_f}));
     auto comp = engine.allocate_memory(comp_lay);
     set_values(comp, comp_val);
 
-    auto stride_tensor = tensor(batch(1), feature(1), spatial(stride, stride, stride, 1));
+    auto stride_tensor = tensor({1, 1, stride, stride, stride});
     if (num_in_spatial_dims == 2) {
-        stride_tensor = tensor(batch(1), feature(1), spatial(stride, stride, 1, 1));
+        stride_tensor = tensor({1, 1, stride, stride});
     }
 
     topology topology(input_layout("input", input->get_layout()),
@@ -7395,8 +7395,8 @@ TEST_P(convolution_grouped_gpu, base) {
                                   groups,
                                   data_types::f32,
                                   stride_tensor,
-                                  tensor(batch(0), feature(0), spatial(-input_offset_x, -input_offset_y, -input_offset_z, 0)),
-                                  tensor(batch(1), feature(1), spatial(1, 1, 1, 1)),
+                                  tensor({0, 0, -input_offset_x, -input_offset_y, -input_offset_z}),
+                                  tensor({1, 1, 1, 1, 1, 1}),
                                   ref_conv_out_size,
                                   true),
                       reorder("out", "conv", {data_types::f32, format::bfzyx, ref_conv_out_size}));
@@ -7425,18 +7425,18 @@ TEST_P(convolution_grouped_gpu, base) {
     auto out_lay = out_mem->get_layout();
 
     ASSERT_EQ(out_mem->get_layout().format, input_data_format);
-    ASSERT_EQ(out_lay.size.batch[0], expected_result.size());
-    ASSERT_EQ(out_lay.size.feature[0], expected_result[0].size());
-    ASSERT_EQ(out_lay.size.spatial[2], expected_result[0][0].size());
-    ASSERT_EQ(out_lay.size.spatial[1], expected_result[0][0][0].size());
-    ASSERT_EQ(out_lay.size.spatial[0], expected_result[0][0][0][0].size());
+    ASSERT_EQ(out_lay.size.batch(0), expected_result.size());
+    ASSERT_EQ(out_lay.size.feature(0), expected_result[0].size());
+    ASSERT_EQ(out_lay.size.spatial(2), expected_result[0][0].size());
+    ASSERT_EQ(out_lay.size.spatial(1), expected_result[0][0][0].size());
+    ASSERT_EQ(out_lay.size.spatial(0), expected_result[0][0][0][0].size());
 
     for (int bi = 0; bi < batch_num; ++bi)
         for (int ofi = 0; ofi < output_f; ++ofi)
             for (int zi = 0; zi < (int)expected_result[0][0].size(); ++zi)
                 for (int yi = 0; yi < (int)expected_result[0][0][0].size(); ++yi)
                     for (int xi = 0; xi < (int)expected_result[0][0][0][0].size(); ++xi) {
-                        tensor coords = tensor(batch(bi), feature(ofi), spatial(xi, yi, zi, 0));
+                        tensor coords = tensor({bi, ofi, zi, yi, xi});
                         auto offset = out_lay.get_linear_offset(coords);
                         auto val = out_ptr[offset];
                         auto val_ref = expected_result[bi][ofi][zi][yi][xi];
@@ -7495,13 +7495,13 @@ TEST_P(convolution_general_gpu, conv_fp16_cases) {
     auto impl_name = testing::get<12>(GetParam());
     auto with_bias = testing::get<13>(GetParam());
 
-    auto input_size = tensor(batch_num, input_f, input_x, input_y);
+    auto input_size = tensor({batch_num, input_f, input_y, input_x});
     auto input_data = generate_random_4d<FLOAT16>(batch_num, input_f, input_y, input_x, -1, 1);
     auto input_data_bfyx = flatten_4d(format::bfyx, input_data);
     auto input_mem = engine.allocate_memory({ data_types::f16, format::bfyx, input_size });
     set_values(input_mem, input_data_bfyx);
 
-    auto weights_size = tensor(output_f, input_f, filter_y, filter_x, 1);
+    auto weights_size = tensor({output_f, input_f, filter_y, filter_x, 1});
     auto weights_data = generate_random_4d<FLOAT16>(output_f, input_f, filter_y, filter_x, -1, 1);
     auto weights_data_bfyx = flatten_4d(format::bfyx, weights_data);
     auto weights_mem = engine.allocate_memory({data_types::f16, format::bfyx, weights_size});
@@ -7513,7 +7513,7 @@ TEST_P(convolution_general_gpu, conv_fp16_cases) {
 
     // Calculate reference values
     if (with_bias) {
-        auto biases_size = tensor(1, output_f, 1, 1);
+        auto biases_size = tensor({1, output_f, 1, 1});
         auto biases_data = generate_random_1d<FLOAT16>(output_f, -1, 1);
         auto biases_mem = engine.allocate_memory({data_types::f16, format::bfyx, biases_size});
         set_values(biases_mem, biases_data);
@@ -7585,16 +7585,16 @@ TEST_P(convolution_general_gpu, conv_fp16_cases) {
     auto out_lay = out_mem->get_layout();
 
     ASSERT_EQ(out_mem->get_layout().format, input_data_format);
-    ASSERT_EQ(out_lay.size.batch[0], expected_result.size());
-    ASSERT_EQ(out_lay.size.feature[0], expected_result[0].size());
-    ASSERT_EQ(out_lay.size.spatial[1], expected_result[0][0].size());
-    ASSERT_EQ(out_lay.size.spatial[0], expected_result[0][0][0].size());
+    ASSERT_EQ(out_lay.size.batch(0), expected_result.size());
+    ASSERT_EQ(out_lay.size.feature(0), expected_result[0].size());
+    ASSERT_EQ(out_lay.size.spatial(1), expected_result[0][0].size());
+    ASSERT_EQ(out_lay.size.spatial(0), expected_result[0][0][0].size());
 
-    for (int bi = 0; bi < out_lay.size.batch[0]; ++bi)
-        for (int ofi = 0; ofi < out_lay.size.feature[0]; ++ofi)
-            for (int yi = 0; yi < out_lay.size.spatial[1]; ++yi)
-                for (int xi = 0; xi < out_lay.size.spatial[0]; ++xi) {
-                    tensor coords = tensor(batch(bi), feature(ofi), spatial(xi, yi, 0, 0));
+    for (int bi = 0; bi < out_lay.size.batch(0); ++bi)
+        for (int ofi = 0; ofi < out_lay.size.feature(0); ++ofi)
+            for (int yi = 0; yi < out_lay.size.spatial(1); ++yi)
+                for (int xi = 0; xi < out_lay.size.spatial(0); ++xi) {
+                    tensor coords = tensor({bi, ofi, yi, xi});
                     auto offset = out_lay.get_linear_offset(coords);
                     auto val = out_ptr[offset];
                     auto val_ref = expected_result[bi][ofi][yi][xi];
@@ -7625,7 +7625,7 @@ public:
         topo.add(reorder("input_reorder", "input", reordered_layout));
         std::string input_id = "input_reorder";
         if (has_input_zp()) {
-            auto input_zp_lay = layout(input_type(), format::bfyx, tensor(feature(input_features())));
+            auto input_zp_lay = layout(input_type(), format::bfyx, tensor({TensorValue(input_features())}));
             auto input_zp_mem = engine.allocate_memory(input_zp_lay);
             set_values(input_zp_mem, _input_zp);
             topo.add(data("input_zp", input_zp_mem));
@@ -7635,7 +7635,7 @@ public:
         topo.add(data("weights", wei_mem));
         std::string weights_id = "weights";
         if (has_weights_zp()) {
-            auto weights_zp_lay = layout(weights_type(), format::bfyx, tensor(batch(output_features())));
+            auto weights_zp_lay = layout(weights_type(), format::bfyx, tensor({TensorValue(output_features())}));
             auto weights_zp_mem = engine.allocate_memory(weights_zp_lay);
             set_values(weights_zp_mem, _weights_zp);
             topo.add(data("weights_zp", weights_zp_mem));
@@ -7648,13 +7648,13 @@ public:
                 input_id,
                 { weights_id },
                 static_cast<uint32_t>(groups()),
-                tensor(batch(0), feature(0), spatial(_stride_x, _stride_y)),
-                tensor(batch(0), feature(0), spatial(_offset_x, _offset_y)),
-                tensor(batch(0), feature(0), spatial(_dilation_x, _dilation_y)));
+                tensor({0, 0, _stride_y, _stride_x}),
+                tensor({0, 0, _offset_y, _offset_x}),
+                tensor({0, 0, _dilation_y, _dilation_x}));
             conv_prim.output_data_type = output_type();
             topo.add(conv_prim);
         } else {
-            auto bias_lay = layout(output_type(), format::bfyx, tensor(feature(output_features())));
+            auto bias_lay = layout(output_type(), format::bfyx, tensor({TensorValue(output_features())}));
             auto bias_mem = engine.allocate_memory(bias_lay);
             set_values(bias_mem, _bias);
             topo.add(data("bias", bias_mem));
@@ -7664,9 +7664,9 @@ public:
                 { weights_id },
                 { "bias" },
                 static_cast<uint32_t>(groups()),
-                tensor(batch(0), feature(0), spatial(_stride_x, _stride_y)),
-                tensor(batch(0), feature(0), spatial(_offset_x, _offset_y)),
-                tensor(batch(0), feature(0), spatial(_dilation_x, _dilation_y)));
+                tensor({0, 0, _stride_y, _stride_x}),
+                tensor({0, 0, _offset_y, _offset_x}),
+                tensor({0, 0, _dilation_y, _dilation_x}));
             conv_prim.output_data_type = output_type();
             topo.add(conv_prim);
         }
@@ -7698,7 +7698,7 @@ public:
             for (size_t fi = 0; fi < input_features(); ++fi)
                 for (size_t yi = 0; yi < input_y(); ++yi)
                     for (size_t xi = 0; xi < input_x(); ++xi) {
-                        tensor coords = tensor(batch(bi), feature(fi), spatial(xi, yi, 0, 0));
+                        tensor coords = tensor({TensorValue(bi), TensorValue(fi), TensorValue(yi), TensorValue(xi)});
                         size_t offset = input_lay.get_linear_offset(coords);
                         input_flat[offset] = _input[bi][fi][yi][xi];
                     }
@@ -7723,16 +7723,16 @@ public:
         }
 
         ASSERT_EQ(out_lay.data_type, output_type());
-        ASSERT_EQ(out_lay.size.batch[0], expected.size());
-        ASSERT_EQ(out_lay.size.feature[0], expected[0].size());
-        ASSERT_EQ(out_lay.size.spatial[1], expected[0][0].size());
-        ASSERT_EQ(out_lay.size.spatial[0], expected[0][0][0].size());
+        ASSERT_EQ(out_lay.size.batch(0), expected.size());
+        ASSERT_EQ(out_lay.size.feature(0), expected[0].size());
+        ASSERT_EQ(out_lay.size.spatial(1), expected[0][0].size());
+        ASSERT_EQ(out_lay.size.spatial(0), expected[0][0][0].size());
 
         for (size_t bi = 0; bi < batch_num(); ++bi)
             for (size_t fi = 0; fi < output_features(); ++fi)
                 for (size_t yi = 0; yi < expected[0][0].size(); ++yi)
                     for (size_t xi = 0; xi < expected[0][0][0].size(); ++xi) {
-                        tensor coords = tensor(batch(bi), feature(fi), spatial(xi, yi, 0, 0));
+                        tensor coords = tensor({TensorValue(bi), TensorValue(fi), TensorValue(yi), TensorValue(xi)});
                         size_t offset = out_lay.get_linear_offset(coords);
 
                         ASSERT_EQ(out_ptr[offset], expected[bi][fi][yi][xi])
@@ -7817,29 +7817,29 @@ protected:
     data_types input_type() const { return type_to_data_type<InputT>::value; }
     format input_format() const { return _input_fmt; }
     tensor input_size() const {
-        return tensor(TensorValue(batch_num()),
+        return tensor({TensorValue(batch_num()),
                       TensorValue(input_features()),
                       TensorValue(input_x()),
-                      TensorValue(input_y()));
+                      TensorValue(input_y())});
     }
 
     data_types weights_type() const { return type_to_data_type<WeightsT>::value; }
     tensor weights_size() const {
-        return tensor(TensorValue(output_features()),
+        return tensor({TensorValue(output_features()),
                       TensorValue(weights_input_features()),
                       TensorValue(filter_x()),
-                      TensorValue(filter_y()));
+                      TensorValue(filter_y())});
     }
     padding padding_size() const {
         if (_padded_input) {
             if (_bigger_pad) {
                 return padding{
-                        tensor(0, 0, TensorValue(filter_x() / 2 + 1), TensorValue(filter_y() / 2 + 1)).sizes(),
-                        tensor(0, 0, TensorValue(filter_x() / 2 + 1), TensorValue(filter_y() / 2 + 1)).sizes()};
+                        tensor({0, 0, TensorValue(filter_x() / 2 + 1), TensorValue(filter_y() / 2 + 1)}).sizes(),
+                        tensor({0, 0, TensorValue(filter_x() / 2 + 1), TensorValue(filter_y() / 2 + 1)}).sizes()};
             } else {
                 return padding{
-                        tensor(0, 0, TensorValue(filter_x() / 2), TensorValue(filter_y() / 2)).sizes(),
-                        tensor(0, 0, TensorValue(filter_x() / 2), TensorValue(filter_y() / 2)).sizes()};
+                        tensor({0, 0, TensorValue(filter_x() / 2), TensorValue(filter_y() / 2)}).sizes(),
+                        tensor({0, 0, TensorValue(filter_x() / 2), TensorValue(filter_y() / 2)}).sizes()};
             }
         } else {
             return padding{};
@@ -7990,7 +7990,7 @@ public:
         topo.add(reorder("input_reorder", "input", reordered_layout));
         std::string input_id = "input_reorder";
         if (this->has_input_zp()) {
-            auto input_zp_lay = layout(this->input_type(), format::bfyx, tensor(feature(this->input_features())));
+            auto input_zp_lay = layout(this->input_type(), format::bfyx, tensor({TensorValue(this->input_features())}));
             auto input_zp_mem = engine.allocate_memory(input_zp_lay);
             set_values(input_zp_mem, this->_input_zp);
             topo.add(data("input_zp", input_zp_mem));
@@ -8000,7 +8000,7 @@ public:
         topo.add(data("weights", wei_mem));
         std::string weights_id = "weights";
         if (this->has_weights_zp()) {
-            auto weights_zp_lay = layout(this->weights_type(), format::bfyx, tensor(batch(this->output_features())));
+            auto weights_zp_lay = layout(this->weights_type(), format::bfyx, tensor({TensorValue(this->output_features())}));
             auto weights_zp_mem = engine.allocate_memory(weights_zp_lay);
             set_values(weights_zp_mem, this->_weights_zp);
             topo.add(data("weights_zp", weights_zp_mem));
@@ -8013,13 +8013,13 @@ public:
                 input_id,
                 { weights_id },
                 static_cast<uint32_t>(this->groups()),
-                tensor(batch(0), feature(0), spatial(this->_stride_x, this->_stride_y)),
-                tensor(batch(0), feature(0), spatial(this->_offset_x, this->_offset_y)),
-                tensor(batch(0), feature(0), spatial(this->_dilation_x, this->_dilation_y)));
+                tensor({0, 0, this->_stride_y, this->_stride_x}),
+                tensor({0, 0, this->_offset_y, this->_offset_x}),
+                tensor({0, 0, this->_dilation_y, this->_dilation_x}));
             conv_prim.output_data_type = this->output_type();
             topo.add(conv_prim);
         } else {
-            auto bias_lay = layout(this->output_type(), format::bfyx, tensor(feature(this->output_features())));
+            auto bias_lay = layout(this->output_type(), format::bfyx, tensor({TensorValue(this->output_features())}));
             auto bias_mem = engine.allocate_memory(bias_lay);
             set_values(bias_mem, this->_bias);
             topo.add(data("bias", bias_mem));
@@ -8029,9 +8029,9 @@ public:
                 { weights_id },
                 { "bias" },
                 static_cast<uint32_t>(this->groups()),
-                tensor(batch(0), feature(0), spatial(this->_stride_x, this->_stride_y)),
-                tensor(batch(0), feature(0), spatial(this->_offset_x, this->_offset_y)),
-                tensor(batch(0), feature(0), spatial(this->_dilation_x, this->_dilation_y)));
+                tensor({0, 0, this->_stride_y, this->_stride_x}),
+                tensor({0, 0, this->_offset_y, this->_offset_x}),
+                tensor({0, 0, this->_dilation_y, this->_dilation_x}));
             conv_prim.output_data_type = this->output_type();
             topo.add(conv_prim);
         }
@@ -8058,7 +8058,7 @@ public:
             for (size_t fi = 0; fi < this->input_features(); ++fi)
                 for (size_t yi = 0; yi < this->input_y(); ++yi)
                     for (size_t xi = 0; xi < this->input_x(); ++xi) {
-                        tensor coords = tensor(batch(bi), feature(fi), spatial(xi, yi, 0, 0));
+                        tensor coords = tensor({TensorValue(bi), TensorValue(fi), TensorValue(yi), TensorValue(xi)});
                         size_t offset = input_lay.get_linear_offset(coords);
                         input_flat[offset] = this->_input[bi][fi][yi][xi];
                     }
@@ -8083,16 +8083,16 @@ public:
         }
 
         ASSERT_EQ(out_lay.data_type, this->output_type());
-        ASSERT_EQ(out_lay.size.batch[0], expected.size());
-        ASSERT_EQ(out_lay.size.feature[0], expected[0].size());
-        ASSERT_EQ(out_lay.size.spatial[1], expected[0][0].size());
-        ASSERT_EQ(out_lay.size.spatial[0], expected[0][0][0].size());
+        ASSERT_EQ(out_lay.size.batch(0), expected.size());
+        ASSERT_EQ(out_lay.size.feature(0), expected[0].size());
+        ASSERT_EQ(out_lay.size.spatial(1), expected[0][0].size());
+        ASSERT_EQ(out_lay.size.spatial(0), expected[0][0][0].size());
 
         for (size_t bi = 0; bi < this->batch_num(); ++bi)
             for (size_t fi = 0; fi < this->output_features(); ++fi)
                 for (size_t yi = 0; yi < expected[0][0].size(); ++yi)
                     for (size_t xi = 0; xi < expected[0][0][0].size(); ++xi) {
-                        tensor coords = tensor(batch(bi), feature(fi), spatial(xi, yi, 0, 0));
+                        tensor coords = tensor({TensorValue(bi), TensorValue(fi), TensorValue(yi), TensorValue(xi)});
                         size_t offset = out_lay.get_linear_offset(coords);
 
                         ASSERT_EQ(out_ptr[offset], expected[bi][fi][yi][xi])
@@ -8114,8 +8114,8 @@ public:
     topology build_topology(cldnn::engine& engine) override {
         topology topo = parent::build_topology(engine);
 
-        auto scale_lay = layout(this->output_type(), format::bfyx, tensor(batch(1), feature(this->output_features())));
-        auto shift_lay = layout(this->output_type(), format::bfyx, tensor(batch(1), feature(this->output_features())));
+        auto scale_lay = layout(this->output_type(), format::bfyx, tensor({1, static_cast<tensor::value_type>(this->output_features())}));
+        auto shift_lay = layout(this->output_type(), format::bfyx, tensor({1, static_cast<tensor::value_type>(this->output_features())}));
 
         auto scale_mem = engine.allocate_memory(scale_lay);
         auto shift_mem = engine.allocate_memory(shift_lay);
@@ -8384,9 +8384,9 @@ public:
         const std::vector<primitive_id>& weights = { "input1" };
         const std::vector<primitive_id>& bias = { "input2" };
 
-        std::vector<tensor> stride_sizes = { tensor(1, 1, 1, 1), tensor(1, 1, 2, 3), tensor(1, 1, 4, 1), tensor(1, 1, 5, 5) };
-        std::vector<tensor> dilation_sizes = { tensor(1, 1, 1, 1), tensor(1, 1, 5, 4), tensor(1, 1, 1, 3), tensor(1, 1, 7, 2) };
-        std::vector<tensor> input_offset_sizes = { tensor(0, 0, 0, 0), tensor(0, 0, 2, 2), tensor(0, 0, -5, -2), tensor(0, 0, 3, -3) };
+        std::vector<tensor> stride_sizes = { tensor({1, 1, 1, 1}), tensor({1, 1, 2, 3}), tensor({1, 1, 4, 1}), tensor({1, 1, 5, 5}) };
+        std::vector<tensor> dilation_sizes = { tensor({1, 1, 1, 1}), tensor({1, 1, 5, 4}), tensor({1, 1, 1, 3}), tensor({1, 1, 7, 2}) };
+        std::vector<tensor> input_offset_sizes = { tensor({0, 0, 0, 0}), tensor({0, 0, 2, 2}), tensor({0, 0, -5, -2}), tensor({0, 0, 3, -3}) };
 
         // No padding
         all_layer_params.emplace_back(new convolution("convolution_no_relu", "input0", weights, bias, stride_sizes[0], input_offset_sizes[0], dilation_sizes[0]));
@@ -8416,9 +8416,9 @@ public:
         std::vector<cldnn::format> weights_formats = { cldnn::format::bfyx, cldnn::format::yxfb };
 
         std::vector<int32_t> output_features_sizes = { 1, 3, 16 };
-        std::vector<cldnn::tensor> kernel_sizes = { tensor(1, 1, 1, 1), tensor(1, 1, 4, 7), tensor(1, 1, 5, 3) };
+        std::vector<cldnn::tensor> kernel_sizes = { tensor({1, 1, 1, 1}), tensor({1, 1, 4, 7}), tensor({1, 1, 5, 3}) };
 
-        std::vector<tensor> input_tensor_size = { tensor(1, 5, 59, 72), tensor(8, 3, 63, 56), tensor(16, 2, 50, 50), tensor(32, 1, 44, 62) };
+        std::vector<tensor> input_tensor_size = { tensor({1, 5, 59, 72}), tensor({8, 3, 63, 56}), tensor({16, 2, 50, 50}), tensor({32, 1, 44, 62}) };
 
         auto data_types = test_data_types();
 
@@ -8432,10 +8432,13 @@ public:
                     for (cldnn::tensor input_size : input_tensor_size) {
                         for (cldnn::tensor kernel_size : kernel_sizes) {
                             for (auto output_features : output_features_sizes) {
-                                std::shared_ptr<tests::test_params> params = std::make_shared<test_params>(data_type, input_format, input_size.batch[0], input_size.feature[0], tensor(1, 1, input_size.spatial[0], input_size.spatial[1]), network_build_options);
-                                int input_features = params->input_layouts[0].size.feature[0];
-                                params->input_layouts.push_back(cldnn::layout(params->data_type, weights_format, cldnn::tensor(output_features, input_features, kernel_size.spatial[0], kernel_size.spatial[1]))); // weights
-                                params->input_layouts.push_back(cldnn::layout(params->data_type, params->fmt, cldnn::tensor(1, 1, output_features, 1))); // biases
+                                std::shared_ptr<tests::test_params> params = std::make_shared<test_params>(data_type, input_format, input_size.batch(0), input_size.feature(0),
+                                tensor({1, 1, input_size.spatial(1), input_size.spatial(0)}), network_build_options);
+                                int input_features = params->input_layouts[0].size.feature(0);
+                                params->input_layouts.push_back(cldnn::layout(params->data_type, weights_format,
+                                cldnn::tensor({output_features, input_features, kernel_size.spatial(1), kernel_size.spatial(0)}))); // weights
+                                params->input_layouts.push_back(cldnn::layout(params->data_type, params->fmt,
+                                cldnn::tensor({1, 1, output_features, 1}))); // biases
                                 all_generic_params.push_back(params);
                             }
                         }
@@ -8466,15 +8469,15 @@ public:
         tensor input_offset = convolution->input_offset;
         tensor weights_size = generic_params->input_layouts[1].size;
 
-        int kernel_extent_y = dilation.spatial[1] * (weights_size.spatial[1] - 1) + 1;
-        int kernel_extent_x = dilation.spatial[0] * (weights_size.spatial[0] - 1) + 1;
+        int kernel_extent_y = dilation.spatial(1) * (weights_size.spatial(1) - 1) + 1;
+        int kernel_extent_x = dilation.spatial(0) * (weights_size.spatial(0) - 1) + 1;
 
         // Calculate output size
-        int output_size_y = 1 + (input_size.spatial[1] - kernel_extent_y - 2 * input_offset.spatial[1]) / stride.spatial[1];
-        int output_size_x = 1 + (input_size.spatial[0] - kernel_extent_x - 2 * input_offset.spatial[0]) / stride.spatial[0];
-        int output_features = weights_size.batch[0];
+        int output_size_y = 1 + (input_size.spatial(1) - kernel_extent_y - 2 * input_offset.spatial(1)) / stride.spatial(1);
+        int output_size_x = 1 + (input_size.spatial(0) - kernel_extent_x - 2 * input_offset.spatial(0)) / stride.spatial(0);
+        int output_features = weights_size.batch(0);
 
-        return cldnn::tensor(input_size.batch[0], output_features, output_size_x, output_size_y);
+        return cldnn::tensor({input_size.batch(0), output_features, output_size_y, output_size_x});
     }
 
     void prepare_input_for_test(std::vector<cldnn::memory::ptr>& inputs) override {
@@ -8492,21 +8495,21 @@ public:
         // Update inputs.
         auto input = inputs[0];
         auto input_size = inputs[0]->get_layout().size;
-        VVVVF<Type> input_rnd = generate_random_4d<Type>(input_size.batch[0], input_size.feature[0], input_size.spatial[1], input_size.spatial[0], -2, 2, k);
+        VVVVF<Type> input_rnd = generate_random_4d<Type>(input_size.batch(0), input_size.feature(0), input_size.spatial(1), input_size.spatial(0), -2, 2, k);
         VF<Type> input_rnd_vec = flatten_4d<Type>(input->get_layout().format, input_rnd);
         set_values(input, input_rnd_vec);
 
         // Update weights.
         auto weight_input = inputs[1];
         auto weight_size = inputs[1]->get_layout().size;
-        VVVVF<Type> weight_rnd = generate_random_4d<Type>(weight_size.batch[0], weight_size.feature[0], weight_size.spatial[1], weight_size.spatial[0], -2, 2, k);
+        VVVVF<Type> weight_rnd = generate_random_4d<Type>(weight_size.batch(0), weight_size.feature(0), weight_size.spatial(1), weight_size.spatial(0), -2, 2, k);
         VF<Type> weight_rnd_vec = flatten_4d<Type>(weight_input->get_layout().format, weight_rnd);
         set_values(weight_input, weight_rnd_vec);
 
         // Update biases.
         auto bias_input = inputs[2];
         auto bias_size = inputs[2]->get_layout().size;
-        VF<Type> bias_rnd = generate_random_1d<Type>(bias_size.spatial[0], -2, 2, k);
+        VF<Type> bias_rnd = generate_random_1d<Type>(bias_size.spatial(0), -2, 2, k);
         set_values(bias_input, bias_rnd);
     }
 
@@ -8528,10 +8531,10 @@ public:
         tensor output_size = get_expected_output_tensor();
 
         // Calculate output size
-        int output_size_y = output_size.spatial[1];
-        int output_size_x = output_size.spatial[0];
-        int output_features = weights_size.batch[0];
-        int input_features = weights_size.feature[0];
+        int output_size_y = output_size.spatial(1);
+        int output_size_x = output_size.spatial(0);
+        int output_features = weights_size.batch(0);
+        int input_features = weights_size.feature(0);
 
         auto output = engine.allocate_memory(cldnn::layout(dt, cldnn::format::bfyx, output_size, output_padding));
 
@@ -8546,13 +8549,13 @@ public:
         std::fill(output_mem.begin(), output_mem.end(), static_cast<Type>(0));
 
         // Add the bias
-        for (int b = 0; b < input_size.batch[0]; b++) {
+        for (int b = 0; b < input_size.batch(0); b++) {
             for (int out_f = 0; out_f < output_features; out_f++) {
                 for (int y = 0; y < output_size_y; y++) {
                     for (int x = 0; x < output_size_x; x++) {
-                        int output_index = (b * output_buffer_size.feature[0] + out_f) * output_buffer_size.spatial[1] * output_buffer_size.spatial[0];
+                        int output_index = (b * output_buffer_size.feature(0) + out_f) * output_buffer_size.spatial(1) * output_buffer_size.spatial(0);
                         tensor lower_output_padding = convolution->output_padding.lower_size();
-                        output_index += (lower_output_padding.spatial[1] + y) * output_buffer_size.spatial[0] + lower_output_padding.spatial[0] + x;
+                        output_index += (lower_output_padding.spatial(1) + y) * output_buffer_size.spatial(0) + lower_output_padding.spatial(0) + x;
 
                         output_mem[output_index] += bias_mem[out_f];
                     }
@@ -8564,7 +8567,7 @@ public:
         const auto input1_desc = get_linear_memory_desc(inputs[1]->get_layout());
 
         // Convolve with weights
-        for (int b = 0; b < input_size.batch[0]; b++) {
+        for (int b = 0; b < input_size.batch(0); b++) {
             int input_bi = b;
             for (int out_f = 0; out_f < output_features; out_f++) {
                 for (int in_f = 0; in_f < input_features; in_f++) {
@@ -8575,19 +8578,19 @@ public:
                             int output_fi = out_f;
                             int output_yi = y;
                             int output_xi = x;
-                            int output_index = (output_bi * output_buffer_size.feature[0] + output_fi) * output_buffer_size.spatial[1] * output_buffer_size.spatial[0];
+                            int output_index = (output_bi * output_buffer_size.feature(0) + output_fi) * output_buffer_size.spatial(1) * output_buffer_size.spatial(0);
                             tensor lower_output_padding = convolution->output_padding.lower_size();
-                            output_index += (lower_output_padding.spatial[1] + output_yi) * output_buffer_size.spatial[0] + lower_output_padding.spatial[0] + output_xi;
+                            output_index += (lower_output_padding.spatial(1) + output_yi) * output_buffer_size.spatial(0) + lower_output_padding.spatial(0) + output_xi;
 
-                            for (int kernel_y = 0; kernel_y < weights_size.spatial[1]; kernel_y++) {
-                                int input_yi = y * stride.spatial[1] + input_offset.spatial[1] + kernel_y * dilation.spatial[1];
-                                if ((input_yi < 0) || (input_yi >= input_size.spatial[1])) {
+                            for (int kernel_y = 0; kernel_y < weights_size.spatial(1); kernel_y++) {
+                                int input_yi = y * stride.spatial(1) + input_offset.spatial(1) + kernel_y * dilation.spatial(1);
+                                if ((input_yi < 0) || (input_yi >= input_size.spatial(1))) {
                                     continue;
                                 }
 
-                                for (int kernel_x = 0; kernel_x < weights_size.spatial[0]; kernel_x++) {
-                                    int input_xi = x * stride.spatial[0] + input_offset.spatial[0] + kernel_x * dilation.spatial[0];
-                                    if ((input_xi < 0) || (input_xi >= input_size.spatial[0])) {
+                                for (int kernel_x = 0; kernel_x < weights_size.spatial(0); kernel_x++) {
+                                    int input_xi = x * stride.spatial(0) + input_offset.spatial(0) + kernel_x * dilation.spatial(0);
+                                    if ((input_xi < 0) || (input_xi >= input_size.spatial(0))) {
                                         continue;
                                     }
 

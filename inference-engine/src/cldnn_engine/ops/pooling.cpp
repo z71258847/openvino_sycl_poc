@@ -31,24 +31,24 @@ static PoolingParameters GetPoolingParameters(const ngraph::Shape& kernel,
     std::vector<cldnn::tensor::value_type> pe_casted(pads_end.begin(), pads_end.end());
     switch (strides.size()) {
         case 3: {
-            k = cldnn::tensor(cldnn::batch(1), cldnn::feature(1), cldnn::spatial(kernel[2], kernel[1], kernel[0]));
-            s = cldnn::tensor(cldnn::batch(1), cldnn::feature(1), cldnn::spatial(strides[2], strides[1], strides[0]));
-            pb = cldnn::tensor(cldnn::batch(0), cldnn::feature(0), cldnn::spatial(-pb_casted[2], -pb_casted[1], -pb_casted[0]));
-            pe = cldnn::tensor(cldnn::batch(0), cldnn::feature(0), cldnn::spatial(-pe_casted[2], -pe_casted[1], -pe_casted[0]));
+            k = cldnn::tensor({1, 1, kernel[0], kernel[1], kernel[2]});
+            s = cldnn::tensor({1, 1, strides[0], strides[1], strides[2]});
+            pb = cldnn::tensor({0, 0, -pb_casted[0], -pb_casted[1], -pb_casted[2]});
+            pe = cldnn::tensor({0, 0, -pe_casted[0], -pe_casted[1], -pe_casted[2]});
             break;
         }
         case 2: {
-            k = cldnn::tensor(cldnn::batch(1), cldnn::feature(1), cldnn::spatial(kernel[1], kernel[0], 1));
-            s = cldnn::tensor(cldnn::batch(1), cldnn::feature(1), cldnn::spatial(strides[1], strides[0], 1));
-            pb = cldnn::tensor(cldnn::batch(0), cldnn::feature(0), cldnn::spatial(-pb_casted[1], -pb_casted[0], 0));
-            pe = cldnn::tensor(cldnn::batch(0), cldnn::feature(0), cldnn::spatial(-pe_casted[1], -pe_casted[0], 0));
+            k = cldnn::tensor({1, 1, kernel[0], kernel[1], 1});
+            s = cldnn::tensor({1, 1, strides[0], strides[1], 1});
+            pb = cldnn::tensor({0, 0, -pb_casted[0], -pb_casted[1], 0});
+            pe = cldnn::tensor({0, 0, -pe_casted[0], -pe_casted[1], 0});
             break;
         }
         case 1: {
-            k = cldnn::tensor(cldnn::batch(1), cldnn::feature(1), cldnn::spatial(kernel[0], 1, 1));
-            s = cldnn::tensor(cldnn::batch(1), cldnn::feature(1), cldnn::spatial(strides[0], 1, 1));
-            pb = cldnn::tensor(cldnn::batch(0), cldnn::feature(0), cldnn::spatial(-pb_casted[0], 0, 0));
-            pe = cldnn::tensor(cldnn::batch(0), cldnn::feature(0), cldnn::spatial(-pe_casted[0], 0, 0));
+            k = cldnn::tensor({1, 1, kernel[0], 1, 1});
+            s = cldnn::tensor({1, 1, strides[0], 1, 1});
+            pb = cldnn::tensor({0, 0, -pb_casted[0], 0, 0});
+            pe = cldnn::tensor({0, 0, -pe_casted[0], 0, 0});
             break;
         }
         default: IE_THROW() << "Unsupported pooling parameters size. Only 1d, 2d, and 3d cases are supported";

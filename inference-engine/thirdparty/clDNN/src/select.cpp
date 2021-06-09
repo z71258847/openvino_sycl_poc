@@ -102,15 +102,15 @@ select_inst::typed_primitive_inst(network& network, select_node const& node) : p
                                 "");
 
         cldnn::tensor output_tensor = tensor::max(deps[1]->get_output_layout().size, deps[2]->get_output_layout().size);
-        auto max_dim_count = output_tensor.raw.size();
+        auto max_dim_count = output_tensor.rank().get_length();
 
         for (size_t i = 0; i < deps.size(); i++) {
             for (size_t d = 0; d < max_dim_count; d++) {
-                auto current_dim = deps[i]->get_output_layout().size.raw[d];
+                auto current_dim = deps[i]->get_output_layout().size[d];
 
                 CLDNN_ERROR_BOOL(node.id(),
                                     "Sizes equal or broadcast is possible",
-                                    !(current_dim == output_tensor.raw[d] || current_dim == 1),
+                                    !(current_dim == output_tensor[d] || current_dim == 1),
                                     "Invalid input shapes");
             }
         }

@@ -67,8 +67,8 @@ struct non_max_suppression_basic : public testing::Test {
         T(0.1f), T(0.2f), T(0.3f),
     };
 
-    const layout boxes_layout = layout(type_to_data_type<T>::value, format::bfyx, tensor(batch(batch_size), feature(boxes_num), spatial(1, 4)));
-    const layout scores_layout = layout(type_to_data_type<T>::value, format::bfyx, tensor(batch(batch_size), feature(classes_num), spatial(1, boxes_num)));
+    const layout boxes_layout = layout(type_to_data_type<T>::value, format::bfyx, tensor({batch_size, boxes_num, 4, 1}));
+    const layout scores_layout = layout(type_to_data_type<T>::value, format::bfyx, tensor({batch_size, classes_num, boxes_num, 1}));
 
     memory::ptr get_boxes_memory(engine& engine) {
         auto mem = engine.allocate_memory(boxes_layout);
@@ -130,7 +130,7 @@ TYPED_TEST(non_max_suppression_basic, basic) {
 TYPED_TEST(non_max_suppression_basic, num_per_class) {
     auto& engine = tests::get_test_engine();
 
-    auto num_per_class_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor(batch(1))));
+    auto num_per_class_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor({1})));
     tests::set_values(num_per_class_mem, { 1.f });
 
     topology topo;
@@ -173,9 +173,9 @@ TYPED_TEST(non_max_suppression_basic, num_per_class) {
 TYPED_TEST(non_max_suppression_basic, iou_threshold) {
     auto& engine = tests::get_test_engine();
 
-    auto num_per_class_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor(batch(1))));
+    auto num_per_class_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor({1})));
     tests::set_values(num_per_class_mem, { 3.f });
-    auto iou_threshold_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor(batch(1))));
+    auto iou_threshold_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor({1})));
     tests::set_values(iou_threshold_mem, { 0.4f });
 
     topology topo;
@@ -219,11 +219,11 @@ TYPED_TEST(non_max_suppression_basic, iou_threshold) {
 TYPED_TEST(non_max_suppression_basic, score_threshold) {
     auto& engine = tests::get_test_engine();
 
-    auto num_per_class_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor(batch(1))));
+    auto num_per_class_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor({1})));
     tests::set_values(num_per_class_mem, { 3.f });
-    auto iou_threshold_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor(batch(1))));
+    auto iou_threshold_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor({1})));
     tests::set_values(iou_threshold_mem, { 0.4f });
-    auto score_threshold_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor(batch(1))));
+    auto score_threshold_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor({1})));
     tests::set_values(score_threshold_mem, { 0.4f });
 
     topology topo;
@@ -268,13 +268,13 @@ TYPED_TEST(non_max_suppression_basic, score_threshold) {
 TYPED_TEST(non_max_suppression_basic, soft_nms_sigma) {
     auto& engine = tests::get_test_engine();
 
-    auto num_per_class_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor(batch(1))));
+    auto num_per_class_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor({1})));
     tests::set_values(num_per_class_mem, { 3.f });
-    auto iou_threshold_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor(batch(1))));
+    auto iou_threshold_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor({1})));
     tests::set_values(iou_threshold_mem, { 0.4f });
-    auto score_threshold_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor(batch(1))));
+    auto score_threshold_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor({1})));
     tests::set_values(score_threshold_mem, { 0.4f });
-    auto soft_nms_sigma_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor(batch(1))));
+    auto soft_nms_sigma_mem = engine.allocate_memory(layout(data_types::f32, format::bfyx, tensor({1})));
     tests::set_values(soft_nms_sigma_mem, { 0.5f });
 
     topology topo;

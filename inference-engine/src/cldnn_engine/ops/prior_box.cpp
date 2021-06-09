@@ -30,7 +30,7 @@ void CreatePriorBoxClusteredOp(Program& p, const std::shared_ptr<ngraph::op::v0:
 
     int img_w = static_cast<int>(img_dims.back());
     int img_h = static_cast<int>(img_dims.at(img_dims.size() - 2));
-    cldnn::tensor img_size = (cldnn::tensor) cldnn::spatial(TensorValue(img_w), TensorValue(img_h));
+    cldnn::tensor img_size = cldnn::tensor{TensorValue(img_h), TensorValue(img_w)};
 
     auto step_w = attrs.step_widths;
     auto step_h = attrs.step_heights;
@@ -87,7 +87,7 @@ void CreatePriorBoxOp(Program& p, const std::shared_ptr<ngraph::op::v0::PriorBox
     auto wdim = img_dims.back();
     auto hdim = img_dims.at(img_dims.size()-2);
 
-    cldnn::tensor img_size = (cldnn::tensor) cldnn::spatial(TensorValue(wdim), TensorValue(hdim));
+    cldnn::tensor img_size = cldnn::tensor{TensorValue(hdim), TensorValue(wdim)};
     auto priorBoxPrim = cldnn::prior_box(layerName,
                                          inputPrimitives[0],
                                          img_size,

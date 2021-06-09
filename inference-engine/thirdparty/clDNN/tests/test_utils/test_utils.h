@@ -268,12 +268,12 @@ void set_values_per_batch_and_feature(cldnn::memory::ptr mem, std::vector<T> arg
     cldnn::mem_lock<T> mem_ptr(mem, get_test_stream());
     auto&& pitches = mem->get_layout().get_pitches();
     auto&& size = mem->get_layout().size;
-    for (cldnn::tensor::value_type b = 0; b < size.batch[0]; ++b) {
-        for (cldnn::tensor::value_type f = 0; f < size.feature[0]; ++f) {
-            for (cldnn::tensor::value_type y = 0; y < size.spatial[1]; ++y) {
-                for (cldnn::tensor::value_type x = 0; x < size.spatial[0]; ++x) {
-                    unsigned int input_it = b*pitches.batch[0] + f*pitches.feature[0] + y*pitches.spatial[1] + x*pitches.spatial[0];
-                    mem_ptr[input_it] = args[b*size.feature[0] + f];
+    for (cldnn::tensor::value_type b = 0; b < size.batch(0); ++b) {
+        for (cldnn::tensor::value_type f = 0; f < size.feature(0); ++f) {
+            for (cldnn::tensor::value_type y = 0; y < size.spatial(1); ++y) {
+                for (cldnn::tensor::value_type x = 0; x < size.spatial(0); ++x) {
+                    unsigned int input_it = b*pitches.batch(0) + f*pitches.feature(0) + y*pitches.spatial(1) + x*pitches.spatial(0);
+                    mem_ptr[input_it] = args[b*size.feature(0) + f];
                 }
             }
         }
@@ -385,7 +385,7 @@ public:
         data_type(dt),
         fmt(input_format),
         network_build_options(options) {
-        cldnn::tensor t = cldnn::tensor(batch_size, feature_size, input_size.spatial[0],  input_size.spatial[1] );
+        cldnn::tensor t = cldnn::tensor({batch_size, feature_size, input_size.spatial(0),  input_size.spatial(1) });
         input_layouts.push_back( cldnn::layout(dt, fmt, t) );
     }
 
@@ -522,9 +522,9 @@ inline void PrintTupleTo(const std::tuple<std::shared_ptr<test_params>, std::sha
         str << "Norm region: " << norm_region << " Epsilon: " << normalize->epsilon << " Scale input id: " << normalize->scale_input;
     } else if (primitive->type == cldnn::convolution::type_id()) {
         auto convolution = std::static_pointer_cast<cldnn::convolution>(primitive);
-        str << "Stride x: " << convolution->stride.spatial[0] << " Stride y: " << convolution->stride.spatial[1]
-            << " Dilation x: " << convolution->dilation.spatial[0] << " Dilation y: " << convolution->dilation.spatial[1]
-            << " Input offset x: " << convolution->input_offset.spatial[0] << " Input offset y: " << convolution->input_offset.spatial[1];
+        str << "Stride x: " << convolution->stride.spatial(0) << " Stride y: " << convolution->stride.spatial(1)
+            << " Dilation x: " << convolution->dilation.spatial(0) << " Dilation y: " << convolution->dilation.spatial(1)
+            << " Input offset x: " << convolution->input_offset.spatial(0) << " Input offset y: " << convolution->input_offset.spatial(1);
     } else if (primitive->type == cldnn::activation::type_id()) {
         auto activation = std::static_pointer_cast<cldnn::activation>(primitive);
         str << "Negative slope: " << activation->additional_params.a << " Negative slope input id: " << activation->additional_params_input;
@@ -532,9 +532,9 @@ inline void PrintTupleTo(const std::tuple<std::shared_ptr<test_params>, std::sha
         auto pooling = std::static_pointer_cast<cldnn::pooling>(primitive);
         std::string pooling_mode = (pooling->mode == cldnn::pooling_mode::max) ? "max" : "average";
         str << "Pooling mode: " << pooling_mode
-            << " Input offset x: " << pooling->input_offset.spatial[0] << " Input offset y: " << pooling->input_offset.spatial[1]
-            << " Stride x: " << pooling->stride.spatial[0] << " Stride y: " << pooling->stride.spatial[1]
-            << " Size x: " << pooling->size.spatial[0] << " Size y: " << pooling->size.spatial[1];
+            << " Input offset x: " << pooling->input_offset.spatial(0) << " Input offset y: " << pooling->input_offset.spatial(1)
+            << " Stride x: " << pooling->stride.spatial(0) << " Stride y: " << pooling->stride.spatial(1)
+            << " Size x: " << pooling->size.spatial(0) << " Size y: " << pooling->size.spatial(1);
     } else {
         throw std::runtime_error("Not implemented yet for this primitive.");
     }
@@ -554,19 +554,19 @@ T div_up(const T a, const U b) {
 
 //     std::cerr << name;
 //     std::cerr << " shape: ";
-//     std::cerr << size.batch[0] << " ";
-//     std::cerr << size.feature[0] << " ";
-//     std::cerr << size.spatial[1] << " ";
-//     std::cerr << size.spatial[0] << " ";
-//     std::cerr << "(" << size.batch[0] * size.feature[0] * size.spatial[1] * size.spatial[0] << ")" << std::endl;
+//     std::cerr << size.batch(0) << " ";
+//     std::cerr << size.feature(0) << " ";
+//     std::cerr << size.spatial(1) << " ";
+//     std::cerr << size.spatial(0) << " ";
+//     std::cerr << "(" << size.batch(0) * size.feature(0) * size.spatial(1) * size.spatial(0) << ")" << std::endl;
 
 //     auto mem_ptr = mem.pointer<uint32_t>();
 
 //     bool packed_ic = mem.get_layout().format == cldnn::format::b_fs_yx_32fp ? 1 : 0;
-//     int B = size.batch[0];
-//     int C = size.feature[0];
-//     int H = size.spatial[1];
-//     int W = size.spatial[0];
+//     int B = size.batch(0);
+//     int C = size.feature(0);
+//     int H = size.spatial(1);
+//     int W = size.spatial(0);
 
 //     for (cldnn::tensor::value_type b = 0; b < B; ++b)
 //     {
@@ -604,18 +604,18 @@ T div_up(const T a, const U b) {
 
 //     std::cerr << name;
 //     std::cerr << " shape: ";
-//     std::cerr << size.batch[0] << " ";
-//     std::cerr << size.feature[0] << " ";
-//     std::cerr << size.spatial[1] << " ";
-//     std::cerr << size.spatial[0] << " ";
-//     std::cerr << "(" << size.batch[0] * size.feature[0] * size.spatial[1] * size.spatial[0] << ")" << std::endl;
+//     std::cerr << size.batch(0) << " ";
+//     std::cerr << size.feature(0) << " ";
+//     std::cerr << size.spatial(1) << " ";
+//     std::cerr << size.spatial(0) << " ";
+//     std::cerr << "(" << size.batch(0) * size.feature(0) * size.spatial(1) * size.spatial(0) << ")" << std::endl;
 
 //     auto mem_ptr = mem.pointer<uint32_t>();
 
-//     int B = size.batch[0];
-//     int C = size.feature[0];
-//     int H = size.spatial[1];
-//     int W = size.spatial[0];
+//     int B = size.batch(0);
+//     int C = size.feature(0);
+//     int H = size.spatial(1);
+//     int W = size.spatial(0);
 
 //     for (cldnn::tensor::value_type b = 0; b < B; ++b)
 //     {
@@ -642,18 +642,18 @@ T div_up(const T a, const U b) {
 
 //     std::cerr << name;
 //     std::cerr << " shape: ";
-//     std::cerr << size.batch[0] << " ";
-//     std::cerr << size.feature[0] << " ";
-//     std::cerr << size.spatial[1] << " ";
-//     std::cerr << size.spatial[0] << " ";
-//     std::cerr << "(" << size.batch[0] * size.feature[0] * size.spatial[1] * size.spatial[0] << ")" << std::endl;
+//     std::cerr << size.batch(0) << " ";
+//     std::cerr << size.feature(0) << " ";
+//     std::cerr << size.spatial(1) << " ";
+//     std::cerr << size.spatial(0) << " ";
+//     std::cerr << "(" << size.batch(0) * size.feature(0) * size.spatial(1) * size.spatial(0) << ")" << std::endl;
 
 //     auto mem_ptr = mem.pointer<float>();
 
-//     int B = size.batch[0];
-//     int C = size.feature[0];
-//     int H = size.spatial[1];
-//     int W = size.spatial[0];
+//     int B = size.batch(0);
+//     int C = size.feature(0);
+//     int H = size.spatial(1);
+//     int W = size.spatial(0);
 
 //     for (cldnn::tensor::value_type b = 0; b < B; ++b)
 //     {

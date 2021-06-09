@@ -30,14 +30,12 @@ layout border_inst::calc_output_layout(border_node const& node) {
     auto ret_format = input_layout.format;
 
     if (ret_format == format::bfwzyx) {
-        return layout{ ret_data_t, ret_format, tensor(batch(new_size.batch[0]), feature(new_size.feature[0]),
-            spatial(new_size.spatial[0], new_size.spatial[1], new_size.spatial[2], new_size.spatial[3])) };
+        return layout{ ret_data_t, ret_format, tensor({new_size.batch(0), new_size.feature(0),
+            new_size.spatial(3), new_size.spatial(2), new_size.spatial(1), new_size.spatial(0)}) };
     } else if (ret_format == format::bfzyx) {
-        return layout{ ret_data_t, ret_format, tensor(batch(new_size.batch[0]), feature(new_size.feature[0]),
-            spatial(new_size.spatial[0], new_size.spatial[1], new_size.spatial[2])) };
+        return layout{ ret_data_t, ret_format, tensor({new_size.batch(0), new_size.feature(0), new_size.spatial(2), new_size.spatial(1), new_size.spatial(0)})};
     }
-    return layout{ ret_data_t, ret_format, tensor(batch(new_size.batch[0]), feature(new_size.feature[0]),
-        spatial(new_size.spatial[0], new_size.spatial[1])) };
+    return layout{ ret_data_t, ret_format, tensor({new_size.batch(0), new_size.feature(0), new_size.spatial(1), new_size.spatial(0)}) };
 }
 
 std::string border_inst::to_string(border_node const& node) {

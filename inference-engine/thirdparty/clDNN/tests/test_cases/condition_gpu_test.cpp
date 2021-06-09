@@ -173,16 +173,16 @@ std::pair<std::vector<float>, std::vector<float>> get_values_to_compare(const cl
     std::vector<float> ret_true;
     std::vector<float> ret_false;
     auto mem_desc = generic_test::get_linear_memory_desc(input_lay);
-    for (int32_t b = 0; b < range.batch[0]; b++) {
-        for (int32_t f = 0; f < range.feature[0]; f++) {
-            for (int32_t y = 0; y < range.spatial[1]; y++) {
-                for (int32_t x = 0; x < range.spatial[0]; x++) {
+    for (int32_t b = 0; b < range.batch(0); b++) {
+        for (int32_t f = 0; f < range.feature(0); f++) {
+            for (int32_t y = 0; y < range.spatial(1); y++) {
+                for (int32_t x = 0; x < range.spatial(0); x++) {
                     auto linear_idx = generic_test::get_linear_index(
                         input_lay,
-                        offset.batch[0] + b,
-                        offset.feature[0] + f,
-                        offset.spatial[1] + y,
-                        offset.spatial[0] + x,
+                        offset.batch(0) + b,
+                        offset.feature(0) + f,
+                        offset.spatial(1) + y,
+                        offset.spatial(0) + x,
                         mem_desc);
 
                     switch (func) {

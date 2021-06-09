@@ -106,26 +106,26 @@ bool concat_in_place_optimization::match(concatenation_node& node) {
         // TODO: Below condition should be moved to program_node::supports_padding.
         // This hovewer will need updating the algorithm as it may make cascade adjustment impossible in some cases.
         // It hovewer would make normal optimizations possible in others, so this is a trade-off to be investigated.
-        if (l.format == format::b_fs_yx_fsv16 && (l.size.feature[0] % 16 != 0 || node.get_primitive()->axis != concatenation::along_f))
+        if (l.format == format::b_fs_yx_fsv16 && (l.size.feature(0) % 16 != 0 || node.get_primitive()->axis != concatenation::along_f))
             return false;
 
-        if (l.format == format::b_fs_zyx_fsv16 && (l.size.feature[0] % 16 != 0 || node.get_primitive()->axis != concatenation::along_f))
+        if (l.format == format::b_fs_zyx_fsv16 && (l.size.feature(0) % 16 != 0 || node.get_primitive()->axis != concatenation::along_f))
             return false;
 
         if ((l.format == format::b_fs_yx_fsv32 || l.format == format::b_fs_zyx_fsv32) &&
-            (l.size.feature[0] % 32 != 0 || node.get_primitive()->axis != concatenation::along_f))
+            (l.size.feature(0) % 32 != 0 || node.get_primitive()->axis != concatenation::along_f))
             return false;
 
         if (l.format == format::bs_fs_yx_bsv16_fsv16)
             return false;
 
-        if (l.format == format::b_fs_yx_fsv4 && (l.size.feature[0] != 8 || node.get_primitive()->axis != concatenation::along_f))
+        if (l.format == format::b_fs_yx_fsv4 && (l.size.feature(0) != 8 || node.get_primitive()->axis != concatenation::along_f))
             return false;
     }
 
-    auto lower_padd_in_axis = node.get_output_layout().data_padding.lower_size().raw[concat_axis];
-    lower_padd_in_axis = std::max(lower_padd_in_axis,
-                                  node.get_dependency(0).get_output_layout().data_padding.lower_size().raw[concat_axis]);
+    auto lower_padd_in_axis = node.get_output_layout().data_padding.lower_size()[concat_axis];
+    lower_padd_in_axis = std::max<tensor::value_type>(lower_padd_in_axis.get_length(),
+                                  node.get_dependency(0).get_output_layout().data_padding.lower_size()[concat_axis].get_length());
 
     // check if concatenation in place can be applied for inputs set
     size_t idx = 0;
@@ -143,7 +143,7 @@ bool concat_in_place_optimization::match(concatenation_node& node) {
         // which would affect a form of its output (unless debug flag is set),
         // we also need to restrict input types to those which support padding on all axis
         if ((input->is_output() && !get_program().is_debug_build()) ||
-            !input->is_padding_supported(concat_axis, lower_padd_in_axis))
+            !input->is_padding_supported(concat_axis, lower_padd_in_axis.get_length()))
             return false;
 
         // TODO: Investigate if this condition is needed
@@ -173,13 +173,13 @@ bool concat_in_place_optimization::match(concatenation_node& node) {
         // Check that there isn't already some padding between inputs in concat axis.
         // If node has already been optimized we skip this check - this is just cascade adjustment.
         if (!node.can_be_optimized()) {
-            if (idx != node.get_dependencies().size() && input_padd.upper_size().raw[concat_axis] != 0)
+            if (idx != node.get_dependencies().size() && input_padd.upper_size()[concat_axis] != 0)
                 return false;
-            if (idx != 0 && input_padd.lower_size().raw[concat_axis] != 0)
+            if (idx != 0 && input_padd.lower_size()[concat_axis] != 0)
                 return false;
         }
 
-        lower_padd_in_axis += input->get_output_layout().size.raw[concat_axis];
+        lower_padd_in_axis += input->get_output_layout().size[concat_axis];
         idx += 1;
     }
 
@@ -201,16 +201,16 @@ void concat_in_place_optimization::optimize_cascade(concatenation_node& node, st
     // For cascade adjustment override padding in concat axis to output padding.
     // In other case match(...) already checked that only first/last input have lower/upper padding.
     if (node.can_be_optimized()) {
-        lower_padd.raw[concat_axis] = node.get_output_layout().data_padding.lower_size().raw[concat_axis];
-        upper_padd.raw[concat_axis] = node.get_output_layout().data_padding.upper_size().raw[concat_axis];
+        lower_padd[concat_axis] = node.get_output_layout().data_padding.lower_size()[concat_axis];
+        upper_padd[concat_axis] = node.get_output_layout().data_padding.upper_size()[concat_axis];
     }
     node.set_output_padding(padding(lower_padd.sizes(), upper_padd.sizes()));
 
-    upper_padd.raw[concat_axis] += node.get_output_layout().size.raw[concat_axis];
+    upper_padd[concat_axis] += node.get_output_layout().size[concat_axis];
 
     // apply concatenation in place optimization
     for (auto input : node.get_dependencies()) {
-        auto input_length = input->get_output_layout().size.raw[concat_axis];
+        auto input_length = input->get_output_layout().size[concat_axis];
 
         if (input->is_type<concatenation>() && input->can_be_optimized())
             need_reoptimization.push_back(&input->as<concatenation>());
@@ -219,7 +219,7 @@ void concat_in_place_optimization::optimize_cascade(concatenation_node& node, st
         //
         //   |--- lower padd ---|                    |---------- upper padd -----------|
         //   |-- output padd ---| ----- input1 ------|----- input2 -----|-- out padd --|
-        upper_padd.raw[concat_axis] -= input_length;
+        upper_padd[concat_axis] += -input_length.get_length();
 
         // set new padding for input
         input->set_output_padding(padding(lower_padd.sizes(), upper_padd.sizes()));
@@ -228,7 +228,7 @@ void concat_in_place_optimization::optimize_cascade(concatenation_node& node, st
         //
         //   |-------------- lower padd -------------|---------- upper padd -----------|
         //   |-- output padd ---| ----- input1 ------|----- input2 -----|-- out padd --|
-        lower_padd.raw[concat_axis] += input_length;
+        lower_padd[concat_axis] += input_length;
     }
 
     node.can_be_optimized(true);
@@ -295,8 +295,8 @@ void prepare_buffer_fusing::run(program& p) {
                 auto input_layout = node.get_dependency(0).get_output_layout();
                 const auto& crop_size = crop_layout.size;
                 const auto& out_padd = crop_layout.data_padding;
-                const auto opt_lower_pad = crop_prim->offsets.feature[0];
-                const auto opt_upper_pad = input_layout.size.feature[0] - crop_prim->offsets.feature[0] - crop_size.feature[0];
+                const auto opt_lower_pad = crop_prim->offsets.feature(0);
+                const auto opt_upper_pad = input_layout.size.feature(0) - crop_prim->offsets.feature(0) - crop_size.feature(0);
 
                 // do not optimize crop if paddings are not properly aligned
                 for (auto& usr : node.get_users()) {
@@ -304,19 +304,19 @@ void prepare_buffer_fusing::run(program& p) {
                     if (usr_layout.format == format::b_fs_yx_fsv16 &&
                         (opt_lower_pad % 16 != 0 || opt_upper_pad % 16 != 0))
                         return;
-                    if (input_layout.data_padding.lower_size().batch[0] != 0 || input_layout.data_padding.upper_size().batch[0] != 0 ||
-                        input_layout.data_padding.lower_size().spatial[0] != 0 || input_layout.data_padding.upper_size().spatial[0] != 0 ||
-                        input_layout.data_padding.lower_size().spatial[1] != 0 || input_layout.data_padding.upper_size().spatial[1] != 0)
+                    if (input_layout.data_padding.lower_size().batch(0) != 0 || input_layout.data_padding.upper_size().batch(0) != 0 ||
+                        input_layout.data_padding.lower_size().spatial(0) != 0 || input_layout.data_padding.upper_size().spatial(0) != 0 ||
+                        input_layout.data_padding.lower_size().spatial(1) != 0 || input_layout.data_padding.upper_size().spatial(1) != 0)
                         return;
                 }
 
-                if (format == format::bfyx && crop_size.batch[0] == input_layout.size.batch[0] &&
-                    crop_size.spatial[0] == input_layout.size.spatial[0] &&
-                    crop_size.spatial[1] == input_layout.size.spatial[1] && out_padd.lower_size().feature[0] == 0 &&
-                    out_padd.upper_size().feature[0] == 0 && out_padd.lower_size().batch[0] == 0 &&
-                    out_padd.upper_size().batch[0] == 0 && out_padd.lower_size().spatial[0] == 0 &&
-                    out_padd.lower_size().spatial[1] == 0 && out_padd.upper_size().spatial[0] == 0 &&
-                    out_padd.upper_size().spatial[1] == 0) {
+                if (format == format::bfyx && crop_size.batch(0) == input_layout.size.batch(0) &&
+                    crop_size.spatial(0) == input_layout.size.spatial(0) &&
+                    crop_size.spatial(1) == input_layout.size.spatial(1) && out_padd.lower_size().feature(0) == 0 &&
+                    out_padd.upper_size().feature(0) == 0 && out_padd.lower_size().batch(0) == 0 &&
+                    out_padd.upper_size().batch(0) == 0 && out_padd.lower_size().spatial(0) == 0 &&
+                    out_padd.lower_size().spatial(1) == 0 && out_padd.upper_size().spatial(0) == 0 &&
+                    out_padd.upper_size().spatial(1) == 0) {
                     //  Regular crop
                     //  crop input buffer
                     //  |___________data____________|
@@ -332,14 +332,14 @@ void prepare_buffer_fusing::run(program& p) {
                     //  |_low_pad_|__data_size__|___|<-upper pad
 
                     node.set_output_padding(
-                        padding({out_padd.lower_size().batch[0],
+                        padding({out_padd.lower_size().batch(0),
                                  opt_lower_pad,
-                                 out_padd.lower_size().spatial[0],
-                                 out_padd.lower_size().spatial[1]},
-                                {out_padd.upper_size().batch[0],
+                                 out_padd.lower_size().spatial(0),
+                                 out_padd.lower_size().spatial(1)},
+                                {out_padd.upper_size().batch(0),
                                  opt_upper_pad,
-                                 out_padd.upper_size().spatial[0],
-                                 out_padd.upper_size().spatial[1]}));
+                                 out_padd.upper_size().spatial(0),
+                                 out_padd.upper_size().spatial(1)}));
                     node.can_be_optimized(true);
                 }
             }

@@ -19,17 +19,17 @@ post_optimize_weights::post_optimize_weights(reorder_factory& rf_ref)
 
 // function which prepares given primitive for weights optimization
 template<typename T> post_optimize_weights::weights_bias_offset post_optimize_weights::get_weights_bias_offset(const T& node) {
-    return weights_bias_offset(node.get_primitive()->input.size(), program_helpers::wrap_if_single(node.get_primitive()->weights).size());
+    return weights_bias_offset(node.get_primitive()->input_ids.size(), program_helpers::wrap_if_single(node.get_primitive()->weights).size());
 }
 
 template <>
 post_optimize_weights::weights_bias_offset post_optimize_weights::get_weights_bias_offset<fused_conv_eltwise_node>(const fused_conv_eltwise_node& node) {
-    return weights_bias_offset(node.get_primitive()->input.size(), program_helpers::wrap_if_single(node.get_primitive()->conv.weights).size());
+    return weights_bias_offset(node.get_primitive()->input_ids.size(), program_helpers::wrap_if_single(node.get_primitive()->conv.weights).size());
 }
 
 template <>
 post_optimize_weights::weights_bias_offset post_optimize_weights::get_weights_bias_offset<lstm_dynamic_input_node>(const lstm_dynamic_input_node& node) {
-    return weights_bias_offset(node.get_primitive()->input.size() + 1, program_helpers::wrap_if_single(node.get_primitive()->weights).size());
+    return weights_bias_offset(node.get_primitive()->input_ids.size() + 1, program_helpers::wrap_if_single(node.get_primitive()->weights).size());
 }
 
 // function which prepares given primitive for weights optimization

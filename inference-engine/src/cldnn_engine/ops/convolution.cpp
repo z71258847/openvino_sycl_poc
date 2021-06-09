@@ -32,27 +32,27 @@ static ConvoltuionParameters GetConvolutionParameters(const ngraph::CoordinateDi
                                                       const ngraph::Strides& dilations,
                                                       const ngraph::Strides& strides,
                                                       uint32_t groups) {
-    cldnn::tensor stride, padding, dilation;
+    cldnn::tensor stride, dilation, padding;
     if (pads_begin.size() != strides.size() || dilations.size() != strides.size())
         IE_THROW() << "Strides, Dilations and Pads are supposed to have the same elements count";
 
     switch (strides.size()) {
         case 3: {
-            stride = cldnn::tensor(cldnn::batch(1), cldnn::feature(1), cldnn::spatial(strides[2], strides[1], strides[0]));
-            padding = cldnn::tensor(cldnn::batch(0), cldnn::feature(0), cldnn::spatial(-pads_begin[2], -pads_begin[1], -pads_begin[0]));
-            dilation = cldnn::tensor(cldnn::batch(1), cldnn::feature(1), cldnn::spatial(dilations[2], dilations[1], dilations[0]));
+            stride = cldnn::tensor({strides[2], strides[1], strides[0]});
+            padding = cldnn::tensor({-pads_begin[2], -pads_begin[1], -pads_begin[0]});
+            dilation = cldnn::tensor({dilations[2], dilations[1], dilations[0]});
             break;
         }
         case 2: {
-            stride = cldnn::tensor(cldnn::batch(1), cldnn::feature(1), cldnn::spatial(strides[1], strides[0], 1));
-            padding = cldnn::tensor(cldnn::batch(0), cldnn::feature(0), cldnn::spatial(-pads_begin[1], -pads_begin[0], 0));
-            dilation = cldnn::tensor(cldnn::batch(1), cldnn::feature(1), cldnn::spatial(dilations[1], dilations[0], 1));
+            stride = cldnn::tensor({strides[1], strides[0], 1});
+            padding = cldnn::tensor({-pads_begin[1], -pads_begin[0], 0});
+            dilation = cldnn::tensor({dilations[1], dilations[0], 1});
             break;
         }
         case 1: {
-            stride = cldnn::tensor(cldnn::batch(1), cldnn::feature(1), cldnn::spatial(strides[0], 1, 1));
-            padding = cldnn::tensor(cldnn::batch(0), cldnn::feature(0), cldnn::spatial(-pads_begin[0], 0, 0));
-            dilation = cldnn::tensor(cldnn::batch(1), cldnn::feature(1), cldnn::spatial(dilations[0], 1, 1));
+            stride = cldnn::tensor({strides[0], 1, 1});
+            padding = cldnn::tensor({-pads_begin[0], 0, 0});
+            dilation = cldnn::tensor({dilations[0], 1, 1});
             break;
         }
         default: IE_THROW() << "Unsupported convolve parameters size. Only 1d, 2d, and 3d cases are supported";
@@ -258,17 +258,9 @@ void CreateDeformableConvolutionOp(Program& p, const std::shared_ptr<ngraph::op:
         auto weights_shape = op->get_input_shape(2);
         size_t sidx = 2 + (params.groups > 1 ? 1 : 0);
         if (weights_shape.size() == 3) {
-            kernel = cldnn::tensor(cldnn::batch(1),
-                                   cldnn::feature(1),
-                                   cldnn::spatial(weights_shape[sidx + 2],
-                                                  weights_shape[sidx + 1],
-                                                  weights_shape[sidx + 0]));
+            kernel = cldnn::tensor({1, 1, weights_shape[sidx + 0], weights_shape[sidx + 1], weights_shape[sidx + 2]});
         } else {
-            kernel = cldnn::tensor(cldnn::batch(1),
-                                   cldnn::feature(1),
-                                   cldnn::spatial(weights_shape[sidx + 1],
-                                                  weights_shape[sidx + 0],
-                                                  1));
+            kernel = cldnn::tensor({1, 1, weights_shape[sidx + 0], weights_shape[sidx + 1], 1});
         }
 
         auto defConvPrimInterp = cldnn::deformable_interp(defConvLayerNameInterp,

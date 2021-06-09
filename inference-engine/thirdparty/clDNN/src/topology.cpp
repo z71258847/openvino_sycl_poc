@@ -11,7 +11,7 @@
 namespace cldnn {
 
 void topology::add_primitive(std::shared_ptr<primitive> desc) {
-    auto id = desc->id;
+    auto id = desc->output_ids[0];
     auto itr = _primitives.find(id);
     if (itr != _primitives.end()) {
         if (itr->second != desc)

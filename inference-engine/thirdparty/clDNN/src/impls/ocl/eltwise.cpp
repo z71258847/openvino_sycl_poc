@@ -56,10 +56,10 @@ public:
 
         for (size_t i = 0; i < ew_params.inputs.size(); i++) {
             if (!ew_params.inputs[i].SameDims(ew_params.output)) {
-                std::vector<int32_t> input_size = arg.input(i).get_output_layout().size.raw.vector();
-                std::vector<int32_t> output_size = arg.get_output_layout().size.raw.vector();
+                auto input_size = arg.input(i).get_output_layout().size;
+                auto output_size = arg.get_output_layout().size;
                 bool broadcast = false;
-                for (size_t d = 0; d < output_size.size(); d++) {
+                for (size_t d = 0; d < output_size.rank().get_length(); d++) {
                     if (output_size[d] != 1 && input_size[d] == 1)
                         broadcast = true;
                 }
@@ -78,9 +78,9 @@ public:
             const auto& stride = primitive->stride;
             ew_params.stride.resize(stride.size());
             for (size_t i = 0; i < primitive->stride.size(); i++) {
-                ew_params.stride[i] = {(uint32_t)stride[i].spatial[0],
-                                       (uint32_t)stride[i].spatial[1],
-                                       (uint32_t)stride[i].spatial[2]};
+                ew_params.stride[i] = {(uint32_t)stride[i].spatial(0),
+                                       (uint32_t)stride[i].spatial(1),
+                                       (uint32_t)stride[i].spatial(2)};
             }
         }
 

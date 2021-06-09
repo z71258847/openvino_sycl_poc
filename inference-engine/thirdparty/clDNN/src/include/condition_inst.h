@@ -42,7 +42,7 @@ private:
             if (_topology.get_primitives().count(input_id) == 0) {
                 _topology.add_primitive(std::make_shared<input_layout>(input_id, layout));
                 for (auto& prim : _topology.get_primitives()) {
-                    for (auto& inp : prim.second->input) {
+                    for (auto& inp : prim.second->input_ids) {
                         if (inp == node.id())
                             inp = input_id;
                     }

@@ -5,7 +5,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "pass_manager.h"
-#include "program_node.h"
+#include "cldnn/graph/program_node.hpp"
 
 #include "split_inst.h"
 #include "convolution_inst.h"
@@ -77,9 +77,10 @@ void graph_initializations::handle_split_node(program& p, split_node& node) {
         }
 
         // For all the other dimensions, copy from the split_input
+        int32_t tensor_dim_max = 8;
         for (int32_t dimension = 0; dimension < tensor_dim_max; dimension++) {
-            if (reference_input_size.raw[dimension] == 0) {
-                reference_input_size.raw[dimension] = output_layout_size.raw[dimension];
+            if (reference_input_size[dimension] == 0) {
+                reference_input_size[dimension] = output_layout_size[dimension];
             }
         }
 
@@ -128,9 +129,9 @@ void graph_initializations::handle_lstm_node(program& p, lstm_node& node) {
     // hidden tensor size = [batch, seq, hidden_size, direction]
     // the output of the element wise operation is cropped and used in the next time step
     // sequence_len = 1 and direction = 1. The backward pass is separated from the forward pass
-    auto hidden_size = tensor(input_size.batch[0], 1, recurrent_size.spatial[0], 1);
+    auto hidden_size = tensor({input_size.batch(0), 1, recurrent_size.spatial(0), 1});
 
-    size_t directions = recurrent_size.feature[0];
+    size_t directions = recurrent_size.feature(0);
     size_t num_input_dependencies = node.get_dependencies().size();
     size_t sequence_len = node.sequence_len();
 
@@ -139,7 +140,7 @@ void graph_initializations::handle_lstm_node(program& p, lstm_node& node) {
     // input is not divided into sequence elements
     if (sequence_len == 1 && num_input_dependencies == 1) {
         // Get the sequence length from the input to LSTM
-        sequence_len = input_size.feature[0];
+        sequence_len = input_size.feature(0);
 
         // If the input's feature/sequence length field is > 1, i.e. If
         // the sequence elements are concatenated into one single input
@@ -147,7 +148,7 @@ void graph_initializations::handle_lstm_node(program& p, lstm_node& node) {
         if (sequence_len > 1) {
             for (size_t sequence_element = 0; sequence_element < sequence_len; sequence_element++) {
                 primitive_id crop_id = input.id() + ":crop:" + get_id_string(sequence_element);
-                tensor crop_tensor{input_size.batch[0], 1, input_size.spatial[0], input_size.spatial[1]};
+                tensor crop_tensor{input_size.batch(0), 1, input_size.spatial(0), input_size.spatial(1)};
                 tensor offset_tensor{0, static_cast<tensor::value_type>(sequence_element), 0, 0};
                 auto input_crop = std::make_shared<crop>(crop_id, input.id(), crop_tensor, offset_tensor);
                 auto& input_crop_node = p.get_or_create(input_crop);
@@ -190,7 +191,7 @@ void graph_initializations::handle_lstm_node(program& p, lstm_node& node) {
     std::vector<program_node*> cell_list(directions * sequence_len);
     std::vector<program_node*> hidden_list(directions * sequence_len);
     std::map<size_t, std::pair<primitive_id, program_node*>> output_map;
-    size_t input_directions = input_size.spatial[1];
+    size_t input_directions = input_size.spatial(1);
 
     // lstm expanding
     for (size_t dir = 0; dir < directions; ++dir) {
@@ -312,9 +313,9 @@ void graph_initializations::handle_lstm_node(program& p, lstm_node& node) {
             if (emit_last_cell)
                 concatenate_len++;
 
-            tensor output_size{input_size.batch[0],
+            tensor output_size{input_size.batch(0),
                                static_cast<int32_t>(concatenate_len),
-                               hidden_size.spatial[0],
+                               hidden_size.spatial(0),
                                (int32_t)directions};
             auto reshape_primitive = std::make_shared<reshape>(node.id() + ":reshape", concatenation_id, output_size);
             auto& reshape_node = p.get_or_create(reshape_primitive);
@@ -333,7 +334,7 @@ void graph_initializations::handle_dynamic_lstm_node(program& p, lstm_dynamic_no
     // [0] Prepare helper temp variables.
     // auto& lstm_dynamic_node = node->as<lstm_dynamic>();
     auto& node_id = node.id();
-    auto input_id = node.get_primitive()->input.at(0);
+    auto input_id = node.get_primitive()->input_ids.at(0);
     auto dyn_length_id = node.dyn_length_id();
     auto weights_id = node.weights_id();
     auto bias_id = node.bias_id();

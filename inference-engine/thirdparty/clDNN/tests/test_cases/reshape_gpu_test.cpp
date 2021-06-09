@@ -129,130 +129,130 @@ void generic_reshape_test(format fmt, tensor const& input_size, tensor const& re
 TEST(reshape_gpu_f32, basic_2dim_in_place) {
     generic_reshape_test<float>(
         format::bfyx,
-        tensor(1, 1, 2, 2),
-        tensor(1, 1, 4, 1),
+        tensor({1, 1, 2, 2}),
+        tensor({1, 1, 4, 1}),
         true);
 }
 
 TEST(reshape_gpu_f16, basic_2dim_in_place) {
     generic_reshape_test<FLOAT16>(
         format::bfyx,
-        tensor(1, 1, 2, 2),
-        tensor(1, 1, 1, 4),
+        tensor({1, 1, 2, 2}),
+        tensor({1, 1, 1, 4}),
         true);
 }
 
 TEST(reshape_gpu_i8, basic_2dim_in_place) {
     generic_reshape_test<int8_t>(
         format::bfyx,
-        tensor(1, 1, 2, 2),
-        tensor(1, 1, 1, 4),
+        tensor({1, 1, 2, 2}),
+        tensor({1, 1, 1, 4}),
         true);
 }
 
 TEST(reshape_gpu_i32, basic_2dim_in_place) {
     generic_reshape_test<int32_t>(
         format::bfyx,
-        tensor(1, 1, 2, 2),
-        tensor(1, 1, 1, 4),
+        tensor({1, 1, 2, 2}),
+        tensor({1, 1, 1, 4}),
         true);
 }
 
 TEST(reshape_gpu_i64, basic_2dim_in_place) {
     generic_reshape_test<int64_t>(
         format::bfyx,
-        tensor(1, 1, 2, 2),
-        tensor(1, 1, 1, 4),
+        tensor({1, 1, 2, 2}),
+        tensor({1, 1, 1, 4}),
         true);
 }
 
 TEST(reshape_gpu_f32, basic_4dim_in_place) {
     generic_reshape_test<float>(
         format::yxfb,
-        tensor(9, 9, 2, 4),
-        tensor(27, 2, 3, 4),
+        tensor({9, 9, 2, 4}),
+        tensor({27, 2, 3, 4}),
         true);
 }
 
 TEST(reshape_gpu_f16, basic_4dim_in_place) {
     generic_reshape_test<FLOAT16>(
         format::yxfb,
-        tensor(9, 9, 2, 4),
-        tensor(3, 4, 27, 2),
+        tensor({9, 9, 2, 4}),
+        tensor({3, 4, 27, 2}),
         true);
 }
 
 TEST(reshape_gpu_i32, basic_4dim_in_place) {
     generic_reshape_test<int32_t>(
         format::yxfb,
-        tensor(9, 9, 2, 4),
-        tensor(3, 4, 27, 2),
+        tensor({9, 9, 2, 4}),
+        tensor({3, 4, 27, 2}),
         true);
 }
 
 TEST(reshape_gpu_i64, basic_4dim_in_place) {
     generic_reshape_test<int64_t>(
         format::yxfb,
-        tensor(9, 9, 2, 4),
-        tensor(3, 4, 27, 2),
+        tensor({9, 9, 2, 4}),
+        tensor({3, 4, 27, 2}),
         true);
 }
 
 TEST(reshpape_gpu_f32, basic_2dim_output_padd) {
     generic_reshape_test<float>(
         format::byxf,
-        tensor(1, 1, 4, 2),
-        tensor(1, 1, 8, 1),
+        tensor({1, 1, 4, 2}),
+        tensor({1, 1, 8, 1}),
         false,
         padding(),
-        padding(std::vector<int>{0, 0, 1, 1}));
+        padding(std::vector<tensor::value_type>{0, 0, 1, 1}));
 }
 
 TEST(reshape_gpu_f16, basic_2dim_output_padd) {
     generic_reshape_test<FLOAT16>(
         format::byxf,
-        tensor(1, 1, 3, 4),
-        tensor(1, 1, 2, 6),
+        tensor({1, 1, 3, 4}),
+        tensor({1, 1, 2, 6}),
         false,
         padding(),
-        padding(std::vector<int>{0, 0, 2, 2}));
+        padding(std::vector<tensor::value_type>{0, 0, 2, 2}));
 }
 
 TEST(reshape_gpu_i8, basic_2dim_output_padd) {
     generic_reshape_test<int8_t>(
         format::byxf,
-        tensor(1, 1, 3, 4),
-        tensor(1, 1, 2, 6),
+        tensor({1, 1, 3, 4}),
+        tensor({1, 1, 2, 6}),
         false,
         padding(),
-        padding(std::vector<int>{0, 0, 2, 2}));
+        padding(std::vector<tensor::value_type>{0, 0, 2, 2}));
 }
 
 TEST(reshape_gpu_i32, basic_2dim_output_padd) {
     generic_reshape_test<int32_t>(
         format::byxf,
-        tensor(1, 1, 3, 4),
-        tensor(1, 1, 2, 6),
+        tensor({1, 1, 3, 4}),
+        tensor({1, 1, 2, 6}),
         false,
         padding(),
-        padding(std::vector<int>{0, 0, 2, 2}));
+        padding(std::vector<tensor::value_type>{0, 0, 2, 2}));
 }
 
 TEST(reshape_gpu_i64, basic_2dim_output_padd) {
     generic_reshape_test<int64_t>(
         format::byxf,
-        tensor(1, 1, 3, 4),
-        tensor(1, 1, 2, 6),
+        tensor({1, 1, 3, 4}),
+        tensor({1, 1, 2, 6}),
         false,
         padding(),
-        padding(std::vector<int>{0, 0, 2, 2}));
+        padding(std::vector<tensor::value_type>{0, 0, 2, 2}));
 }
 
 TEST(reshape_gpu_f32, basic_2dim_input_padd) {
     generic_reshape_test<float>(
         format::fyxb,
-        tensor(1, 1, 2, 5),
-        tensor(1, 1, 5, 2),
+        tensor({1, 1, 2, 5}),
+        tensor({1, 1, 5, 2}),
         false,
         padding({0, 0, 3, 2}, {0, 0, 1, 4}));
 }
@@ -260,8 +260,8 @@ TEST(reshape_gpu_f32, basic_2dim_input_padd) {
 TEST(reshape_gpu_f16, basic_2dim_input_padd) {
     generic_reshape_test<FLOAT16>(
         format::fyxb,
-        tensor(1, 1, 3, 3),
-        tensor(1, 1, 1, 9),
+        tensor({1, 1, 3, 3}),
+        tensor({1, 1, 1, 9}),
         false,
         padding({0, 0, 4, 1}, {0, 0, 2, 3}));
 }
@@ -269,8 +269,8 @@ TEST(reshape_gpu_f16, basic_2dim_input_padd) {
 TEST(reshape_gpu_i8, basic_2dim_input_padd) {
     generic_reshape_test<int8_t>(
         format::fyxb,
-        tensor(1, 1, 3, 3),
-        tensor(1, 1, 1, 9),
+        tensor({1, 1, 3, 3}),
+        tensor({1, 1, 1, 9}),
         false,
         padding({0, 0, 4, 1}, {0, 0, 2, 3}));
 }
@@ -278,8 +278,8 @@ TEST(reshape_gpu_i8, basic_2dim_input_padd) {
 TEST(reshape_gpu_i32, basic_2dim_input_padd) {
     generic_reshape_test<int32_t>(
         format::fyxb,
-        tensor(1, 1, 3, 3),
-        tensor(1, 1, 1, 9),
+        tensor({1, 1, 3, 3}),
+        tensor({1, 1, 1, 9}),
         false,
         padding({0, 0, 4, 1}, {0, 0, 2, 3}));
 }
@@ -287,8 +287,8 @@ TEST(reshape_gpu_i32, basic_2dim_input_padd) {
 TEST(reshape_gpu_i64, basic_2dim_input_padd) {
     generic_reshape_test<int64_t>(
         format::fyxb,
-        tensor(1, 1, 3, 3),
-        tensor(1, 1, 1, 9),
+        tensor({1, 1, 3, 3}),
+        tensor({1, 1, 1, 9}),
         false,
         padding({0, 0, 4, 1}, {0, 0, 2, 3}));
 }
@@ -296,8 +296,8 @@ TEST(reshape_gpu_i64, basic_2dim_input_padd) {
 TEST(reshape_gpu_f32, basic_2dim_input_output_padd) {
     generic_reshape_test<float>(
         format::byxf,
-        tensor(1, 1, 5, 7),
-        tensor(1, 1, 7, 5),
+        tensor({1, 1, 5, 7}),
+        tensor({1, 1, 7, 5}),
         false,
         padding({0, 0, 4, 4}, {0, 0, 1, 1}),
         padding({0, 0, 0, 0}, {0, 0, 3, 0}));
@@ -306,8 +306,8 @@ TEST(reshape_gpu_f32, basic_2dim_input_output_padd) {
 TEST(reshape_gpu_f16, basic_2dim_input_output_padd) {
     generic_reshape_test<FLOAT16>(
         format::byxf,
-        tensor(1, 1, 6, 6),
-        tensor(1, 1, 3, 12),
+        tensor({1, 1, 6, 6}),
+        tensor({1, 1, 3, 12}),
         false,
         padding({0, 0, 1, 1}, {0, 0, 0, 0}),
         padding({0, 0, 2, 1}, {0, 0, 1, 2}));
@@ -316,8 +316,8 @@ TEST(reshape_gpu_f16, basic_2dim_input_output_padd) {
 TEST(reshape_gpu_i8, basic_2dim_input_output_padd) {
     generic_reshape_test<int8_t>(
         format::byxf,
-        tensor(1, 1, 5, 7),
-        tensor(1, 1, 7, 5),
+        tensor({1, 1, 5, 7}),
+        tensor({1, 1, 7, 5}),
         false,
         padding({0, 0, 4, 4}, {0, 0, 1, 1}),
         padding({0, 0, 0, 0}, {0, 0, 3, 0}));
@@ -326,8 +326,8 @@ TEST(reshape_gpu_i8, basic_2dim_input_output_padd) {
 TEST(reshape_gpu_i32, basic_2dim_input_output_padd) {
     generic_reshape_test<int32_t>(
         format::byxf,
-        tensor(1, 1, 5, 7),
-        tensor(1, 1, 7, 5),
+        tensor({1, 1, 5, 7}),
+        tensor({1, 1, 7, 5}),
         false,
         padding({0, 0, 4, 4}, {0, 0, 1, 1}),
         padding({0, 0, 0, 0}, {0, 0, 3, 0}));
@@ -336,8 +336,8 @@ TEST(reshape_gpu_i32, basic_2dim_input_output_padd) {
 TEST(reshape_gpu_i64, basic_2dim_input_output_padd) {
     generic_reshape_test<int64_t>(
         format::byxf,
-        tensor(1, 1, 5, 7),
-        tensor(1, 1, 7, 5),
+        tensor({1, 1, 5, 7}),
+        tensor({1, 1, 7, 5}),
         false,
         padding({0, 0, 4, 4}, {0, 0, 1, 1}),
         padding({0, 0, 0, 0}, {0, 0, 3, 0}));
@@ -346,8 +346,8 @@ TEST(reshape_gpu_i64, basic_2dim_input_output_padd) {
 TEST(reshpape_gpu_f32, basic_4dim_output_padd) {
     generic_reshape_test<float>(
         format::bfyx,
-        tensor(2, 5, 7, 3),
-        tensor(1, 14, 15, 1),
+        tensor({2, 5, 7, 3}),
+        tensor({1, 14, 15, 1}),
         false,
         padding(),
         padding({1, 0, 0, 1}, {0, 2, 3, 0}));
@@ -356,8 +356,8 @@ TEST(reshpape_gpu_f32, basic_4dim_output_padd) {
 TEST(reshape_gpu_f16, basic_4dim_output_padd) {
     generic_reshape_test<FLOAT16>(
         format::bfyx,
-        tensor(5, 4, 2, 2),
-        tensor(40, 2, 1, 1),
+        tensor({5, 4, 2, 2}),
+        tensor({40, 2, 1, 1}),
         false,
         padding(),
         padding({0, 2, 0, 1}, {0, 2, 3, 0}));
@@ -366,8 +366,8 @@ TEST(reshape_gpu_f16, basic_4dim_output_padd) {
 TEST(reshape_gpu_f32, basic_4dim_input_padd) {
     generic_reshape_test<float>(
         format::yxfb,
-        tensor(8, 128, 3, 3),
-        tensor(16, 8, 8, 9),
+        tensor({8, 128, 3, 3}),
+        tensor({16, 8, 8, 9}),
         false,
         padding({0, 1, 3, 3}, {0, 1, 1, 1}));
 }
@@ -375,8 +375,8 @@ TEST(reshape_gpu_f32, basic_4dim_input_padd) {
 TEST(reshape_gpu_f16, basic_4dim_input_padd) {
     generic_reshape_test<FLOAT16>(
         format::yxfb,
-        tensor(2, 32, 8, 8),
-        tensor(8, 128, 1, 4),
+        tensor({2, 32, 8, 8}),
+        tensor({8, 128, 1, 4}),
         false,
         padding({2, 2, 1, 0}, {1, 2, 2, 0}));
 }
@@ -384,8 +384,8 @@ TEST(reshape_gpu_f16, basic_4dim_input_padd) {
 TEST(reshape_gpu_f32, basic_4dim_input_output_padd) {
     generic_reshape_test<float>(
         format::fyxb,
-        tensor(8, 1024, 25, 25),
-        tensor(8, 64, 100, 100),
+        tensor({8, 1024, 25, 25}),
+        tensor({8, 64, 100, 100}),
         false,
         padding({2, 0, 2, 1}, {0, 1, 4, 0}),
         padding({1, 2, 3, 4}, {0, 4, 1, 1}));
@@ -394,8 +394,8 @@ TEST(reshape_gpu_f32, basic_4dim_input_output_padd) {
 TEST(reshape_gpu_f16, basic_4dim_input_output_padd) {
     generic_reshape_test<FLOAT16>(
         format::byxf,
-        tensor(32, 3, 227, 227),
-        tensor(8, 12, 227, 227),
+        tensor({32, 3, 227, 227}),
+        tensor({8, 12, 227, 227}),
         false,
         padding({0, 1, 4, 4}, {0, 1, 1, 1}),
         padding({0, 29, 29, 0}, {0, 0, 0, 0}));
@@ -404,8 +404,8 @@ TEST(reshape_gpu_f16, basic_4dim_input_output_padd) {
 TEST(reshape_gpu_f32, basic_5dim_in_place) {
     generic_reshape_test<float>(
         format::bfzyx,
-        tensor(9, 9, 2, 4, 2),
-        tensor(27, 2, 1, 4, 6),
+        tensor({9, 9, 2, 4, 2}),
+        tensor({27, 2, 1, 4, 6}),
         true);
 }
 
@@ -440,12 +440,12 @@ TEST(reshape_gpu_f32, multiple_users_with_reorder) {
     auto feature_num = 2;
     auto x_size = 1;
     auto y_size = 1;
-    auto input = engine.allocate_memory({data_types::f32, format::bfyx, {tensor(spatial(x_size, y_size), feature(feature_num), batch(batch_num))}});
+    auto input = engine.allocate_memory({data_types::f32, format::bfyx, {tensor({batch_num, feature_num, y_size, x_size})}});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
     topology.add(activation("relu", "input", activation_func::relu));
-    topology.add(reshape("reshape", "relu", tensor(batch(4))));
+    topology.add(reshape("reshape", "relu", tensor({4})));
     topology.add(reorder("reorder1", "reshape", format::yxfb, data_types::f32));
     topology.add(activation("relu1", "reorder1", activation_func::relu));
     topology.add(activation("relu2", "reshape", activation_func::relu));
@@ -489,7 +489,7 @@ TEST(reshape_gpu_f32, calc_output_shape) {
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
-    topology.add(reshape("reshape", "input", tensor(1, 1, 0, -1)));
+    topology.add(reshape("reshape", "input", tensor({1, 1, 0, -1})));
 
     set_values(input, {-1.f, 2.f, -3.f, 4.f});
 
@@ -505,7 +505,7 @@ TEST(reshape_gpu_f32, calc_output_shape) {
     EXPECT_TRUE(output->get_layout().data_type == input->get_layout().data_type);
     EXPECT_TRUE(output->get_layout().format == input->get_layout().format);
 
-    ASSERT_TRUE(output->get_layout().size == tensor(1, 1, 1, 4));
+    ASSERT_TRUE(output->get_layout().size == tensor({1, 1, 1, 4}));
 
     float answers[4] = {-1.f, 2.f, -3.f, 4.f};
 
@@ -521,11 +521,11 @@ TEST(reshape_gpu_f32, basic_bfwzyx) {
 
     auto& engine = get_test_engine();
 
-    auto input = engine.allocate_memory(layout{data_types::f32, format::bfwzyx, tensor{batch(3), feature(3), spatial(1, 1, 2, 2)}});
+    auto input = engine.allocate_memory(layout{data_types::f32, format::bfwzyx, tensor{3, 3, 2, 2, 1, 1}});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
-    topology.add(reshape("reshape", "input", tensor(batch(1), feature(1), spatial(2, 2, 3, 3)), padding({0, 0, 0, 0, 0, 1}, 0.f)));
+    topology.add(reshape("reshape", "input", tensor({1, 1, 3, 3, 2, 2}), padding({0, 0, 0, 0, 0, 1}, 0.f)));
 
     // clang-format off
     std::vector<float> input_data = {
@@ -586,9 +586,9 @@ TEST(reshape_gpu_f32, shrink_chain_partial) {
     auto feature_num = 2;
     auto x_size = 1;
     auto y_size = 1;
-    auto input = engine.allocate_memory({data_types::f32, format::bfyx, {tensor(spatial(x_size, y_size), feature(feature_num), batch(batch_num))}});
-    auto scale_in = engine.allocate_memory({data_types::f32, format::bfyx, { tensor(feature(4)) }});
-    auto shift_in = engine.allocate_memory({data_types::f32, format::bfyx, { tensor(feature(4)) }});
+    auto input = engine.allocate_memory({data_types::f32, format::bfyx, {tensor({batch_num, feature_num, y_size, x_size})}});
+    auto scale_in = engine.allocate_memory({data_types::f32, format::bfyx, { tensor({4}) }});
+    auto shift_in = engine.allocate_memory({data_types::f32, format::bfyx, { tensor({4}) }});
 
     std::vector<float> scale_vals = {0.f, 1.f, 2.f, 3.f};
     std::vector<float> scale_shifts = {5.f, 10.f, 15.f, 20.0f};
@@ -600,9 +600,9 @@ TEST(reshape_gpu_f32, shrink_chain_partial) {
     topology.add(data("scale_in", scale_in));
     topology.add(data("shift_in", shift_in));
     topology.add(activation("relu", "input", activation_func::relu));
-    topology.add(reshape("reshape", "relu", tensor(spatial(2, 2))));
+    topology.add(reshape("reshape", "relu", tensor({2, 2})));
     topology.add(reorder("reorder", "reshape", format::bfyx, data_types::f32));
-    topology.add(reshape("reshape1", "reorder", tensor(feature(4))));
+    topology.add(reshape("reshape1", "reorder", tensor({4})));
     topology.add(scale("scale", "reshape1", "scale_in", "shift_in"));
     topology.add(reorder("out_reorder", "scale", format::yxfb, data_types::f32));
 
@@ -625,9 +625,9 @@ TEST(reshape_gpu_f32, shrink_chain_partial) {
 
 TEST(reshape_gpu_f32, shrink_chain_full) {
     auto& engine = get_test_engine();
-    auto input = engine.allocate_memory({data_types::f32, format::bfyx, { tensor(feature(4)) }});
-    auto scale_in = engine.allocate_memory({data_types::f32, format::bfyx, { tensor(feature(4)) }});
-    auto shift_in = engine.allocate_memory({data_types::f32, format::bfyx, { tensor(feature(4)) }});
+    auto input = engine.allocate_memory({data_types::f32, format::bfyx, { tensor({4}) }});
+    auto scale_in = engine.allocate_memory({data_types::f32, format::bfyx, { tensor({4}) }});
+    auto shift_in = engine.allocate_memory({data_types::f32, format::bfyx, { tensor({4}) }});
 
     std::vector<float> scale_vals = {0.f, 1.f, 2.f, 3.f};
     std::vector<float> scale_shifts = {5.f, 10.f, 15.f, 20.0f};
@@ -639,9 +639,9 @@ TEST(reshape_gpu_f32, shrink_chain_full) {
     topology.add(data("scale_in", scale_in));
     topology.add(data("shift_in", shift_in));
     topology.add(activation("relu", "input", activation_func::relu));
-    topology.add(reshape("reshape", "relu", tensor(spatial(2, 2))));
+    topology.add(reshape("reshape", "relu", tensor({2, 2})));
     topology.add(reorder("reorder", "reshape", format::bfyx, data_types::f32));
-    topology.add(reshape("reshape1", "reorder", tensor(feature(4))));
+    topology.add(reshape("reshape1", "reorder", tensor({4})));
     topology.add(scale("scale", "reshape1", "scale_in", "shift_in"));
     topology.add(reorder("out_reorder", "scale", format::yxfb, data_types::f32));
 
@@ -664,9 +664,9 @@ TEST(reshape_gpu_f32, shrink_chain_full) {
 
 TEST(reshape_gpu_f32, shrink_chain_out) {
     auto& engine = get_test_engine();
-    auto input = engine.allocate_memory({data_types::f32, format::bfyx, { tensor(feature(4)) }});
-    auto scale_in = engine.allocate_memory({data_types::f32, format::bfyx, { tensor(feature(4)) }});
-    auto shift_in = engine.allocate_memory({data_types::f32, format::bfyx, { tensor(feature(4)) }});
+    auto input = engine.allocate_memory({data_types::f32, format::bfyx, { tensor({4}) }});
+    auto scale_in = engine.allocate_memory({data_types::f32, format::bfyx, { tensor({4}) }});
+    auto shift_in = engine.allocate_memory({data_types::f32, format::bfyx, { tensor({4}) }});
 
     std::vector<float> scale_vals = {0.f, 1.f, 2.f, 3.f};
     std::vector<float> scale_shifts = {5.f, 10.f, 15.f, 20.0f};
@@ -676,9 +676,9 @@ TEST(reshape_gpu_f32, shrink_chain_out) {
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
     topology.add(activation("relu", "input", activation_func::relu));
-    topology.add(reshape("reshape", "relu", tensor(spatial(2, 2))));
+    topology.add(reshape("reshape", "relu", tensor({2, 2})));
     topology.add(reorder("reorder", "reshape", format::bfyx, data_types::f32));
-    topology.add(reshape("reshape1", "reorder", tensor(feature(4))));
+    topology.add(reshape("reshape1", "reorder", tensor({4})));
 
     std::vector<float> input_vec = {-1.f, 2.f, -3.f, 4.f};
     std::vector<float> out = {0.f, 2.f, 0.f, 4.0f};

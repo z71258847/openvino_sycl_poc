@@ -94,8 +94,11 @@ float convert_element(half_t h) { return convert_half_to_float(h); }
 
 static size_t get_x_pitch(const layout& layout) {
     try {
-        auto tensor_x0 = tensor(batch(0), feature(0), spatial(0, 0, 0, 0));
-        auto tensor_x1 = tensor(batch(0), feature(0), spatial(1, 0, 0, 0));
+        // TODO(GPU_DYN)
+        cldnn::tensor tensor_x0({0});
+        cldnn::tensor tensor_x1({0});
+        // auto tensor_x0 = tensor(batch(0), feature(0), spatial(0, 0, 0, 0));
+        // auto tensor_x1 = tensor(batch(0), feature(0), spatial(1, 0, 0, 0));
         auto x0 = layout.get_linear_offset(tensor_x0);
         auto x1 = layout.get_linear_offset(tensor_x1);
         return (x1 - x0);
@@ -117,16 +120,17 @@ static void dump(memory::ptr mem, stream& stream, std::ofstream& file_stream) {
     auto x_pitch = get_x_pitch(mem->get_layout());
     std::stringstream buffer;
 
-    for (cldnn::tensor::value_type g = 0; g < size.group[0]; ++g) {
-        for (cldnn::tensor::value_type b = 0; b < size.batch[0]; ++b) {
-            for (cldnn::tensor::value_type f = 0; f < size.feature[0]; ++f) {
-                for (cldnn::tensor::value_type w = 0; w < size.spatial[3]; ++w) {
-                    for (cldnn::tensor::value_type z = 0; z < size.spatial[2]; ++z) {
-                        for (cldnn::tensor::value_type y = 0; y < size.spatial[1]; ++y) {
-                            cldnn::tensor t(cldnn::group(g), cldnn::batch(b), cldnn::feature(f), cldnn::spatial(0, y, z, w));
+    for (cldnn::tensor::value_type g = 0; g < size.group(0); ++g) {
+        for (cldnn::tensor::value_type b = 0; b < size.batch(0); ++b) {
+            for (cldnn::tensor::value_type f = 0; f < size.feature(0); ++f) {
+                for (cldnn::tensor::value_type w = 0; w < size.spatial(3); ++w) {
+                    for (cldnn::tensor::value_type z = 0; z < size.spatial(2); ++z) {
+                        for (cldnn::tensor::value_type y = 0; y < size.spatial(1); ++y) {
+                            // TODO(GPU_DYN)
+                            cldnn::tensor t({0});
                             size_t input_it = mem->get_layout().get_linear_offset(t);
 
-                            for (cldnn::tensor::value_type x = 0; x < size.spatial[0]; ++x, input_it += x_pitch) {
+                            for (cldnn::tensor::value_type x = 0; x < size.spatial(0); ++x, input_it += x_pitch) {
                                 buffer << std::fixed << std::setprecision(6) << convert_element(mem_ptr[input_it]) << std::endl;
                             }
                         }
@@ -142,21 +146,22 @@ void dump<uint32_t>(memory::ptr mem, stream& stream, std::ofstream& file_stream)
     auto&& size = mem->get_layout().size;
 
     file_stream << "shape: ";
-    file_stream << size.batch[0] << " ";
-    file_stream << size.feature[0] << " ";
-    file_stream << size.spatial[1] << " ";
-    file_stream << size.spatial[0] << " ";
-    file_stream << "(" << size.batch[0] * size.feature[0] * size.spatial[1] * size.spatial[0] << ")" << std::endl;
+    file_stream << size.batch(0) << " ";
+    file_stream << size.feature(0) << " ";
+    file_stream << size.spatial(1) << " ";
+    file_stream << size.spatial(0) << " ";
+    file_stream << "(" << size.batch(0) * size.feature(0) * size.spatial(1) * size.spatial(0) << ")" << std::endl;
 
     mem_lock<uint32_t> lock(mem, stream);
     auto mem_ptr = lock.data();
 
-    for (cldnn::tensor::value_type b = 0; b < size.batch[0]; ++b) {
-        for (cldnn::tensor::value_type f = 0; f < (cldnn::tensor::value_type)ceil_div(size.feature[0], 32); ++f) {
-            for (cldnn::tensor::value_type z = 0; z < size.spatial[2]; ++z) {
-                for (cldnn::tensor::value_type y = 0; y < size.spatial[1]; ++y) {
-                    for (cldnn::tensor::value_type x = 0; x < size.spatial[0]; ++x) {
-                        cldnn::tensor t(cldnn::batch(b), cldnn::feature(f), cldnn::spatial(x, y, z, 0));
+    for (cldnn::tensor::value_type b = 0; b < size.batch(0); ++b) {
+        for (cldnn::tensor::value_type f = 0; f < (cldnn::tensor::value_type)ceil_div(size.feature(0), 32); ++f) {
+            for (cldnn::tensor::value_type z = 0; z < size.spatial(2); ++z) {
+                for (cldnn::tensor::value_type y = 0; y < size.spatial(1); ++y) {
+                    for (cldnn::tensor::value_type x = 0; x < size.spatial(0); ++x) {
+                        // TODO(GPU_DYN)
+                        cldnn::tensor t({0});
                         size_t input_it = mem->get_layout().get_linear_offset(t);
                         file_stream << mem_ptr[input_it] << std::endl;
                     }
@@ -471,6 +476,10 @@ void network::allocate_primitives() {
     std::sort(nodes_to_allocate.begin(),
               nodes_to_allocate.end(),
               [](std::shared_ptr<program_node> const& lhs, std::shared_ptr<program_node> const& rhs) {
+                  if (rhs->get_output_layout().is_dynamic())
+                    return false;
+                  if (lhs->get_output_layout().is_dynamic())
+                    return true;
                   return (lhs->get_output_layout().bytes_count() > rhs->get_output_layout().bytes_count());
               });
 
@@ -527,7 +536,9 @@ void network::execute_impl(const std::vector<event::ptr>& events) {
 
     auto surf_lock = surfaces_lock::create(get_engine().type(), in_out_mem, get_stream());
 
-    set_arguments();
+    std::cerr << "SET ARGUMENTS!\n";
+    if (!_is_dynamic)
+        set_arguments();
 
     for (auto& inst : _exec_order) {
         GPU_DEBUG_IF(debug_config->dump_layers_path.length() > 0) {
@@ -552,11 +563,15 @@ void network::execute_impl(const std::vector<event::ptr>& events) {
             GPU_DEBUG_COUT << "Execute " << inst->id() << std::endl;
         }
 
+        // if (inst->shape_changed()) {
+            inst->choose_impl();
+        // }
         // If a node has mutable input or it's an output, then the input/output buffers might be changed
         // So we need to set arguments on each execution.
-        if (inst->has_mutable_input() || inst->is_output()) {
+        if (inst->has_mutable_input() || inst->is_output() || _is_dynamic) {
             inst->set_arguments();
         }
+
         execute_primitive(inst, events);
 
         GPU_DEBUG_IF(debug_config->dump_layers_path.length() > 0) {
@@ -603,6 +618,7 @@ void network::execute_impl(const std::vector<event::ptr>& events) {
 
     for (auto& prim : _primitives) {
         prim.second->reset_output_change();
+        prim.second->reset_shape_change();
     }
 
     // Using output of previous network as input to another one may cause hazard (in OOOQ mode) if user would not
@@ -707,6 +723,10 @@ void network::allocate_primitive_instance(program_node const& node) {
             inst->set_mutable_input(true);
             break;
         }
+    }
+
+    if (inst->has_dynamic_shapes()) {
+        _is_dynamic = true;
     }
 
     _primitives[node.id()] = inst;

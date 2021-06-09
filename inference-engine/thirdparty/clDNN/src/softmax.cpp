@@ -47,7 +47,7 @@ softmax_inst::typed_primitive_inst(network& network, softmax_node const& node) :
 
     // auto& input_inst = network.get_topology()->get_primitives().at(desc->input()[0]);
     // if (input_inst->output_layout->size.format == cldnn::format::bfyx)
-    //    if (input_inst->output_layout->size.spatial[0] != 1 || input_inst->output_layout->size.spatial[1] != 1)
+    //    if (input_inst->output_layout->size.spatial(0) != 1 || input_inst->output_layout->size.spatial(1) != 1)
     //        throw std::runtime_error("Softmax input has more than one dimension per batch");
 }
 }  // namespace cldnn

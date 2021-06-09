@@ -25,8 +25,8 @@ layout gemm_inst::calc_output_layout(gemm_node const& node) {
     bool transpose_input0 = prim->transpose_input0;
     bool transpose_input1 = prim->transpose_input1;
 
-    auto M = !transpose_input0 ? input0_layout.size.spatial[1] : input0_layout.size.spatial[0];
-    auto N = !transpose_input1 ? input1_layout.size.spatial[0] : input1_layout.size.spatial[1];
+    auto M = !transpose_input0 ? input0_layout.size.spatial(1) : input0_layout.size.spatial(0);
+    auto N = !transpose_input1 ? input1_layout.size.spatial(0) : input1_layout.size.spatial(1);
 
     auto output_size = input0_layout.size;
 
@@ -35,8 +35,8 @@ layout gemm_inst::calc_output_layout(gemm_node const& node) {
         output_size = tensor::max(output_size, input_layout.size);
     }
 
-    output_size.spatial[0] = N;
-    output_size.spatial[1] = M;
+    output_size.set_spatial(0, N);
+    output_size.set_spatial(1, M);
     auto output_type = input0_layout.data_type;
     if ((output_type == data_types::u8 || output_type == data_types::i8) && prim->output_data_type)
         output_type = *prim->output_data_type;
@@ -79,15 +79,15 @@ gemm_inst::typed_primitive_inst(network& network, gemm_node const& node) : paren
     bool transpose_input0 = node.get_primitive()->transpose_input0;
     bool transpose_input1 = node.get_primitive()->transpose_input1;
 
-    auto transposed_x0 = input0_layout.size.spatial[0];
-    auto transposed_y0 = input0_layout.size.spatial[1];
+    auto transposed_x0 = input0_layout.size.spatial(0);
+    auto transposed_y0 = input0_layout.size.spatial(1);
 
     if (transpose_input0) {
         std::swap(transposed_x0, transposed_y0);
     }
 
-    auto transposed_x1 = input1_layout.size.spatial[0];
-    auto transposed_y1 = input1_layout.size.spatial[1];
+    auto transposed_x1 = input1_layout.size.spatial(0);
+    auto transposed_y1 = input1_layout.size.spatial(1);
 
     if (transpose_input1) {
         std::swap(transposed_x1, transposed_y1);
@@ -107,13 +107,13 @@ gemm_inst::typed_primitive_inst(network& network, gemm_node const& node) : paren
                               "Input 0 external dimension size",
                               transposed_y0,
                               "Input 2 rows number",
-                              input2_layout.size.spatial[1],
+                              input2_layout.size.spatial(1),
                               "");
         CLDNN_ERROR_NOT_EQUAL(node.id(),
                               "Input 1 external dimension size",
                               transposed_x1,
                               "Input 2 columns number",
-                              input2_layout.size.spatial[0],
+                              input2_layout.size.spatial(0),
                               "");
     }
 }

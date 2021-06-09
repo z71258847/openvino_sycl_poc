@@ -205,7 +205,7 @@ TEST(space_to_batch_fp16_gpu, i134121_bs142121_pb010100_pe000000) {
     // Input values in fp16
 
     auto& engine = get_test_engine();
-    tensor input_shape = tensor{ batch(1), feature(3), spatial(1, 2, 1, 4) };
+    tensor input_shape = tensor{ 1, 3, 4, 1, 2, 1 };
     auto input = engine.allocate_memory({ data_types::f16, format::bfwzyx, input_shape });
 
     set_values(input, {
@@ -540,7 +540,7 @@ TEST(space_to_batch_fp32_gpu, i134121_bs142121_pb010100_pe000000) {
     // Input values in fp32
 
     auto& engine = get_test_engine();
-    tensor input_shape = tensor{ batch(1), feature(3), spatial(1, 2, 1, 4) };
+    tensor input_shape = tensor{ 1, 3, 4, 1, 2, 1 };
     auto input = engine.allocate_memory({ data_types::f32, format::bfwzyx, input_shape });
 
     set_values(input, {

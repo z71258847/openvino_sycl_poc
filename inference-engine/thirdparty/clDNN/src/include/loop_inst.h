@@ -177,7 +177,7 @@ public:
 
         if (inputDesc.axis >= 0) {
             iteration_axis = convert_to_raw_axis(static_cast<size_t>(inputDesc.axis), shape.size());
-            calculated_layout.size.raw[iteration_axis] = 1; // cropped inputs shape
+            calculated_layout.size[iteration_axis] = 1; // cropped inputs shape
         }
 
         return calculated_layout;
@@ -479,10 +479,10 @@ private:
 
             int64_t batch_size = 1;
             for (int64_t i = 0; i < axis; ++i) {
-                batch_size *= mem_layout.size.raw[i];
+                batch_size *= mem_layout.size[i].get_length();
             }
             for (int64_t i = axis-1; i >= 2; --i) {
-                batch_size *= mem_layout.size.raw[i];
+                batch_size *= mem_layout.size[i].get_length();
             }
             return batch_size;
         }

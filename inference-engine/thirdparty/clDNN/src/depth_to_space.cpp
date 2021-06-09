@@ -28,7 +28,7 @@ layout depth_to_space_inst::calc_output_layout(depth_to_space_node const& node) 
                             "Invalid depthToSpace block_size value (should equal at least two). Actual block size is" +
                                 std::to_string(block_size));
 
-    if (input_layout.size.feature[0] % (block_size * block_size) != 0)
+    if (input_layout.size.feature(0) % (block_size * block_size) != 0)
         CLDNN_ERROR_MESSAGE(
             node.id(),
             "The depth of the input tensor must be divisible by squared block size. Actual block size is " +
@@ -36,16 +36,16 @@ layout depth_to_space_inst::calc_output_layout(depth_to_space_node const& node) 
 
     auto out_size = input_layout.size;
     if (format::spatial_num(input_layout.format) == 3) {
-        const size_t feature = input_layout.size.feature[0] / block_size / block_size / block_size;
-        const size_t z = input_layout.size.spatial[2] * block_size;
-        const size_t y = input_layout.size.spatial[1] * block_size;
-        const size_t x = input_layout.size.spatial[0] * block_size;
-        out_size = tensor(TensorValue(input_layout.size.batch[0]), TensorValue(feature), TensorValue(x), TensorValue(y), TensorValue(z));
+        const tensor::value_type feature = input_layout.size.feature(0) / block_size / block_size / block_size;
+        const tensor::value_type z = input_layout.size.spatial(2) * block_size;
+        const tensor::value_type y = input_layout.size.spatial(1) * block_size;
+        const tensor::value_type x = input_layout.size.spatial(0) * block_size;
+        out_size = tensor({input_layout.size.batch(0), feature, z, y, x});
     } else {
-        const size_t feature = input_layout.size.feature[0] / block_size / block_size;
-        const size_t y = input_layout.size.spatial[1] * block_size;
-        const size_t x = input_layout.size.spatial[0] * block_size;
-        out_size = tensor(TensorValue(input_layout.size.batch[0]), TensorValue(feature), TensorValue(x), TensorValue(y));
+        const tensor::value_type feature = input_layout.size.feature(0) / block_size / block_size;
+        const tensor::value_type y = input_layout.size.spatial(1) * block_size;
+        const tensor::value_type x = input_layout.size.spatial(0) * block_size;
+        out_size = tensor({input_layout.size.batch(0), feature, y, x});
     }
 
     if (node.has_fused_primitives()) {

@@ -7,7 +7,7 @@
 #include <algorithm>
 
 #include "pass_manager.h"
-#include "program_node.h"
+#include "cldnn/graph/program_node.hpp"
 #include "mutable_data_inst.h"
 #include "concatenation_inst.h"
 #include "tensor_type.h"

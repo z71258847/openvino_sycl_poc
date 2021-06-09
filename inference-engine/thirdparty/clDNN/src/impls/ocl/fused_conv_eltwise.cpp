@@ -67,7 +67,7 @@ public:
         const auto transposed = arg.get_transposed();
 
         if (arg.get_fused_primitives().empty() || !(arg.get_fused_primitives().begin()->node->is_type<depth_to_space>()))
-            assert(arg.get_output_layout().size.feature[0] == weights_layout.size.batch[0] * weights_layout.size.group[0]);
+            assert(arg.get_output_layout().size.feature(0) == weights_layout.size.batch(0) * weights_layout.size.group(0));
 
         // conv params
         auto fused_params =
@@ -98,27 +98,26 @@ public:
         fused_params.second_input_in_output = primitive->second_input_in_output;
         fused_params.depth_to_space_already_fused = primitive->depth_to_space_already_fused;
 
-        conv_params.local_convolution = weights_size.local[0] > 1 || weights_size.local[1] > 1;
         conv_params.split = split;
         conv_params.filterSize = {
-            (uint32_t)weights_size.spatial[0],
-            (uint32_t)weights_size.spatial[1],
-            (uint32_t)weights_size.spatial[2],
+            (uint32_t)weights_size.spatial(0),
+            (uint32_t)weights_size.spatial(1),
+            (uint32_t)weights_size.spatial(2),
         };
 
-        conv_params.padding = {(uint32_t)std::max(-input_offset.spatial[0], 0),
-                               (uint32_t)std::max(-input_offset.spatial[1], 0),
-                               (uint32_t)std::max(-input_offset.spatial[2], 0) };
+        conv_params.padding = {(uint32_t)std::max<tensor::value_type>(-input_offset.spatial(0), 0),
+                               (uint32_t)std::max<tensor::value_type>(-input_offset.spatial(1), 0),
+                               (uint32_t)std::max<tensor::value_type>(-input_offset.spatial(2), 0) };
 
-        conv_params.stride = {(uint32_t)stride.spatial[0], (uint32_t)stride.spatial[1], (uint32_t)stride.spatial[2]};
-        conv_params.dilation = {(uint32_t)dilation.spatial[0], (uint32_t)dilation.spatial[1], (uint32_t)dilation.spatial[2] };
+        conv_params.stride = {(uint32_t)stride.spatial(0), (uint32_t)stride.spatial(1), (uint32_t)stride.spatial(2)};
+        conv_params.dilation = {(uint32_t)dilation.spatial(0), (uint32_t)dilation.spatial(1), (uint32_t)dilation.spatial(2) };
 
         // stride
         if (!primitive->eltw.stride.empty()) {
             const auto& eltw_stride = primitive->eltw.stride;
             eltw_params.stride.resize(eltw_stride.size());
             for (size_t i = 0; i < primitive->eltw.stride.size(); i++) {
-                eltw_params.stride[i] = {(uint32_t)eltw_stride[i].spatial[0], (uint32_t)eltw_stride[i].spatial[1]};
+                eltw_params.stride[i] = {(uint32_t)eltw_stride[i].spatial(0), (uint32_t)eltw_stride[i].spatial(1)};
             }
         }
 

@@ -52,7 +52,7 @@ gather_tree_inst::typed_primitive_inst(network& network, gather_tree_node const&
         "input1 size", dependencies.at(1)->get_output_layout().size, "output size", input_layout.size,
         "mismatch");
     CLDNN_ERROR_NOT_EQUAL(node.id(),
-        "input2 size", dependencies.at(2)->get_output_layout().count(), "node's feature size", input_layout.size.feature.at(0),
+        "input2 size", dependencies.at(2)->get_output_layout().count(), "node's feature size", input_layout.size.feature(0),
         "There can't be more than one end_token");
     CLDNN_ERROR_NOT_EQUAL(node.id(),
         "input3 size", dependencies.at(3)->get_output_layout().size.count(), "one", 1,

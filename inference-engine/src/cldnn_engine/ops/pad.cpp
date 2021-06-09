@@ -23,8 +23,8 @@ static cldnn::border_type GetBorderType(ngraph::op::PadMode mode) {
     return cldnn::border_type::constant;
 }
 
-static std::vector<int32_t> GetPermuteOrder(const ngraph::CoordinateDiff& ie_order) {
-    std::vector<int32_t> cldnn_order(ie_order.begin(), ie_order.end());
+static std::vector<cldnn::tensor::value_type> GetPermuteOrder(const ngraph::CoordinateDiff& ie_order) {
+    std::vector<cldnn::tensor::value_type> cldnn_order(ie_order.begin(), ie_order.end());
 
     // 1. Align to min. 4 sizes
     if (cldnn_order.size() < 4) {
@@ -45,8 +45,8 @@ void CreatePadOp(Program& p, const std::shared_ptr<ngraph::op::v1::Pad>& op) {
     auto inputPrimitives = p.GetInputPrimitiveIDs(op);
     std::string layerName = layer_type_name_ID(op);
 
-    auto pads_begin = cldnn::tensor(GetPermuteOrder(op->get_pads_begin()), 0);
-    auto pads_end = cldnn::tensor(GetPermuteOrder(op->get_pads_end()), 0);
+    auto pads_begin = cldnn::tensor(GetPermuteOrder(op->get_pads_begin()));
+    auto pads_end = cldnn::tensor(GetPermuteOrder(op->get_pads_end()));
     float pad_value = 0.f;
 
     if (op->get_input_size() == 4) {

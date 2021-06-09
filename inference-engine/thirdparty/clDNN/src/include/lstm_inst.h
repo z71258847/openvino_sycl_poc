@@ -36,7 +36,7 @@ public:
     std::vector<activation_additional_params> activation_params() const {
         return get_primitive()->activation_params;
     }
-    size_t sequence_len() const { return get_primitive()->input.size(); }
+    size_t sequence_len() const { return get_primitive()->input_ids.size(); }
 };
 
 using lstm_node = typed_program_node<lstm>;

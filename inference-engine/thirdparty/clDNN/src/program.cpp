@@ -208,8 +208,7 @@ bool program::analyze_output_size_handling_need() {
                 continue;
 
             tensor specified_output_range(
-                {0, 0, prim->output_size.spatial[0], prim->output_size.spatial[1], prim->output_size.spatial[2]},
-                1);
+                {0, 0, prim->output_size.spatial(0), prim->output_size.spatial(1), prim->output_size.spatial(2)});
 
             auto filter_size = prim_node.weights(0).get_output_layout().size;
 
@@ -229,8 +228,7 @@ bool program::analyze_output_size_handling_need() {
             const auto& prim = prim_node.get_primitive();
 
             tensor specified_output_range(
-                {0, 0, prim->output_size.spatial[0], prim->output_size.spatial[1], prim->output_size.spatial[2]},
-                1);
+                {0, 0, prim->output_size.spatial(0), prim->output_size.spatial(1), prim->output_size.spatial(2)});
 
             auto filter_size = prim_node.weights(0).get_output_layout().size;
 
@@ -253,8 +251,7 @@ bool program::analyze_output_size_handling_need() {
                 continue;
 
             tensor specified_output_range(
-                {0, 0, prim->output_size.spatial[0], prim->output_size.spatial[1], prim->output_size.spatial[2]},
-                1);
+                {0, 0, prim->output_size.spatial(0), prim->output_size.spatial(1), prim->output_size.spatial(2)});
 
             auto filter_size = prim_node.weights(0).get_output_layout().size;
 
@@ -276,8 +273,7 @@ bool program::analyze_output_size_handling_need() {
                 continue;
 
             tensor specified_output_range(
-                {0, 0, prim->output_size.spatial[0], prim->output_size.spatial[1], prim->output_size.spatial[2]},
-                1);
+                {0, 0, prim->output_size.spatial(0), prim->output_size.spatial(1), prim->output_size.spatial(2)});
 
             // TODO: Check compatibility of output size calculation (with caffe).
             auto calc_output_range = calc_sliding_window_output_range<swor_mode::exceed_once_data>(
@@ -317,7 +313,7 @@ void program::prepare_nodes(std::set<std::shared_ptr<program_node>> const& nodes
         for (const auto& src_node : nodes) {
             if (src_node == nullptr)
                 throw std::runtime_error("NULL pointer in nodes_map.");
-            if (node.first == src_node->get_primitive()->id) {
+            if (node.first == src_node->get_primitive()->output_ids[0]) {
                 copy_node_dependencies(node_ptr.get(), src_node.get());
                 found = true;
                 break;
@@ -360,7 +356,7 @@ void program::add_node_dependencies(program_node* node) {
             dep_node->users.push_back(node);
         } catch (...) {
             throw std::runtime_error("Program doesn't contain primitive: " + dep +
-                                     " that is input to: " + node->get_primitive()->id);
+                                     " that is input to: " + node->get_primitive()->output_ids[0]);
         }
     }
 }
@@ -369,24 +365,24 @@ void program::add_node_dependencies(program_node* node) {
    copies src_node dependecies to the destination node dest_node dependencies.
    But only to those which appaer in this program implementation nodes_map */
 void program::copy_node_dependencies(program_node* dest_node, program_node* src_node) {
-    if (dest_node->get_primitive()->id != src_node->get_primitive()->id) {
-        throw std::runtime_error("Node " + src_node->get_primitive()->id + " and its copy " +
-                                 dest_node->get_primitive()->id + " do not match.");
+    if (dest_node->get_primitive()->output_ids[0] != src_node->get_primitive()->output_ids[0]) {
+        throw std::runtime_error("Node " + src_node->get_primitive()->output_ids[0] + " and its copy " +
+                                 dest_node->get_primitive()->output_ids[0] + " do not match.");
     }
     auto src_deps = src_node->get_dependencies();
     // add pointers to node's dependencies
     for (auto& src_dep : src_deps) {
         // do not copy dependencies to nodes which does not belong to the new (subgraph) topology
-        if (nodes_map.find(src_dep->get_primitive()->id) == nodes_map.end())
+        if (nodes_map.find(src_dep->get_primitive()->output_ids[0]) == nodes_map.end())
             continue;
 
         try {
-            auto dest_dep = nodes_map.at(src_dep->get_primitive()->id);
+            auto dest_dep = nodes_map.at(src_dep->get_primitive()->output_ids[0]);
             dest_node->dependencies.push_back(dest_dep.get());
             dest_dep->users.push_back(dest_node);
         } catch (...) {
-            throw std::runtime_error("Program doesn't contain primitive: " + src_dep->get_primitive()->id +
-                                     " that is input to: " + src_node->get_primitive()->id);
+            throw std::runtime_error("Program doesn't contain primitive: " + src_dep->get_primitive()->output_ids[0] +
+                                     " that is input to: " + src_node->get_primitive()->output_ids[0]);
         }
     }
 }
@@ -638,7 +634,7 @@ void program::add_split_outputs() {
 
         if (node->is_type<split>()) {
             auto split_prim = node->as<split>().typed_desc();
-            primitive_id input_id = split_prim->input[0];
+            primitive_id input_id = split_prim->input_ids[0];
             auto split_num = split_prim->output_offsets.size();
 
             // create crop for each split output provided
@@ -710,12 +706,14 @@ void program::reverse_connection(program_node& dep_node, program_node& user_node
 }
 
 program_node& program::get_or_create(std::shared_ptr<primitive> prim) {
-    auto itr = nodes_map.lower_bound(prim->id);
-    if (itr != nodes_map.end() && itr->first == prim->id)
+    auto itr = nodes_map.lower_bound(prim->output_ids[0]);
+    if (itr != nodes_map.end() && itr->first == prim->output_ids[0]) {
+        std::cerr << "get_or_create: get!\n";
         return *itr->second;
+    }
 
     auto new_node = prim->type->create_node(*this, prim);
-    nodes_map.insert(itr, {prim->id, new_node});
+    nodes_map.insert(itr, {prim->output_ids[0], new_node});
     return *new_node;
 }
 
@@ -824,12 +822,12 @@ void program::rename(program_node& node, primitive_id const& new_id) {
     nodes_map.emplace(new_id, node_ptr);
     nodes_map.erase(node.id());
 
-    const_cast<primitive_id&>(node.desc->id) = new_id;
+    const_cast<primitive_id&>(node.desc->output_ids[0]) = new_id;
 }
 
 void program::swap_names(program_node& node1, program_node& node2) {
     const auto _extract_id = [](program_node& node) -> primitive_id& {
-        return const_cast<primitive_id&>(node.desc->id);
+        return const_cast<primitive_id&>(node.desc->output_ids[0]);
     };
 
     nodes_map.at(node1.id()).swap(nodes_map.at(node2.id()));
@@ -1232,7 +1230,7 @@ void program::set_layout_optimizer_attributes(layout_optimizer& lo) {
                 lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::deformable_convolution, 1);
 
             auto input_size = node->get_dependency(0).get_output_layout().size;
-            auto ifm = static_cast<uint32_t>(input_size.feature[0]);
+            auto ifm = static_cast<uint32_t>(input_size.feature(0));
             if (conv.get_primitive()->groups == ifm && conv.get_primitive()->groups >= 16)
                 total_dw_conv_layers++;
             else if (conv.get_primitive()->groups == ifm && conv.get_primitive()->groups < 16)
@@ -1240,7 +1238,7 @@ void program::set_layout_optimizer_attributes(layout_optimizer& lo) {
             else if (conv.get_primitive()->groups > 1 || conv.get_primitive()->split() > 1)
                 total_grouped_conv_layers++;
 
-            if (input_size.spatial[0] == 1 && input_size.spatial[1] == 1)
+            if (input_size.spatial(0) == 1 && input_size.spatial(1) == 1)
                 total_1x1_fm_conv_layers++;
 
             lo.update_formats_map(conv);

@@ -9,7 +9,7 @@
 
 #include "meta_utils.h"
 #include "primitive_type.h"
-#include "program_node.h"
+#include "cldnn/graph/program_node.hpp"
 #include "primitive_inst.h"
 #include "cldnn/graph/network.hpp"
 #include "impls/implementation_map.hpp"
@@ -63,6 +63,13 @@ struct primitive_type_base : primitive_type {
             throw std::invalid_argument("primitive_type_base::calc_output_layout: primitive type mismatch");
 
         return typed_primitive_inst<PType>::calc_output_layout(node);
+    }
+
+    std::vector<cldnn::layout> infer_shapes(const cldnn::program_node& node) const override {
+        if (node.type() != this)
+            throw std::invalid_argument("primitive_type_base::calc_output_layout: primitive type mismatch");
+
+        return typed_primitive_inst<PType>::infer_shapes(node);
     }
 
     std::string to_string(const cldnn::program_node& node) const override {

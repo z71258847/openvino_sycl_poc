@@ -28,7 +28,7 @@ void kernel_runner::prepare_kernel_args(const kernel_selector::KernelsData& kern
         for (const auto& input : base_params.inputs) {
             int num_of_input_elements = static_cast<int>(input.PhysicalSize());
             input_buffers.push_back(_engine.allocate_memory(
-                {from_data_type(input.GetDType()), format::bfyx, tensor(1, 1, num_of_input_elements, 1)}));
+                {from_data_type(input.GetDType()), format::bfyx, tensor({1, 1, num_of_input_elements, 1})}));
         }
     }
     for (const auto& input : input_buffers) {
@@ -40,7 +40,7 @@ void kernel_runner::prepare_kernel_args(const kernel_selector::KernelsData& kern
             for (auto& fused_ops_input : fused_op.tensors) {
                 auto num_of_elements = static_cast<int>(fused_ops_input.PhysicalSize());
                 fused_ops_buffers.push_back(_engine.allocate_memory(
-                    { from_data_type(fused_ops_input.GetDType()), format::bfyx, tensor(1, 1, num_of_elements, 1) }));
+                    { from_data_type(fused_ops_input.GetDType()), format::bfyx, tensor({1, 1, num_of_elements, 1}) }));
             }
         }
     }
@@ -51,7 +51,7 @@ void kernel_runner::prepare_kernel_args(const kernel_selector::KernelsData& kern
     if (output_buffers.empty()) {
         int num_of_output_elements = static_cast<int>(base_params.output.PhysicalSize());
         output_buffers.push_back(_engine.allocate_memory(
-            {from_data_type(base_params.output.GetDType()), format::bfyx, tensor(1, 1, num_of_output_elements, 1)}));
+            {from_data_type(base_params.output.GetDType()), format::bfyx, tensor({1, 1, num_of_output_elements, 1})}));
     }
 
     args.output = output_buffers[0];
@@ -73,13 +73,13 @@ void kernel_runner::prepare_kernel_args(const kernel_selector::KernelsData& kern
                 weight_buffers.push_back(
                     _engine.allocate_memory({from_weights_type(weights_bias_params.weights.GetDType()),
                                              fmt,
-                                             tensor(num_of_weight_elements_ofm, 1, num_of_weight_elements_spatial, 1)}));
+                                             tensor({num_of_weight_elements_ofm, 1, num_of_weight_elements_spatial, 1})}));
 
             if (weight_buffers[0]->get_layout().format != fmt)
                 weight_buffers[0] =
                     _engine.allocate_memory({from_weights_type(weights_bias_params.weights.GetDType()),
                                              fmt,
-                                             tensor(num_of_weight_elements_ofm, 1, num_of_weight_elements_spatial, 1)});
+                                             tensor({num_of_weight_elements_ofm, 1, num_of_weight_elements_spatial, 1})});
 
             while (weight_buffers[0]->get_layout().bytes_count() < weights_bias_params.weights.PhysicalSizeInBytes()) {
                 // Weights layout depends on the kernel. Multiply the buffer size by 2 until it is big enough
@@ -89,7 +89,7 @@ void kernel_runner::prepare_kernel_args(const kernel_selector::KernelsData& kern
                 weight_buffers.push_back(
                     _engine.allocate_memory({from_weights_type(weights_bias_params.weights.GetDType()),
                                              fmt,
-                                             tensor(num_of_weight_elements_ofm, 1, num_of_weight_elements_spatial, 1)}));
+                                             tensor({num_of_weight_elements_ofm, 1, num_of_weight_elements_spatial, 1})}));
             }
         } else {
             weight_buffers.clear();
@@ -97,10 +97,10 @@ void kernel_runner::prepare_kernel_args(const kernel_selector::KernelsData& kern
             num_of_weight_elements_ofm = static_cast<int>(weights_bias_params.weights.OFM().v);
             weight_buffers.push_back(_engine.allocate_memory({from_weights_type(weights_bias_params.weights.GetDType()),
                                                               fmt,
-                                                              tensor(num_of_weight_elements_ofm,
+                                                              tensor({num_of_weight_elements_ofm,
                                                                      num_of_weight_elements_ifm,
                                                                      num_of_weight_elements_spatial_x,
-                                                                     num_of_weight_elements_spatial_y)}));
+                                                                     num_of_weight_elements_spatial_y})}));
         }
         args.weights = weight_buffers[0];
 
@@ -110,7 +110,7 @@ void kernel_runner::prepare_kernel_args(const kernel_selector::KernelsData& kern
                 int num_of_bias_elements = static_cast<int>(weights_bias_params.bias[0].PhysicalSize());
                 bias_buffers.push_back(_engine.allocate_memory({from_data_type(weights_bias_params.bias[0].GetDType()),
                                                                 format::bfyx,
-                                                                tensor(1, num_of_bias_elements, 1, 1)}));
+                                                                tensor({1, num_of_bias_elements, 1, 1})}));
             }
             args.bias = bias_buffers[0];
         }
@@ -125,7 +125,7 @@ void kernel_runner::prepare_kernel_args(const kernel_selector::KernelsData& kern
                         _engine.allocate_memory({
                             from_data_type(weight_zero_point.GetDType()),
                             format::bfyx,
-                            tensor(1, num_of_elements, 1, 1) }));
+                            tensor({1, num_of_elements, 1, 1}) }));
                 }
                 args.weights_zero_points = weight_zero_point_buffers[0];
             }
@@ -137,7 +137,7 @@ void kernel_runner::prepare_kernel_args(const kernel_selector::KernelsData& kern
                         _engine.allocate_memory({
                             from_data_type(activation_zero_point.GetDType()),
                             format::bfyx,
-                            tensor(1, num_of_elements, 1, 1) }));
+                            tensor({1, num_of_elements, 1, 1}) }));
                 }
                 args.activations_zero_points = activation_zero_point_buffers[0];
             }
@@ -149,7 +149,7 @@ void kernel_runner::prepare_kernel_args(const kernel_selector::KernelsData& kern
                         _engine.allocate_memory({
                             from_data_type(compensation.GetDType()),
                             format::bfyx,
-                            tensor(1, num_of_elements, 1, 1) }));
+                            tensor({1, num_of_elements, 1, 1}) }));
                 }
                 args.compensation = compensation_buffers[0];
             }

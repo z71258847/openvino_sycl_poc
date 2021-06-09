@@ -242,7 +242,7 @@ TEST(border_gpu, basic_bfwzyx_0x0x0x1x0x1_0x0x0x1x0x1_border_constant) {
     constexpr auto out_size_w = in_size_w + blt_size_w + brb_size_w;
 
     auto& engine = get_test_engine();
-    auto input = engine.allocate_memory({ data_types::f32, format::bfwzyx, tensor{ batch(in_size_b), feature(in_size_f), spatial(in_size_x, in_size_y, in_size_z, in_size_w) } });
+    auto input = engine.allocate_memory({ data_types::f32, format::bfwzyx, tensor{{in_size_b, in_size_f, in_size_w, in_size_z, in_size_y, in_size_x} } });
 
     topology topology;
     topology.add(
@@ -250,8 +250,8 @@ TEST(border_gpu, basic_bfwzyx_0x0x0x1x0x1_0x0x0x1x0x1_border_constant) {
     );
     topology.add(
         border("output", "input",
-            tensor{ batch(blt_size_b), feature(blt_size_f), spatial(blt_size_x, blt_size_y, blt_size_z, blt_size_w) },
-            tensor{ batch(brb_size_b), feature(brb_size_f), spatial(brb_size_x, brb_size_y, brb_size_z, brb_size_w) },
+            tensor{{blt_size_b, blt_size_f, blt_size_w, blt_size_z, blt_size_y, blt_size_x}},
+            tensor{{brb_size_b, brb_size_f, brb_size_w, brb_size_z, brb_size_y, brb_size_x}},
             border_type::constant, 0.0f)
     );
 
@@ -580,7 +580,7 @@ TEST(border_gpu, basic_bfzyxw_0x0x0x0x1_0x0x0x0x1_border_mirror) {
     constexpr auto out_size_w = in_size_w + blt_size_w + brb_size_w;
 
     auto& engine = get_test_engine();
-    auto input = engine.allocate_memory({ data_types::f32, format::bfwzyx, tensor{ batch(in_size_b), feature(in_size_f), spatial(in_size_x, in_size_y, in_size_z, in_size_w) } });
+    auto input = engine.allocate_memory({ data_types::f32, format::bfwzyx, tensor{ in_size_b, in_size_f, in_size_w, in_size_z, in_size_y, in_size_x}});
 
     topology topology;
     topology.add(
@@ -588,8 +588,8 @@ TEST(border_gpu, basic_bfzyxw_0x0x0x0x1_0x0x0x0x1_border_mirror) {
     );
     topology.add(
         border("output", "input",
-            tensor{ batch(blt_size_b), feature(blt_size_f), spatial(blt_size_x, blt_size_y, blt_size_z, blt_size_w) },
-            tensor{ batch(brb_size_b), feature(brb_size_f), spatial(brb_size_x, brb_size_y, brb_size_z, brb_size_w) },
+            tensor{ blt_size_b, blt_size_f, blt_size_w, blt_size_z, blt_size_y, blt_size_x },
+            tensor{ brb_size_b, brb_size_f, brb_size_w, brb_size_z, brb_size_y, brb_size_x },
             border_type::mirror)
     );
 
@@ -822,7 +822,7 @@ TEST(border_gpu, basic_bfwzyx_0x0x0x0x1x1_0x0x0x0x1x1_border_mirror_101) {
     constexpr auto out_size_w = in_size_w + blt_size_w + brb_size_w;
 
     auto& engine = get_test_engine();
-    auto input = engine.allocate_memory({ data_types::f32, format::bfwzyx, tensor{ batch(in_size_b), feature(in_size_f), spatial(in_size_x, in_size_y, in_size_z, in_size_w) } });
+    auto input = engine.allocate_memory({ data_types::f32, format::bfwzyx, tensor{{in_size_b, in_size_f, in_size_w, in_size_z, in_size_y, in_size_x} } });
 
     topology topology;
     topology.add(
@@ -830,8 +830,8 @@ TEST(border_gpu, basic_bfwzyx_0x0x0x0x1x1_0x0x0x0x1x1_border_mirror_101) {
     );
     topology.add(
         border("output", "input",
-            tensor{ batch(blt_size_b), feature(blt_size_f), spatial(blt_size_x, blt_size_y, blt_size_z, blt_size_w) },
-            tensor{ batch(brb_size_b), feature(brb_size_f), spatial(brb_size_x, brb_size_y, brb_size_z, brb_size_w) },
+            tensor{{blt_size_b, blt_size_f, blt_size_w, blt_size_z, blt_size_y, blt_size_x}},
+            tensor{{brb_size_b, brb_size_f, brb_size_w, brb_size_z, brb_size_y, brb_size_x}},
             border_type::mirror_101)
     );
 

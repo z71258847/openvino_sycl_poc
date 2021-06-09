@@ -54,10 +54,10 @@ TEST(fused_conv_eltwise, basic_0)
     auto&& out_layout = output->get_layout();
 
     EXPECT_EQ(out_layout.format, format::bfyx);
-    EXPECT_EQ(out_layout.size.batch[0], 1);
-    EXPECT_EQ(out_layout.size.feature[0], 1);
-    EXPECT_EQ(out_layout.size.spatial[0], 4);
-    EXPECT_EQ(out_layout.size.spatial[1], 5);
+    EXPECT_EQ(out_layout.size.batch(0), 1);
+    EXPECT_EQ(out_layout.size.feature(0), 1);
+    EXPECT_EQ(out_layout.size.spatial(0), 4);
+    EXPECT_EQ(out_layout.size.spatial(1), 5);
 }
 
 TEST(fused_conv_eltwise, basic_image2d)
@@ -160,10 +160,10 @@ TEST(fused_conv_eltwise, dont_fuse_if_conv_elt_are_outputs)
     auto&& out_layout = output->get_layout();
 
     EXPECT_EQ(out_layout.format, format::bfyx);
-    EXPECT_EQ(out_layout.size.batch[0], 1);
-    EXPECT_EQ(out_layout.size.feature[0], 1);
-    EXPECT_EQ(out_layout.size.spatial[0], 4);
-    EXPECT_EQ(out_layout.size.spatial[1], 5);
+    EXPECT_EQ(out_layout.size.batch(0), 1);
+    EXPECT_EQ(out_layout.size.feature(0), 1);
+    EXPECT_EQ(out_layout.size.spatial(0), 4);
+    EXPECT_EQ(out_layout.size.spatial(1), 5);
 }
 
 template<typename InputTy,
@@ -210,10 +210,10 @@ protected:
 
         int n_features = static_cast<int>(biases_values.size());
 
-        auto input_shape = tensor(1, n_features, 4, 1);
-        auto weights_shape = tensor(n_features, n_features, 3, 1);
-        auto biases_shape = tensor(1, n_features, 1, 1);
-        auto sum_input_shape = tensor(1, n_features, 2, 1);
+        auto input_shape = tensor({1, n_features, 4, 1});
+        auto weights_shape = tensor({n_features, n_features, 3, 1});
+        auto biases_shape = tensor({1, n_features, 1, 1});
+        auto sum_input_shape = tensor({1, n_features, 2, 1});
 
         auto input = engine.allocate_memory({type_to_data_type<InputTy>::value, format::bfyx, input_shape});
         auto weights = engine.allocate_memory({type_to_data_type<WeightsTy>::value, format::bfyx, weights_shape});
@@ -258,10 +258,10 @@ protected:
         auto output_memory = outputs.at("fused_conv").get_memory();
         auto output_layout = output_memory->get_layout();
         cldnn::mem_lock<OutputTy> output_ptr(output_memory, get_test_stream());
-        int y_size = output_layout.size.spatial[1];
-        int x_size = output_layout.size.spatial[0];
-        int f_size = output_layout.size.feature[0];
-        int b_size = output_layout.size.batch[0];
+        int y_size = output_layout.size.spatial(1);
+        int x_size = output_layout.size.spatial(0);
+        int f_size = output_layout.size.feature(0);
+        int b_size = output_layout.size.batch(0);
         EXPECT_EQ(output_layout.format, format::bfyx);
         EXPECT_EQ(y_size, 1);
         EXPECT_EQ(x_size, 2);

@@ -34,9 +34,9 @@ struct binary_convolution : public primitive_base<binary_convolution> {
     /// @param groups Number of feature groups (grouped convolution). If more than 1 then weights/bias count needs to be 1.
     /// @param pad_value Logical value of padding. Can be one of 3 values: 1 - pad bits equal to 1; -1 -> pad bits equal to 0; 0 -> pad is not counted
     /// @param calc_precision Precision of intermediate accumulators
-    binary_convolution(const primitive_id& id,
-                       const primitive_id& input,
-                       const std::vector<primitive_id>& weights,
+    binary_convolution(const primitive_id &id,
+                       const primitive_id &input,
+                       const std::vector<primitive_id> &weights,
                        tensor stride = {1, 1, 1, 1},
                        tensor input_offset = {0, 0, 0, 0},
                        tensor dilation = {1, 1, 1, 1},
@@ -44,8 +44,8 @@ struct binary_convolution : public primitive_base<binary_convolution> {
                        int groups = 1,
                        float pad_value = 0.0f,
                        data_types calc_precision = data_types::f32,
-                       const padding& output_padding = padding())
-        : primitive_base(id, {input}, output_padding, optional_data_type {calc_precision}),
+                       const padding &output_padding = padding())
+        : primitive_base(id, {input}, output_padding, optional_data_type{calc_precision}),
           input_offset(input_offset),
           stride(stride),
           dilation(dilation),

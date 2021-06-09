@@ -264,7 +264,7 @@ void CreateLSTMSequenceOp(Program& p, const std::shared_ptr<ngraph::op::v5::LSTM
         int seqIdx = isForward ? i : lstm_sequence_len - 1 - i;
         const std::string seqIdx_str = std::to_string(seqIdx);
 
-        cldnn::tensor crop_tensor{ inputShape.batch[0], 1, inputShape.spatial[0], inputShape.spatial[1] };
+        cldnn::tensor crop_tensor{ inputShape.batch(0), 1, inputShape.spatial(0), inputShape.spatial(1) };
         cldnn::tensor offset_tensor{ 0, static_cast<cldnn::tensor::value_type>(seqIdx), 0, 0 };
         cldnn::primitive_id inputCrop_id = inputCropID + ":" + seqIdx_str;
         p.AddPrimitive(cldnn::crop(inputCrop_id, permuteID, crop_tensor, offset_tensor));

@@ -69,7 +69,7 @@ public:
     }
 
     program_node& input(size_t idx = 0) const { return get_dependency(idx); }
-    size_t inputs_count() const { return get_primitive()->input.size(); }
+    size_t inputs_count() const { return get_primitive()->input_ids.size(); }
 
     std::shared_ptr<kernel_selector::fuse_params> get_fuse_params() const override {
         kernel_selector::eltwise_mode mode = convert_to_eltwise_mode(get_primitive()->mode);

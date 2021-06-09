@@ -76,10 +76,10 @@ TEST(max_unpooling_gpu, basic_in2x3x2x2) {
     auto output_layout = output->get_layout();
 
     EXPECT_EQ(output_layout.format, format::bfyx);
-    EXPECT_EQ(output_layout.size.spatial[1], 2);
-    EXPECT_EQ(output_layout.size.spatial[0], 3);
-    EXPECT_EQ(output_layout.size.feature[0], 2);
-    EXPECT_EQ(output_layout.size.batch[0], 2);
+    EXPECT_EQ(output_layout.size.spatial(1), 2);
+    EXPECT_EQ(output_layout.size.spatial(0), 3);
+    EXPECT_EQ(output_layout.size.feature(0), 2);
+    EXPECT_EQ(output_layout.size.batch(0), 2);
 
     std::vector<float> expected_output_vec = {
         0.f, 0.f, 0.f,
@@ -158,10 +158,10 @@ TEST(max_unpooling_gpu, basic_in2x3x2x2_output_padding) {
     auto output_layout = output->get_layout();
 
     EXPECT_EQ(output_layout.format, format::bfyx);
-    EXPECT_EQ(output_layout.size.spatial[1], 2);
-    EXPECT_EQ(output_layout.size.spatial[0], 3);
-    EXPECT_EQ(output_layout.size.feature[0], 2);
-    EXPECT_EQ(output_layout.size.batch[0], 2);
+    EXPECT_EQ(output_layout.size.spatial(1), 2);
+    EXPECT_EQ(output_layout.size.spatial(0), 3);
+    EXPECT_EQ(output_layout.size.feature(0), 2);
+    EXPECT_EQ(output_layout.size.batch(0), 2);
 
     std::vector<float> expected_output_vec = {
         0.f, 0.f, 0.f, 0.f, 0.f,
@@ -249,10 +249,10 @@ TEST(max_unpooling_gpu, basic_in2x3x2x2_output_size) {
     auto output_layout = output->get_layout();
 
     EXPECT_EQ(output_layout.format, format::bfyx);
-    EXPECT_EQ(output_layout.size.spatial[1], 2);
-    EXPECT_EQ(output_layout.size.spatial[0], 3);
-    EXPECT_EQ(output_layout.size.feature[0], 2);
-    EXPECT_EQ(output_layout.size.batch[0], 2);
+    EXPECT_EQ(output_layout.size.spatial(1), 2);
+    EXPECT_EQ(output_layout.size.spatial(0), 3);
+    EXPECT_EQ(output_layout.size.feature(0), 2);
+    EXPECT_EQ(output_layout.size.batch(0), 2);
 
     std::vector<float> expected_output_vec = {
         0.f, 0.f, 0.f,
@@ -330,10 +330,10 @@ TEST(max_unpooling_gpu, basic_in2x3x2x2_fp16) {
     auto output_layout = output->get_layout();
 
     EXPECT_EQ(output_layout.format, format::bfyx);
-    EXPECT_EQ(output_layout.size.spatial[1], 2);
-    EXPECT_EQ(output_layout.size.spatial[0], 3);
-    EXPECT_EQ(output_layout.size.feature[0], 2);
-    EXPECT_EQ(output_layout.size.batch[0], 2);
+    EXPECT_EQ(output_layout.size.spatial(1), 2);
+    EXPECT_EQ(output_layout.size.spatial(0), 3);
+    EXPECT_EQ(output_layout.size.feature(0), 2);
+    EXPECT_EQ(output_layout.size.batch(0), 2);
 
     std::vector<float> expected_output_vec = {
         0.f, 0.f, 0.f,
@@ -409,10 +409,10 @@ TEST(max_unpooling_gpu, basic_in2x2x3x2_max_with_argmax_pooling_unpooling) {
     cldnn::mem_lock<float> argmax_ptr(arg_max, get_test_stream());
 
     EXPECT_EQ(output_layout.format, format::bfyx);
-    EXPECT_EQ(output_layout.size.spatial[1], 2);
-    EXPECT_EQ(output_layout.size.spatial[0], 3);
-    EXPECT_EQ(output_layout.size.feature[0], 2);
-    EXPECT_EQ(output_layout.size.batch[0], 2);
+    EXPECT_EQ(output_layout.size.spatial(1), 2);
+    EXPECT_EQ(output_layout.size.spatial(0), 3);
+    EXPECT_EQ(output_layout.size.feature(0), 2);
+    EXPECT_EQ(output_layout.size.batch(0), 2);
 
     std::vector<float> expected_argmax_vec = {
         4.0f, 4.0f,

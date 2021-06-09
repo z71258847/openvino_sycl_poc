@@ -808,7 +808,7 @@ TEST(reorder_gpu, basic_convert_int8) {
         // 2. reorder primitive with id "reorder_input"
         reorder("reorder_input",
             // input primitive for reorder (implicitly converted to primitive_id)
-            input,
+            "input",
             // output layout for reorder
             byte_layout),
         reorder("reorder2", "reorder_input", in_layout)
@@ -879,13 +879,13 @@ TEST(reorder_gpu, basic_convert_uint8rgbabyxf_to_fp32_bfyx) {
 		// 2. reorder primitive with id "reorder_input"
 		reorder("reorder_input",
 			// input primitive for reorder (implicitly converted to primitive_id)
-			input,
+			"input",
 			// output layout for reorder
 			output_layout)
 	);
 
-	tensor crop_reference_input_tensor(spatial(kernel_size, kernel_size), batch(1), feature(4 - 1));
-	tensor crop_offset_tensor(spatial(0, 0), batch(0), feature(0));
+	tensor crop_reference_input_tensor({1, 4 - 1, kernel_size, kernel_size});
+	tensor crop_offset_tensor({0, 0, 0, 0});
 	padding output_padding = padding({ 0,0,0,0 }, { 0,0,0,0 }, 0);
 	topology.add(
 		// cropping primitive with id "crop1"
@@ -1148,11 +1148,11 @@ TEST(reorder_gpu_f32, basic_bfyx_to_bfzyx)
     auto output = outputs.begin()->second.get_memory();
     EXPECT_TRUE(output->get_layout().format == format::bfzyx);
     auto sizes = output->get_layout().size;
-    EXPECT_TRUE(sizes.batch[0] == 2);
-    EXPECT_TRUE(sizes.feature[0] == 2);
-    EXPECT_TRUE(sizes.spatial[0] == 2);
-    EXPECT_TRUE(sizes.spatial[1] == 2);
-    EXPECT_TRUE(sizes.spatial[2] == 1);
+    EXPECT_TRUE(sizes.batch(0) == 2);
+    EXPECT_TRUE(sizes.feature(0) == 2);
+    EXPECT_TRUE(sizes.spatial(0) == 2);
+    EXPECT_TRUE(sizes.spatial(1) == 2);
+    EXPECT_TRUE(sizes.spatial(2) == 1);
 
     float answers[16] = {
         1.f, 0.f,
@@ -1212,11 +1212,11 @@ TEST(reorder_gpu_f32, basic_yxfb_to_bfzyx)
     auto output = outputs.begin()->second.get_memory();
     EXPECT_TRUE(output->get_layout().format == format::bfzyx);
     auto sizes = output->get_layout().size;
-    EXPECT_TRUE(sizes.batch[0] == 2);
-    EXPECT_TRUE(sizes.feature[0] == 2);
-    EXPECT_TRUE(sizes.spatial[0] == 2);
-    EXPECT_TRUE(sizes.spatial[1] == 2);
-    EXPECT_TRUE(sizes.spatial[2] == 1);
+    EXPECT_TRUE(sizes.batch(0) == 2);
+    EXPECT_TRUE(sizes.feature(0) == 2);
+    EXPECT_TRUE(sizes.spatial(0) == 2);
+    EXPECT_TRUE(sizes.spatial(1) == 2);
+    EXPECT_TRUE(sizes.spatial(2) == 1);
 
     float answers[16] = {
         1.0f,  2.0f,
@@ -1288,11 +1288,11 @@ TEST(reorder_gpu_f32, basic_bfzyx_to_bfyx)
     auto output = outputs.begin()->second.get_memory();
     EXPECT_TRUE(output->get_layout().format == format::bfyx);
     auto sizes = output->get_layout().size;
-    EXPECT_TRUE(sizes.batch[0] == 2);
-    EXPECT_TRUE(sizes.feature[0] == 2);
-    EXPECT_TRUE(sizes.spatial[0] == 2);
-    EXPECT_TRUE(sizes.spatial[1] == 4);
-    EXPECT_TRUE(sizes.spatial[2] == 1);
+    EXPECT_TRUE(sizes.batch(0) == 2);
+    EXPECT_TRUE(sizes.feature(0) == 2);
+    EXPECT_TRUE(sizes.spatial(0) == 2);
+    EXPECT_TRUE(sizes.spatial(1) == 4);
+    EXPECT_TRUE(sizes.spatial(2) == 1);
 
     float answers[32] = {
         1.f, 0.f,
@@ -1789,7 +1789,7 @@ TEST(reorder_gpu_f32, bfwzyx_bfyx_chain)
     // 2 3   1 2   10 11   9 10
     auto& engine = get_test_engine();
 
-    auto input = engine.allocate_memory(layout{ data_types::f32, format::bfyx, tensor{ batch(1), feature(4), spatial(2, 2) } });
+    auto input = engine.allocate_memory(layout{ data_types::f32, format::bfyx, tensor{{1, 4, 2, 2}} });
 
     std::vector<float> data = {
         1.f, 2.f, 3.f, 4.f,
@@ -1811,10 +1811,10 @@ TEST(reorder_gpu_f32, bfwzyx_bfyx_chain)
     topology topology(
         input_layout("input", input->get_layout()),
         reorder("reorder1", "input", format::bfwzyx, data_types::f32),
-        reshape("reshape1", "reorder1", tensor(batch(2), feature(2), spatial(1, 1, 2, 2) )),
+        reshape("reshape1", "reorder1", tensor({2, 2, 2, 2, 1, 1})),
         reorder("reorder2", "reshape1", format::bfwzyx, data_types::f32, sub_bfwzyx),
-        reshape("reshape2", "reorder2", tensor(batch(4), feature(2), spatial(1, 1, 1, 2))),
-        reshape("reshape3", "reshape2", tensor(batch(1), feature(4), spatial(2, 2))),
+        reshape("reshape2", "reorder2", tensor({4, 2, 2, 1, 1, 1})),
+        reshape("reshape3", "reshape2", tensor({1, 4, 2, 2})),
         reorder("reorder3", "reshape3", format::bfyx, data_types::f32, sub_bfyx),
         reorder("out_reorder", "reorder3", format::bfwzyx, data_types::f32)
         );
@@ -1830,12 +1830,12 @@ TEST(reorder_gpu_f32, bfwzyx_bfyx_chain)
     auto output = outputs.begin()->second.get_memory();
     EXPECT_TRUE(output->get_layout().format == format::bfwzyx);
     auto sizes = output->get_layout().size;
-    EXPECT_EQ(sizes.batch[0], 1);
-    EXPECT_EQ(sizes.feature[0], 4);
-    EXPECT_EQ(sizes.spatial[0], 2);
-    EXPECT_EQ(sizes.spatial[1], 2);
-    EXPECT_EQ(sizes.spatial[2], 1);
-    EXPECT_EQ(sizes.spatial[2], 1);
+    EXPECT_EQ(sizes.batch(0), 1);
+    EXPECT_EQ(sizes.feature(0), 4);
+    EXPECT_EQ(sizes.spatial(0), 2);
+    EXPECT_EQ(sizes.spatial(1), 2);
+    EXPECT_EQ(sizes.spatial(2), 1);
+    EXPECT_EQ(sizes.spatial(2), 1);
 
     cldnn::mem_lock<float> output_ptr(output, get_test_stream());
     ASSERT_EQ(output_ptr.size(), expected.size());
@@ -2154,7 +2154,7 @@ TEST(reorder_gpu_f32, b_fs_yx_fsv16_to_bfyx_opt_padded)
 TEST(reorder_gpu, any_format) {
     auto& engine = get_test_engine();
 
-    auto input = engine.allocate_memory(layout(data_types::f32, format::yxfb, tensor(5, 7, 13, 9)));
+    auto input = engine.allocate_memory(layout(data_types::f32, format::yxfb, tensor({5, 7, 13, 9})));
 
     topology topo;
     topo.add(input_layout("in", input->get_layout()));

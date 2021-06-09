@@ -154,9 +154,9 @@ struct pooling : public primitive_base<pooling> {
           argmax(""),
           mode(static_cast<pooling_mode>(mode)),
           global_pooling(true),
-          input_offset(0, 0, 0, 0),
-          stride(1, 1, 1, 1),
-          size(0, 0, 0, 0),
+          input_offset({0, 0, 0, 0}),
+          stride({1, 1, 1, 1}),
+          size({0, 0, 0, 0}),
           with_output_size(false) {}
 
     /// @brief Primitive id which contains indices of each max pooling region.

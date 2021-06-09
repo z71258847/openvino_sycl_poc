@@ -38,11 +38,11 @@ public:
         auto stride = primitive->stride;
 
         params.unpoolSize = {
-            (uint32_t)primitive->size.spatial[0],
-            (uint32_t)primitive->size.spatial[1],
+            (uint32_t)primitive->size.spatial(0),
+            (uint32_t)primitive->size.spatial(1),
         };
 
-        params.unpoolStride = {(uint32_t)stride.spatial[0], (uint32_t)stride.spatial[1]};
+        params.unpoolStride = {(uint32_t)stride.spatial(0), (uint32_t)stride.spatial(1)};
 
         auto& kernel_selector = kernel_selector::average_unpooling_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(average_unpooling_params, average_unpooling_optional_params);

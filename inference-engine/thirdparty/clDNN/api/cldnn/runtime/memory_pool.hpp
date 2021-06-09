@@ -61,10 +61,10 @@ struct padded_pool_comparer {
             return ll.format < rl.format;
         if (ll.data_type != rl.data_type)
             return ll.data_type < rl.data_type;
-        if (ll.size.spatial[0] != rl.size.spatial[0])
-            return ll.size.spatial[0] < rl.size.spatial[0];
-        if (ll.size.spatial[1] != rl.size.spatial[1])
-            return ll.size.spatial[1] < rl.size.spatial[1];
+        if (ll.size.spatial(0) != rl.size.spatial(0))
+            return ll.size.spatial(0) < rl.size.spatial(0);
+        if (ll.size.spatial(1) != rl.size.spatial(1))
+            return ll.size.spatial(1) < rl.size.spatial(1);
         return ll.data_padding < rl.data_padding;
     }
 };

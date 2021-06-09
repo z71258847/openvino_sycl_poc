@@ -126,6 +126,13 @@ void primitive_inst::build_deps() {
     }
 }
 
+void primitive_inst::choose_impl() {
+    const_cast<program_node&>(_node).get_output_layout(true);
+    _impl = _node.type()->choose_impl(_node);
+    _node.get_program().compile();
+    _impl->init_kernels();
+}
+
 primitive_inst::primitive_inst(network& network, program_node const& node, bool allocate_memory)
     : _network(network), _node(node), _impl(node.get_selected_impl() ? node.get_selected_impl()->clone() : nullptr), _output(), _output_changed(false) {
     if (allocate_memory) {
@@ -162,41 +169,45 @@ primitive_inst::primitive_inst(network& network, program_node const& node, bool 
 }
 
 memory::ptr primitive_inst::allocate_output() {
-    auto layout = _node.get_output_layout();
+    // auto layout = _node.get_output_layout();
+    std::cerr << "ALLOC MEM!\n";
+    auto layout = _node.get_output_layout().upper_bound();
     auto& engine = get_network().get_engine();
+
+    return engine.allocate_memory(layout, allocation_type::usm_host);
 
     // For outputs, cpu prim we want to have lockable alloc type
     // Also if the successor of a node is an cpu, then memory needs to be lockable.
-    auto use_lockable_memory = _node.is_output() || _node.get_selected_impl()->is_cpu()
-                               || std::any_of(_node.get_users().begin(), _node.get_users().end(),
-                                              [](const program_node* n) {return n->get_selected_impl()->is_cpu() || n->can_be_optimized(); })
-                               || !engine.supports_allocation(allocation_type::usm_device);
-    allocation_type alloc_type = use_lockable_memory ?
-                                 engine.get_lockable_preffered_memory_allocation_type(layout.format.is_image_2d())
-                                                     : allocation_type::usm_device;
+    // auto use_lockable_memory = _node.is_output() || _node.get_selected_impl()->is_cpu()
+    //                            || std::any_of(_node.get_users().begin(), _node.get_users().end(),
+    //                                           [](const program_node* n) {return n->get_selected_impl()->is_cpu() || n->can_be_optimized(); })
+    //                            || !engine.supports_allocation(allocation_type::usm_device);
+    // allocation_type alloc_type = use_lockable_memory ?
+    //                              engine.get_lockable_preffered_memory_allocation_type(layout.format.is_image_2d())
+    //                                                  : allocation_type::usm_device;
 
-    if (!_network.is_internal() && (_node.can_be_optimized() || _node.is_type<generic_layer>())) {
-        return _network.get_memory_from_pool(layout,
-                                             _node.id(),
-                                             _node.get_memory_dependencies(),
-                                             alloc_type,
-                                             false);
-    } else if (_network.is_internal() && _node.is_output() && _node.is_type<generic_layer>() &&
-               engine.supports_allocation(allocation_type::usm_device)) {
-        return engine.allocate_memory(layout, allocation_type::usm_device, false);
-    } else if (_network.is_internal() && !_node.is_output() && _node.is_type<input_layout>()) {
-        // Skip memory reset for input_layout primitives, since data will be copied from cldnn::data primitive
-        // or just reuse primitive's memory
-        return engine.allocate_memory(layout, alloc_type, false);
-    } else if (_network.is_internal() || (!_node.can_share_buffer()) || _node.can_be_optimized() || _node.is_output()) {
-        return engine.allocate_memory(layout, alloc_type);
-    } else {
-        return _network.get_memory_from_pool(layout,
-                                             _node.id(),
-                                             _node.get_memory_dependencies(),
-                                             alloc_type,
-                                             true);
-    }
+    // if (!_network.is_internal() && (_node.can_be_optimized() || _node.is_type<generic_layer>())) {
+    //     return _network.get_memory_from_pool(layout,
+    //                                          _node.id(),
+    //                                          _node.get_memory_dependencies(),
+    //                                          alloc_type,
+    //                                          false);
+    // } else if (_network.is_internal() && _node.is_output() && _node.is_type<generic_layer>() &&
+    //            engine.supports_allocation(allocation_type::usm_device)) {
+    //     return engine.allocate_memory(layout, allocation_type::usm_device, false);
+    // } else if (_network.is_internal() && !_node.is_output() && _node.is_type<input_layout>()) {
+    //     // Skip memory reset for input_layout primitives, since data will be copied from cldnn::data primitive
+    //     // or just reuse primitive's memory
+    //     return engine.allocate_memory(layout, alloc_type, false);
+    // } else if (_network.is_internal() || (!_node.can_share_buffer()) || _node.can_be_optimized() || _node.is_output()) {
+    //     return engine.allocate_memory(layout, alloc_type);
+    // } else {
+    //     return _network.get_memory_from_pool(layout,
+    //                                          _node.id(),
+    //                                          _node.get_memory_dependencies(),
+    //                                          alloc_type,
+    //                                          true);
+    // }
 }
 
 std::vector<std::shared_ptr<primitive_inst>> primitive_inst::build_exec_deps(

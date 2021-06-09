@@ -22,7 +22,11 @@ void cldnn_print_error_message(const std::string& file,
                                const std::string& instance_id,
                                std::stringstream& msg,
                                const std::string& add_msg = "");
-}
+void cldnn_print_error_message(const std::string& file,
+                               int line,
+                               std::stringstream& msg,
+                               const std::string& add_msg = "");
+}  // namespace err_details
 
 template <typename N1, typename N2>
 inline void error_on_not_equal(const std::string& file,

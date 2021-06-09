@@ -37,7 +37,7 @@ void generic_test::run_single_test() {
                 tests::set_random_values<FLOAT16>(input_mems[i], true, 5, 10);
             }
         } else {
-            size_t size = generic_params->input_layouts[i].size.batch[0] * generic_params->input_layouts[i].size.feature[0];
+            size_t size = generic_params->input_layouts[i].size.batch(0) * generic_params->input_layouts[i].size.feature(0);
 
             if (generic_params->data_type == data_types::f32) {
                 std::vector<float> values;
@@ -81,7 +81,7 @@ void generic_test::run_single_test() {
         topology.add(reorder("input0", "input0_init", input_mems[0]->get_layout()));
     }
 
-    if (layer_params->input[0] == "reorder0") {
+    if (layer_params->input_ids[0] == "reorder0") {
         // Add reorder layer with output padding as input to the tested layer.
         topology.add(reorder("reorder0", "input0", input_mems[0]->get_layout().with_padding(padding{ { 0, 0, 1, 3 },{ 0, 0, 5, 2 } })));
     }
@@ -121,10 +121,10 @@ void generic_test::compare_buffers(const memory::ptr out, const memory::ptr ref)
 
     auto output_size = out_layout.size;
 
-    int batch_size = output_size.batch[0];
-    int feature_size = output_size.feature[0];
-    int y_size = output_size.spatial[1];
-    int x_size = output_size.spatial[0];
+    int batch_size = output_size.batch(0);
+    int feature_size = output_size.feature(0);
+    int y_size = output_size.spatial(1);
+    int x_size = output_size.spatial(0);
 
     mem_lock<Type> res_data(out, get_test_stream());
     mem_lock<Type> ref_data(ref, get_test_stream());
@@ -157,17 +157,17 @@ static size_t calc_offfset(const layout & layout, const pitches& p) {
     auto lower_padding = layout.data_padding.lower_size();
     if (layout.format == format::bfzyx) {
         return
-            p.b * lower_padding.batch[0] +
-            p.f * lower_padding.feature[0] +
-            p.z * lower_padding.spatial[2] +
-            p.y * lower_padding.spatial[1] +
-            p.x * lower_padding.spatial[0];
+            p.b * lower_padding.batch(0) +
+            p.f * lower_padding.feature(0) +
+            p.z * lower_padding.spatial(2) +
+            p.y * lower_padding.spatial(1) +
+            p.x * lower_padding.spatial(0);
     } else {
         return
-            p.b * lower_padding.batch[0] +
-            p.f * lower_padding.feature[0] +
-            p.y * lower_padding.spatial[1] +
-            p.x * lower_padding.spatial[0];
+            p.b * lower_padding.batch(0) +
+            p.f * lower_padding.feature(0) +
+            p.y * lower_padding.spatial(1) +
+            p.x * lower_padding.spatial(0);
     }
 }
 
@@ -244,10 +244,10 @@ size_t generic_test::get_linear_index_with_broadcast(const layout& in_layout, si
 {
     return
         desc.offset +
-        (b % in_layout.size.batch[0]) * desc.pitch.b +
-        (f % in_layout.size.feature[0]) * desc.pitch.f +
-        (y % in_layout.size.spatial[1]) * desc.pitch.y +
-        (x % in_layout.size.spatial[0]) * desc.pitch.x;
+        (b % in_layout.size.batch(0)) * desc.pitch.b +
+        (f % in_layout.size.feature(0)) * desc.pitch.f +
+        (y % in_layout.size.spatial(1)) * desc.pitch.y +
+        (x % in_layout.size.spatial(0)) * desc.pitch.x;
 }
 
 //Default implementation. Should be overridden in derived class otherwise.

@@ -116,7 +116,7 @@ layout loop_inst::calc_output_layout(loop_node const & node) {
         const auto shape = loop_output_layout.size.sizes(loop_output_layout.format);
         const size_t ndim = shape.size();
         const size_t raw_axis = node.convert_to_raw_axis(axis_to_iterate_throgh, static_cast<int>(ndim));
-        loop_output_layout.size.raw[raw_axis] = static_cast<int32_t>(node.get_max_iteration());
+        loop_output_layout.size[raw_axis] = static_cast<int32_t>(node.get_max_iteration());
     }
     return loop_output_layout;
 }

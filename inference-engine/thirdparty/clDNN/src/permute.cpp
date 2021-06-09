@@ -27,7 +27,7 @@ layout permute_inst::calc_output_layout(permute_node const& node) {
     std::vector<tensor::value_type> output_sizes;
 
     for (size_t x = 0; x < permute_order.size(); x++) {
-        output_sizes.push_back(input_layout.size.raw[permute_order[x]]);
+        output_sizes.push_back(input_layout.size[permute_order[x]].get_length());
     }
 
     auto input_size = tensor(output_sizes);

@@ -15,7 +15,7 @@ set(CLDNN_BUILD__PROJ_LABEL       "${CLDNN_BUILD__PROJ}")
 # ========================================= Source/Header files ========================================
 
 set(__CLDNN_Label__main                "")
-file(GLOB __CLDNN_Sources__main
+file(GLOB_RECURSE __CLDNN_Sources__main
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
@@ -80,8 +80,8 @@ include_directories(
     "${CLDNN__MAIN_DIR}/src"
     "${CLDNN__MAIN_DIR}/src/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_utils/"
     "${CLDNN__RUNTIME_DIR}"
-    "${__CLDNN_Directory__test_utils}"
     "${__CLDNN_Directory__ks_core}"
     "${__CLDNN_Directory__ks_core}/common"
     "${__CLDNN_Directory__ks_actual_kernels}"
@@ -103,12 +103,13 @@ set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY PROJECT_LABEL "${CLDNN_BUILD
 
 # Set library dependencies
 target_link_libraries("${CLDNN_BUILD__PROJ}" PRIVATE
-  "${CLDNN_BUILD__PROJ__clDNN}" OpenCL gtest gtest_main gmock)
+  "${CLDNN_BUILD__PROJ__clDNN}" OpenCL gtest gtest_main gmock ngraph)
 
 if(WIN32)
   target_link_libraries("${CLDNN_BUILD__PROJ}" PRIVATE setupapi)
 elseif((NOT ANDROID) AND (UNIX))
   target_link_libraries("${CLDNN_BUILD__PROJ}" PRIVATE pthread)
+  target_compile_options("${CLDNN_BUILD__PROJ}" PRIVATE "-Wno-error=narrowing")
 endif()
 
 # ======================================================================================================

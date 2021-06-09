@@ -250,7 +250,7 @@ TEST(concatenate_f32_gpu, test_concatenation_of_pool_and_unpool) {
                          {1, 1, 2, 1}, /*kernel*/
                          {1, 1, 1, 1}  /*stride*/
                          ));
-    topology.add(resample("unpool1", "input1", tensor(1, 1, 2, 2), 0, resample_type::nearest));
+    topology.add(resample("unpool1", "input1", tensor({1, 1, 2, 2}), 0, resample_type::nearest));
     topology.add(concatenation("concat1", {"pool1", "unpool1"}, cldnn::concatenation::along_x));
     topology.add(data("weights", weights));
     topology.add(convolution("conv", "concat1", {"weights"}));
@@ -450,7 +450,7 @@ TEST(depth_concatenate_f32_gpu, test06_padded_input) {
     topology.add(activation("actv1", "input1", activation_func::linear, { 0.75f, 0.0f }));
     topology.add(activation("actv2", "input2", activation_func::linear, { 0.5f, 0.0f }));
     topology.add(data("weights", weights));
-    topology.add(convolution("conv", "actv2", { "weights" }, tensor(1), tensor(batch(0), feature(0), spatial(-1, -1, 0, 0))));
+    topology.add(convolution("conv", "actv2", { "weights" }, tensor(1), tensor({0, 0, -1, -1})));
     topology.add(concatenation("depth1", { "actv1", "actv2" }, concatenation::along_f));
     topology.add(concatenation("depth2", { "depth1", "conv" }, concatenation::along_f));
     topology.add(reorder("output", "depth2", format::bfyx, data_types::f32));
@@ -528,7 +528,7 @@ TEST(depth_concatenate_f32_gpu, test07_padded_output) {
     topology.add(activation("actv2", "input2", activation_func::linear, { 0.5f, 0.0f }));
     topology.add(concatenation("depth1", { "actv1", "actv2" }, concatenation::along_f));
     topology.add(data("weights", weights));
-    topology.add(convolution("conv", "depth1", { "weights" }, tensor(1), tensor(batch(0), feature(0), spatial(-1, -1, 0, 0))));
+    topology.add(convolution("conv", "depth1", { "weights" }, tensor(1), tensor({0, 0, -1, -1})));
     topology.add(reorder("output", "conv", format::bfyx, data_types::f32));
 
     cldnn::build_options options;
@@ -719,7 +719,7 @@ TEST(depth_concatenate_f32_gpu, concat_with_reshape_input) {
 
     topology topology;
     topology.add(input_layout("input1", input1->get_layout()));
-    topology.add(reshape("reshape", "input1", tensor(2, 1, 4, 2)));
+    topology.add(reshape("reshape", "input1", tensor({2, 1, 4, 2})));
     topology.add(concatenation("depth1", { "reshape" }, concatenation::along_f));
     topology.add(concatenation("depth2", { "depth1" }, concatenation::along_f));
 
@@ -965,9 +965,9 @@ TEST(depth_concatenate_f32_gpu, basic_bfwzyx_along_w) {
     const int z = 7;
     const int w = 9;
 
-    auto input1_layout = layout(data_types::f32, format::bfwzyx, tensor{batch(b), feature(f), spatial(x, y, z, w)});
+    auto input1_layout = layout(data_types::f32, format::bfwzyx, tensor{{b, f, w, z, y, x}});
     auto input1 = engine.allocate_memory(input1_layout);
-    auto output_layout = layout(data_types::f32, format::bfwzyx, tensor{batch(b), feature(f), spatial(x, y, z, w * 2)});
+    auto output_layout = layout(data_types::f32, format::bfwzyx, tensor{{b, f, w *2, z, y, x}});
 
     topology topology;
     topology.add(input_layout("input1", input1->get_layout()));
@@ -983,8 +983,8 @@ TEST(depth_concatenate_f32_gpu, basic_bfwzyx_along_w) {
                 for (int zi = 0; zi < z; zi++)
                     for (int yi = 0; yi < y; yi++)
                         for (int xi = 0; xi < x; xi++) {
-                            auto out_offset = output_layout.get_linear_offset(tensor{batch(bi), feature(fi), spatial(xi, yi, zi, wi)});
-                            auto in_offset = input1_layout.get_linear_offset(tensor{batch(bi), feature(fi), spatial(xi, yi, zi, wi % w)});
+                            auto out_offset = output_layout.get_linear_offset(tensor{{bi, fi, wi, zi, yi, xi}});
+                            auto in_offset = input1_layout.get_linear_offset(tensor{{bi, fi, wi % w, zi, yi, xi}});
 
                             expected_output[out_offset] = input_data[in_offset];
                         }
@@ -1043,10 +1043,10 @@ TEST(NegativeDepthConcatenateTest, DISABLED_TestAll) {
 
     auto f = format::bfyx;
 
-    std::vector<int> t{1, 2, 3, 4};
-    std::vector<int> t0{7, 2, 3, 4};
-    std::vector<int> t1{1, 2, 7, 4};
-    std::vector<int> t2{1, 2, 3, 7};
+    std::vector<tensor::value_type> t{1, 2, 3, 4};
+    std::vector<tensor::value_type> t0{7, 2, 3, 4};
+    std::vector<tensor::value_type> t1{1, 2, 7, 4};
+    std::vector<tensor::value_type> t2{1, 2, 3, 7};
 
     //TODO: should be ASSERT_THROW(statement, exception_type) - but what exception type?
     ASSERT_ANY_THROW(setup_depth_concatatenate_network({}, {}, {}));
@@ -1109,8 +1109,8 @@ public:
         for (cldnn::data_types dt : data_types)
             for (int32_t b : test_batch_sizes)
                 for (tensor& t : test_input_sizes) {
-                    const int w = t.spatial[0];
-                    const int h = t.spatial[1];
+                    const int w = t.spatial(0);
+                    const int h = t.spatial(1);
 
                     switch (input_count) {
                         case 1:
@@ -1118,7 +1118,7 @@ public:
                                 std::shared_ptr<tests::test_params> tp = std::make_shared<test_params>();
                                 tp->data_type = dt;
 
-                                tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor(b, f0, w, h)));
+                                tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor({b, f0, w, h})));
 
                                 all_generic_params.emplace_back(tp);
                             }
@@ -1129,8 +1129,8 @@ public:
                                     std::shared_ptr<tests::test_params> tp = std::make_shared<test_params>();
                                     tp->data_type = dt;
 
-                                    tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor(b, f0, w, h)));
-                                    tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor(b, f1, w, h)));
+                                    tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor({b, f0, w, h})));
+                                    tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor({b, f1, w, h})));
 
                                     all_generic_params.emplace_back(tp);
                                 }
@@ -1142,9 +1142,9 @@ public:
                                         std::shared_ptr<tests::test_params> tp = std::make_shared<test_params>();
                                         tp->data_type = dt;
 
-                                        tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor(b, f0, w, h)));
-                                        tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor(b, f1, w, h)));
-                                        tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor(b, f2, w, h)));
+                                        tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor({b, f0, w, h})));
+                                        tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor({b, f1, w, h})));
+                                        tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor({b, f2, w, h})));
 
                                         all_generic_params.emplace_back(tp);
                                     }
@@ -1182,36 +1182,36 @@ public:
     cldnn::tensor get_expected_output_tensor() override {
         cldnn::tensor::value_type features = 0;
         for (const auto& t : generic_params->input_layouts) {
-            features += t.size.feature[0];
+            features += t.size.feature(0);
         }
 
         const auto& t = generic_params->input_layouts[0].size;
-        return {t.batch[0], features, t.spatial[0], t.spatial[1]};
+        return {t.batch(0), features, t.spatial(0), t.spatial(1)};
     }
 
     template <typename Type>
     memory::ptr generate_reference_typed(const std::vector<memory::ptr>& inputs) {
         assert(!inputs.empty());
 
-        const int in_b = inputs[0]->get_layout().size.batch[0];
-        const int in_h = inputs[0]->get_layout().size.spatial[1];
-        const int in_w = inputs[0]->get_layout().size.spatial[0];
+        const int in_b = inputs[0]->get_layout().size.batch(0);
+        const int in_h = inputs[0]->get_layout().size.spatial(1);
+        const int in_w = inputs[0]->get_layout().size.spatial(0);
 
         int out_f = 0;
 
         for (const memory::ptr& input : inputs) {
-            assert(input->get_layout().size.batch[0] == in_b);
-            assert(input->get_layout().size.spatial[1] == in_h);
-            assert(input->get_layout().size.spatial[0] == in_w);
+            assert(input->get_layout().size.batch(0) == in_b);
+            assert(input->get_layout().size.spatial(1) == in_h);
+            assert(input->get_layout().size.spatial(0) == in_w);
 
-            out_f += input->get_layout().size.feature[0];
+            out_f += input->get_layout().size.feature(0);
 
             assert(input->get_layout().data_type == inputs[0]->get_layout().data_type);
             assert(input->get_layout().format.value == inputs[0]->get_layout().format.value);
         }
 
         //Output is bfyx
-        auto output = engine.allocate_memory(cldnn::layout(inputs[0]->get_layout().data_type, cldnn::format::bfyx, tensor(in_b, out_f, in_w, in_h)));
+        auto output = engine.allocate_memory(cldnn::layout(inputs[0]->get_layout().data_type, cldnn::format::bfyx, tensor({in_b, out_f, in_w, in_h})));
         cldnn::mem_lock<Type> out_mem(output, get_test_stream());
 
         int out_f_off = 0;
@@ -1219,7 +1219,7 @@ public:
             const auto input_desc = get_linear_memory_desc(input->get_layout());
             const auto output_desc = get_linear_memory_desc(output->get_layout());
 
-            const int in_f = input->get_layout().size.feature[0];
+            const int in_f = input->get_layout().size.feature(0);
             cldnn::mem_lock<Type> in_mem(input, get_test_stream());
 
             for (int n = 0; n < in_b; ++n)

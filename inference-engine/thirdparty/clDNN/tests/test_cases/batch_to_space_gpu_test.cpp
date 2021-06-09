@@ -22,7 +22,7 @@ TEST(batch_to_space_fp16_gpu, i8111_bs1222_cb0000_ce0000) {
     //  Input values in fp16
 
     auto& engine = get_test_engine();
-    tensor input_shape = tensor{batch(8), feature(1), spatial(1, 1)};
+    tensor input_shape = tensor{8, 1, 1, 1};
     auto input = engine.allocate_memory({ data_types::f16, format::bfyx, input_shape });
 
     set_values(input, {
@@ -67,7 +67,7 @@ TEST(batch_to_space_fp16_gpu, i4321_bs1212_cb0000_ce0000) {
     //  Input values in fp16
 
     auto& engine = get_test_engine();
-    tensor input_shape = tensor{batch(4), feature(3), spatial(1, 2)};
+    tensor input_shape = tensor{4, 3, 2, 1};
     auto input = engine.allocate_memory({ data_types::f16, format::bfyx, input_shape });
 
     set_values(input, {
@@ -117,7 +117,7 @@ TEST(batch_to_space_fp16_gpu, i4321_bs1212_cb0010_ce0101) {
     //  Input values in fp16
 
     auto& engine = get_test_engine();
-    tensor input_shape = tensor{batch(4), feature(3), spatial(1, 2)};
+    tensor input_shape = tensor{{4, 3, 2, 1}};
     auto input = engine.allocate_memory({ data_types::f16, format::bfyx, input_shape });
 
     set_values(input, {
@@ -164,7 +164,7 @@ TEST(batch_to_space_fp16_gpu, i62121_bs12311_cb02000_ce00110) {
     //  Input values in fp16
 
     auto& engine = get_test_engine();
-    tensor input_shape = tensor{batch(6), feature(2), spatial(1, 2, 1)};
+    tensor input_shape = tensor{6, 2, 1, 2, 1};
     auto input = engine.allocate_memory({ data_types::f16, format::bfzyx, input_shape });
 
     set_values(input, {
@@ -211,7 +211,7 @@ TEST(batch_to_space_fp16_gpu, i1212112_bs112321_cb02000_ce00110) {
     //  Input values in fp16
 
     auto& engine = get_test_engine();
-    tensor input_shape = tensor{batch(12), feature(1), spatial(2, 1, 1, 2)};
+    tensor input_shape = tensor{12, 1, 2, 1, 1, 2};
     auto input = engine.allocate_memory({ data_types::f16, format::bfwzyx, input_shape });
 
     set_values(input, {
@@ -262,7 +262,7 @@ TEST(batch_to_space_fp16_gpu, i21611_bs1112_cb0000_ce0000_b_fs_yx_fsv16) {
     //  Input values in fp16
 
     auto& engine = get_test_engine();
-    tensor input_shape = tensor{batch(2), feature(16), spatial(1, 1)};
+    tensor input_shape = tensor{2, 16, 1, 1};
     auto input = engine.allocate_memory({ data_types::f16, format::bfyx, input_shape });
 
     set_values(input, {
@@ -313,7 +313,7 @@ TEST(batch_to_space_fp16_gpu, i2812_bs1112_cb0000_ce0000_b_fs_yx_fsv16) {
     //  Input values in fp16
 
     auto& engine = get_test_engine();
-    tensor input_shape = tensor{batch(2), feature(8), spatial(2, 1)};
+    tensor input_shape = tensor{2, 8, 1, 2};
     auto input = engine.allocate_memory({ data_types::f16, format::bfyx, input_shape });
 
     set_values(input, {
@@ -363,7 +363,7 @@ TEST(batch_to_space_fp32_gpu, i8111_bs1222_cb0000_ce0000) {
     //  Input values in fp32
 
     auto& engine = get_test_engine();
-    tensor input_shape = tensor{batch(8), feature(1), spatial(1, 1)};
+    tensor input_shape = tensor{8, 1, 1, 1};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, input_shape });
 
     set_values(input, {
@@ -406,7 +406,7 @@ TEST(batch_to_space_fp32_gpu, i4321_bs1212_cb0000_ce0000) {
     //  Input values in fp32
 
     auto& engine = get_test_engine();
-    tensor input_shape = tensor{batch(4), feature(3), spatial(1, 2)};
+    tensor input_shape = tensor{4, 3, 2, 1};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, input_shape });
 
     set_values(input, {
@@ -456,7 +456,7 @@ TEST(batch_to_space_fp32_gpu, i4321_bs1212_cb0010_ce0101) {
     //  Input values in fp32
 
     auto& engine = get_test_engine();
-    tensor input_shape = tensor{batch(4), feature(3), spatial(1, 2)};
+    tensor input_shape = tensor{4, 3, 2, 1};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, input_shape });
 
     set_values(input, {
@@ -503,7 +503,7 @@ TEST(batch_to_space_fp32_gpu, i62121_bs12311_cb02000_ce00110) {
     //  Input values in fp32
 
     auto& engine = get_test_engine();
-    tensor input_shape = tensor{batch(6), feature(2), spatial(1, 2, 1)};
+    tensor input_shape = tensor{6, 2, 1, 2, 1};
     auto input = engine.allocate_memory({ data_types::f32, format::bfzyx, input_shape });
 
     set_values(input, {
@@ -550,7 +550,7 @@ TEST(batch_to_space_fp32_gpu, i1212112_bs112321_cb02000_ce00110) {
     //  Input values in fp32
 
     auto& engine = get_test_engine();
-    tensor input_shape = tensor{batch(12), feature(1), spatial(2, 1, 1, 2)};
+    tensor input_shape = tensor{12, 1, 2, 1, 1, 2};
     auto input = engine.allocate_memory({ data_types::f32, format::bfwzyx, input_shape });
 
     set_values(input, {
@@ -601,7 +601,7 @@ TEST(batch_to_space_fp32_gpu, i21621_bs1112_cb0201_ce0810_b_fs_yx_fsv16) {
     //  Input values in fp32
 
     auto& engine = get_test_engine();
-    tensor input_shape = tensor{batch(2), feature(16), spatial(1, 2)};
+    tensor input_shape = tensor{2, 16, 2, 1};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, input_shape });
 
     set_values(input, {
@@ -653,7 +653,7 @@ TEST(batch_to_space_fp32_gpu, i41021_bs1221_cb0201_ce0810_b_fs_yx_fsv16) {
     //  Input values in fp32
 
     auto& engine = get_test_engine();
-    tensor input_shape = tensor{batch(4), feature(10), spatial(1, 2)};
+    tensor input_shape = tensor{4, 10, 2, 1};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, input_shape });
 
     set_values(input, {

@@ -68,11 +68,11 @@ template<typename data_t>
 void tile_ref(const memory::ptr input, memory::ptr output, tile::tile_axis axis, int num_tiles) {
     auto get_sizes = [](const tensor& size, tile::tile_axis axis) -> std::pair<int, int> {
         switch (axis) {
-        case tile::along_b: return std::make_pair(1, size.batch[0] * size.feature[0] * size.spatial[2] * size.spatial[1] * size.spatial[0]);
-        case tile::along_f: return std::make_pair(size.batch[0], size.feature[0] * size.spatial[2] * size.spatial[1] * size.spatial[0]);
-        case tile::along_z: return std::make_pair(size.batch[0] * size.feature[0], size.spatial[2] * size.spatial[1] * size.spatial[0]);
-        case tile::along_y: return std::make_pair(size.batch[0] * size.feature[0] * size.spatial[2], size.spatial[1] * size.spatial[0]);
-        case tile::along_x: return std::make_pair(size.batch[0] * size.feature[0] * size.spatial[2] * size.spatial[1], size.spatial[0]);
+        case tile::along_b: return std::make_pair(1, size.batch(0) * size.feature(0) * size.spatial(2) * size.spatial(1) * size.spatial(0));
+        case tile::along_f: return std::make_pair(size.batch(0), size.feature(0) * size.spatial(2) * size.spatial(1) * size.spatial(0));
+        case tile::along_z: return std::make_pair(size.batch(0) * size.feature(0), size.spatial(2) * size.spatial(1) * size.spatial(0));
+        case tile::along_y: return std::make_pair(size.batch(0) * size.feature(0) * size.spatial(2), size.spatial(1) * size.spatial(0));
+        case tile::along_x: return std::make_pair(size.batch(0) * size.feature(0) * size.spatial(2) * size.spatial(1), size.spatial(0));
         default: throw std::invalid_argument("Invalid axis(" + std::to_string(static_cast<int>(axis)) + ") in tile ref version");
         }
     };
@@ -106,8 +106,8 @@ TEST(add_reorders_gpu, basic_reshape_and_tile) {
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
-    topology.add(reshape("reshape", "input", tensor(2, 1, 2, 1)));
-    topology.add(tile("tile", "reshape", tensor(2, 1, 2, 4)));
+    topology.add(reshape("reshape", "input", tensor({2, 1, 1, 2})));
+    topology.add(tile("tile", "reshape", tensor({2, 1, 4, 2})));
 
     std::vector<float> input_vec = { 1.f, 0.f, 5.f, 1.5f };
     set_values(input, input_vec);

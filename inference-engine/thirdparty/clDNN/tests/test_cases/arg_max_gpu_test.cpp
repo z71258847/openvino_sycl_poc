@@ -19,7 +19,7 @@ void generic_arg_max_test_xyf(int input_b, int input_f, int input_y, int input_x
     auto test_input_fmt = format::bfyx;
     auto& engine = get_test_engine();
 
-    tensor input_tensor(input_b, input_f, input_x, input_y);
+    tensor input_tensor({input_b, input_f, input_y, input_x});
     auto input = engine.allocate_memory({ type_to_data_type<Tin>::value, test_input_fmt, input_tensor });
     topology topology;
     topology.add(input_layout("input", input->get_layout()));

@@ -178,8 +178,8 @@ protected:
         };
         // add external_id in dependencies if not exist
         for (const auto& mapping : input_primitive_maps) {
-            auto target = std::find(input.begin(), input.end(), mapping.external_id);
-            if (target == input.end()) {
+            auto target = std::find(input_ids.begin(), input_ids.end(), mapping.external_id);
+            if (target == input_ids.end()) {
                 ret.push_back(std::ref(mapping.external_id));
             }
         }

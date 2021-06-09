@@ -7,7 +7,7 @@
 #include "kernel_selector_helper.h"
 #include "kernel_selector_params.h"
 #include "to_string_utils.h"
-#include "program_node.h"
+#include "cldnn/graph/program_node.hpp"
 
 #include <string>
 #include <vector>
@@ -545,7 +545,8 @@ kernel_selector::dev_type get_device_type(cldnn::device_type type) {
 kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_t split, const tensor view_offset) {
     const auto& pad = l.data_padding;
     const auto& vals = l.size.sizes(l.format);
-    const auto& add_offsets = view_offset.sizes(l.format);
+    auto view_offset_aligned = tensor(l.size.rank(), 0);
+    const auto &add_offsets = view_offset_aligned.sizes(l.format);
     const auto& lower_pad = pad.lower_size().sizes(l.format);
     const auto& upper_pad = pad.upper_size().sizes(l.format);
     const auto ks_layout = to_data_layout(l.format);
@@ -619,14 +620,12 @@ layout from_weights_tensor(const kernel_selector::weights_tensor& l) {
 
     tensor size(1);
 
-    size.group[0] = static_cast<int32_t>(l.G().v);
-    size.batch[0] = static_cast<int32_t>(l.OFM().v);
-    size.feature[0] = static_cast<int32_t>(l.IFM().v);
-    size.spatial[0] = static_cast<int32_t>(l.X().v);
-    size.spatial[1] = static_cast<int32_t>(l.Y().v);
-    size.spatial[2] = static_cast<int32_t>(l.Z().v);
-    size.local[0] = static_cast<int32_t>(l.LX().v);
-    size.local[1] = static_cast<int32_t>(l.LY().v);
+    size.set_group(0, static_cast<int32_t>(l.G().v));
+    size.set_batch(0, static_cast<int32_t>(l.OFM().v));
+    size.set_feature(0, static_cast<int32_t>(l.IFM().v));
+    size.set_spatial(0, static_cast<int32_t>(l.X().v));
+    size.set_spatial(1, static_cast<int32_t>(l.Y().v));
+    size.set_spatial(2, static_cast<int32_t>(l.Z().v));
 
     return layout(type, format, size);
 }

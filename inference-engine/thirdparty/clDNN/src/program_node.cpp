@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "program_node.h"
+#include "cldnn/graph/program_node.hpp"
 #include "cldnn/graph/program.hpp"
 #include "primitive_inst.h"
 #include "to_string_utils.h"
@@ -16,7 +16,7 @@
 using namespace cldnn;
 
 program_node::program_node(std::shared_ptr<primitive> prim, program& prog)
-    : desc(prim), myprog(prog), org_id(prim->id) {
+    : desc(prim), myprog(prog), org_id(prim->output_ids[0]) {
     if (prim)
         output_layout.data_padding = prim->output_padding;
 }
@@ -45,7 +45,7 @@ void program_node::replace_dependency(program_node const& old_dep, program_node&
 
 std::vector<primitive_id> program_node::get_dependencies_ids() const {
     std::vector<primitive_id> dep_ids;
-    for (auto& dependency : dependencies) dep_ids.push_back(dependency->get_primitive()->id);
+    for (auto& dependency : dependencies) dep_ids.push_back(dependency->get_primitive()->output_ids[0]);
     return dep_ids;
 }
 
@@ -176,12 +176,17 @@ layout program_node::calc_output_layout() const {
     return type()->calc_output_layout(*this);
 }
 
+std::vector<layout> program_node::infer_shapes() const {
+    return type()->infer_shapes(*this);
+}
+
 layout program_node::get_output_layout(bool invalidate_users_if_changed) {
     if (valid_output_layout)
         return output_layout;
 
     auto new_layout = calc_output_layout();
     set_output_layout(new_layout, invalidate_users_if_changed);
+    output_layouts = infer_shapes();
     return output_layout;
 }
 
@@ -279,4 +284,19 @@ bool program_node::need_lockable_memory() const {
     });
 
     return need_lockable_mem;
+}
+
+bool program_node::has_dynamic_shapes() const {
+    bool is_dynamic_primitive = false;
+    for (auto& in : get_dependencies()) {
+        if (in->get_output_layout().is_dynamic()) {
+            is_dynamic_primitive = true;
+            break;
+        }
+    }
+    if (get_output_layout().is_dynamic())
+        is_dynamic_primitive = true;
+
+    std::cerr << id() << " IS DYNAMIC " << (is_dynamic_primitive ? "true" : "false") << std::endl;
+    return is_dynamic_primitive;
 }

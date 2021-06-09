@@ -34,7 +34,7 @@ void strided_slice_optimize::run(program& p) {
             auto node_layout = strided_slice_node.get_output_layout();
             auto node_size = node_layout.size.sizes(format::bfyx);
 
-            auto is_shift_possible = [&](const std::vector<int32_t>& dims) -> bool {
+            auto is_shift_possible = [&](const std::vector<int64_t>& dims) -> bool {
                 if (dims.empty())
                     CLDNN_ERROR_MESSAGE(node->id(), "Error while adding new axis: node has incorrect dimensions");
 
@@ -45,7 +45,7 @@ void strided_slice_optimize::run(program& p) {
                 return false;
             };
 
-            std::vector<int32_t> output_dims_sizes = node_size;
+            std::vector<int64_t> output_dims_sizes = node_size;
             if (std::find(new_axis_mask.begin(), new_axis_mask.end(), 1) != new_axis_mask.end()) {
                 for (size_t i = 0; i < new_axis_mask.size(); ++i) {
                     if (new_axis_mask[new_axis_mask.size() - i - 1] == 1) {
@@ -60,8 +60,8 @@ void strided_slice_optimize::run(program& p) {
 
             auto reshape_prim = std::make_shared<reshape>(
                 "reshape_" + node->id(),
-                node->get_dependency(0).get_primitive()->id,
-                tensor(output_dims_sizes[0], output_dims_sizes[1], output_dims_sizes[3], output_dims_sizes[2]));
+                node->get_dependency(0).get_primitive()->output_ids[0],
+                tensor({output_dims_sizes[0], output_dims_sizes[1], output_dims_sizes[3], output_dims_sizes[2]}));
 
             auto& reshape_prim_node = p.get_or_create(reshape_prim);
 

@@ -5,7 +5,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "cldnn/graph/program.hpp"
-#include "program_node.h"
+#include "cldnn/graph/program_node.hpp"
 #include <fstream>
 #include <string>
 

@@ -30,9 +30,14 @@ primitive_type_id input_layout::type_id() {
     return &instance;
 }
 
+
 input_layout_node::typed_program_node(const std::shared_ptr<input_layout> dprim, program& prog)
     : parent(dprim, prog) {
     can_share_buffer(false);
+}
+
+std::vector<layout> input_layout_inst::infer_shapes(input_layout_node const& node) {
+    return { node.get_primitive()->layout };
 }
 
 input_layout_inst::typed_primitive_inst(network& network, input_layout_node const& node)
@@ -41,9 +46,17 @@ input_layout_inst::typed_primitive_inst(network& network, input_layout_node cons
 }
 
 void input_layout_inst::set_data(memory::ptr mem) {
-    auto ol = node.get_output_layout();
+    // auto ol = node.get_output_layout();
 
-    check_memory_to_set(*mem, ol);
+    // check_memory_to_set(*mem, ol);
+
+        node.invalidate_users();
+        const_cast<program_node&>(static_cast<const program_node&>(node)).invalidate_layout();
+        std::const_pointer_cast<input_layout>(node.get_primitive())->layout = mem->get_layout();
+    if (_output->get_layout() != mem->get_layout()) {
+        _shape_changed = true;
+        // const_cast<program_node&>(static_cast<const program_node&>(node)).get_output_layout(true);
+    }
 
     if (mem->is_allocated_by(get_network().get_engine())) {
         _output = mem;

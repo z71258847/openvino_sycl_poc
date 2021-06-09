@@ -83,17 +83,17 @@ private:
         auto& offset = instance.argument.offset;
         auto& range = compare_layout.size;
 
-        for (auto b = 0; b < range.batch[0]; b++) {
-            for (auto f = 0; f < range.feature[0]; f++) {
-                for (auto z = 0; z < range.spatial[2]; z++) {
-                    for (auto y = 0; y < range.spatial[1]; y++) {
-                        for (auto x = 0; x < range.spatial[0]; x++) {
-                            tensor input_tensor{
-                                batch(b + offset.batch[0]),
-                                feature(f + offset.feature[0]),
-                                spatial(x + offset.spatial[0], y + offset.spatial[1], z + offset.spatial[2], 0) };
+        for (auto b = 0; b < range.batch(0); b++) {
+            for (auto f = 0; f < range.feature(0); f++) {
+                for (auto z = 0; z < range.spatial(2); z++) {
+                    for (auto y = 0; y < range.spatial(1); y++) {
+                        for (auto x = 0; x < range.spatial(0); x++) {
+                            tensor input_tensor{{
+                                b + offset.batch(0),
+                                f + offset.feature(0),
+                                x + offset.spatial(0), y + offset.spatial(1), z + offset.spatial(2) }};
                             auto input_idx = input_layout.get_linear_offset(input_tensor);
-                            tensor compare_tensor{ batch(b), feature(f), spatial(x, y, z, 0) };
+                            tensor compare_tensor{ {b, f, x, y, z, 0}};
                             auto compare_idx = compare_layout.get_linear_offset(compare_tensor);
                             if (!check_condition(input_ptr[input_idx], compare_ptr[compare_idx], function))
                                 return false;

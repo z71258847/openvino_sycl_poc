@@ -53,24 +53,24 @@ static ConstProperties getConstProperties(const std::shared_ptr<ngraph::op::Cons
 static cldnn::tensor getConstTensor(const ngraph::Shape constDims) {
     cldnn::tensor constTensor;
     switch (constDims.size()) {
-    case 6: constTensor = cldnn::tensor(TensorValue(constDims[0]), TensorValue(constDims[1]),
+    case 6: constTensor = cldnn::tensor({TensorValue(constDims[0]), TensorValue(constDims[1]),
                                         TensorValue(constDims[5]), TensorValue(constDims[4]),
-                                        TensorValue(constDims[3]), TensorValue(constDims[2]));
+                                        TensorValue(constDims[3]), TensorValue(constDims[2])});
         break;
-    case 5: constTensor = cldnn::tensor(TensorValue(constDims[0]), TensorValue(constDims[1]),
-                                        TensorValue(constDims[4]), TensorValue(constDims[3]), TensorValue(constDims[2]));
+    case 5: constTensor = cldnn::tensor({TensorValue(constDims[0]), TensorValue(constDims[1]),
+                                        TensorValue(constDims[4]), TensorValue(constDims[3]), TensorValue(constDims[2])});
         break;
-    case 4: constTensor = cldnn::tensor(TensorValue(constDims[0]), TensorValue(constDims[1]),
-                                        TensorValue(constDims[3]), TensorValue(constDims[2]));
+    case 4: constTensor = cldnn::tensor({TensorValue(constDims[0]), TensorValue(constDims[1]),
+                                        TensorValue(constDims[3]), TensorValue(constDims[2])});
         break;
-    case 3: constTensor = cldnn::tensor(TensorValue(constDims[0]), TensorValue(constDims[1]),
-                                        1, TensorValue(constDims[2]));
+    case 3: constTensor = cldnn::tensor({TensorValue(constDims[0]), TensorValue(constDims[1]),
+                                        1, TensorValue(constDims[2])});
         break;
-    case 2: constTensor = cldnn::tensor(TensorValue(constDims[0]), TensorValue(constDims[1]), 1, 1);
+    case 2: constTensor = cldnn::tensor({TensorValue(constDims[0]), TensorValue(constDims[1]), 1, 1});
         break;
-    case 1: constTensor = cldnn::tensor(1, TensorValue(constDims[0]), 1, 1);
+    case 1: constTensor = cldnn::tensor({1, TensorValue(constDims[0]), 1, 1});
         break;
-    case 0: constTensor = cldnn::tensor(1, 1, 1, 1);
+    case 0: constTensor = cldnn::tensor({1, 1, 1, 1});
         break;
     default: IE_THROW() << "Invalid constant blob dimensions";
     }
@@ -118,8 +118,8 @@ void CreateConstantOp(Program& p, const std::shared_ptr<ngraph::op::v0::Constant
     }
 
     if (needsBatchInterpretation) {
-        constTensor.batch[0] = constTensor.count();
-        constTensor.feature[0] = 1;
+        constTensor.set_batch(0, constTensor.count());
+        constTensor.set_feature(0, 1);
     }
 
     auto constFormat = DefaultFormatForDims(op->get_output_shape(0).size());

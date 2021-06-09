@@ -24,8 +24,8 @@ layout crop_inst::calc_output_layout(crop_node const& node) {
     const auto& offsets = node.get_primitive()->offsets;
 
     // Check for borders variant of crop.
-    if (ref_in_sizes.batch[0] < 0 || ref_in_sizes.feature[0] < 0 || ref_in_sizes.spatial[0] < 0 ||
-        ref_in_sizes.spatial[1] < 0 || ref_in_sizes.spatial[2] < 0) {
+    if (ref_in_sizes.batch(0) < 0 || ref_in_sizes.feature(0) < 0 || ref_in_sizes.spatial(0) < 0 ||
+        ref_in_sizes.spatial(1) < 0 || ref_in_sizes.spatial(2) < 0) {
         // Ignore not supported dimensions.
         const auto rb_sizes = ref_in_sizes.negate().sub({0, 0, 0, 0, 0});
         const auto lt_sizes = offsets.sub({0, 0, 0, 0, 0});
@@ -47,8 +47,8 @@ std::string crop_inst::to_string(crop_node const& node) {
     auto node_info = node.desc_to_json();
 
     // Check for borders variant of crop.
-    if (ref_in_sizes.batch[0] < 0 || ref_in_sizes.feature[0] < 0 || ref_in_sizes.spatial[0] < 0 ||
-        ref_in_sizes.spatial[1] < 0 || ref_in_sizes.spatial[2] < 0) {
+    if (ref_in_sizes.batch(0) < 0 || ref_in_sizes.feature(0) < 0 || ref_in_sizes.spatial(0) < 0 ||
+        ref_in_sizes.spatial(1) < 0 || ref_in_sizes.spatial(2) < 0) {
         // Ignore not supported dimensions.
         const auto rb_sizes = ref_in_sizes.negate().sub({0, 0, 0, 0, 0});
         const auto lt_sizes = offsets.sub({0, 0, 0, 0, 0});
@@ -77,8 +77,8 @@ crop_inst::typed_primitive_inst(network& network, crop_node const& node) : paren
     tensor value_tensor { 1, 1, 1, 1, 1 };
 
     // Check for borders variant of crop.
-    if (ref_in_sizes.batch[0] < 0 || ref_in_sizes.feature[0] < 0 || ref_in_sizes.spatial[0] < 0 ||
-        ref_in_sizes.spatial[1] < 0 || ref_in_sizes.spatial[2] < 0) {
+    if (ref_in_sizes.batch(0) < 0 || ref_in_sizes.feature(0) < 0 || ref_in_sizes.spatial(0) < 0 ||
+        ref_in_sizes.spatial(1) < 0 || ref_in_sizes.spatial(2) < 0) {
         // Ignore not supported dimensions.
         const auto rb_sizes = ref_in_sizes.negate().sub({0, 0, 0, 0, 0});
         const auto lt_sizes = offsets.sub({0, 0, 0, 0, 0});

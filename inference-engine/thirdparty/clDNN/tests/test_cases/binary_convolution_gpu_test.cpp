@@ -189,19 +189,13 @@ TEST_P(binary_convolution_test, conv) {
 
     TestParams p = GetParam();
 
-    cldnn::tensor stride = cldnn::tensor{cldnn::batch(1), cldnn::feature(1), cldnn::spatial(p.sw, p.sh)};
-    cldnn::tensor pad = cldnn::tensor{cldnn::batch(0), cldnn::feature(0), cldnn::spatial(-p.pw, -p.ph)};
+    cldnn::tensor stride = cldnn::tensor{1, 1, p.sh, p.sw};
+    cldnn::tensor pad = cldnn::tensor{0, 0, p.ph, p.pw};
     cldnn::tensor dilation = {1,1,1,1};
 
-    cldnn::tensor is_size{ cldnn::batch(p.b),
-                           cldnn::feature(p.ic),
-                           cldnn::spatial(p.iw, p.ih) };
-    cldnn::tensor wei_size{ cldnn::batch(p.oc),
-                            cldnn::feature(p.ic),
-                            cldnn::spatial(p.kw, p.kh) };
-    cldnn::tensor os_size{ cldnn::batch(p.b),
-                            cldnn::feature(p.oc),
-                            cldnn::spatial(p.ow, p.oh)};
+    cldnn::tensor is_size{ p.b, p.ic, p.ih, p.iw };
+    cldnn::tensor wei_size{ p.b, p.ic, p.kh, p.kw };
+    cldnn::tensor os_size{ p.b, p.oc, p.oh, p.ow};
 
     auto input       = engine.allocate_memory({ cldnn::data_types::bin, cldnn::format::b_fs_yx_32fp, is_size });
     auto weights     = engine.allocate_memory({ cldnn::data_types::bin, cldnn::format::bfyx, wei_size });
@@ -383,10 +377,10 @@ TEST(binary_convolution, basic_convolution_1x1_single_packed_channel) {
 
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(output_layout.data_type, data_types::f32);
-    EXPECT_EQ(output_layout.size.batch[0], 1);
-    EXPECT_EQ(output_layout.size.feature[0], 4);
-    EXPECT_EQ(output_layout.size.spatial[1], 2);
-    EXPECT_EQ(output_layout.size.spatial[0], 2);
+    EXPECT_EQ(output_layout.size.batch(0), 1);
+    EXPECT_EQ(output_layout.size.feature(0), 4);
+    EXPECT_EQ(output_layout.size.spatial(1), 2);
+    EXPECT_EQ(output_layout.size.spatial(0), 2);
 
     for (size_t i = 0; i < output_layout.count(); i++)
     {
@@ -466,10 +460,10 @@ TEST(binary_convolution, basic_convolution_1x1_single_packed_channel_fp16) {
 
     EXPECT_EQ(output_layout.format, format::bfyx);
     EXPECT_EQ(output_layout.data_type, data_types::f16);
-    EXPECT_EQ(output_layout.size.batch[0], 1);
-    EXPECT_EQ(output_layout.size.feature[0], 4);
-    EXPECT_EQ(output_layout.size.spatial[1], 2);
-    EXPECT_EQ(output_layout.size.spatial[0], 2);
+    EXPECT_EQ(output_layout.size.batch(0), 1);
+    EXPECT_EQ(output_layout.size.feature(0), 4);
+    EXPECT_EQ(output_layout.size.spatial(1), 2);
+    EXPECT_EQ(output_layout.size.spatial(0), 2);
 
     for (size_t i = 0; i < output_layout.count(); i++) {
         EXPECT_EQ(float16_to_float32(output_ptr[i]), output_vec[i]) << "index="<< i;

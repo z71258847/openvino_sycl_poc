@@ -297,24 +297,24 @@ InferenceEngine::CNNNetwork CLDNNGraph::GetExecGraphInfoByPrimitivesInfo(std::ve
         Layout l = Layout::NCHW;
         auto size = layout.size;
         if (layout.format.dimension() == 4) {
-            dims = {static_cast<size_t>(size.batch[0]),
-                    static_cast<size_t>(size.feature[0]),
-                    static_cast<size_t>(size.spatial[1]),
-                    static_cast<size_t>(size.spatial[0])};
+            dims = {static_cast<size_t>(size.batch(0)),
+                    static_cast<size_t>(size.feature(0)),
+                    static_cast<size_t>(size.spatial(1)),
+                    static_cast<size_t>(size.spatial(0))};
         } else if (layout.format.dimension() == 5) {
-            dims = {static_cast<size_t>(size.batch[0]),
-                    static_cast<size_t>(size.feature[0]),
-                    static_cast<size_t>(size.spatial[2]),
-                    static_cast<size_t>(size.spatial[1]),
-                    static_cast<size_t>(size.spatial[0])};
+            dims = {static_cast<size_t>(size.batch(0)),
+                    static_cast<size_t>(size.feature(0)),
+                    static_cast<size_t>(size.spatial(2)),
+                    static_cast<size_t>(size.spatial(1)),
+                    static_cast<size_t>(size.spatial(0))};
             l = Layout::NCDHW;
         } else if (layout.format.dimension() == 6) {
-            dims = {static_cast<size_t>(size.batch[0]),
-                    static_cast<size_t>(size.feature[0]),
-                    static_cast<size_t>(size.spatial[3]),
-                    static_cast<size_t>(size.spatial[2]),
-                    static_cast<size_t>(size.spatial[1]),
-                    static_cast<size_t>(size.spatial[0])};
+            dims = {static_cast<size_t>(size.batch(0)),
+                    static_cast<size_t>(size.feature(0)),
+                    static_cast<size_t>(size.spatial(3)),
+                    static_cast<size_t>(size.spatial(2)),
+                    static_cast<size_t>(size.spatial(1)),
+                    static_cast<size_t>(size.spatial(0))};
             // Should be NC?DHW but there is no such layout yet
             l = Layout::BLOCKED;
         }

@@ -140,11 +140,11 @@ protected:
                 // todo: randomize params
                 cldnn::primitive_id weights_id = id + "_weights";
                 cldnn::layout weights_layout(output_layout.data_type,
-                cldnn::format::yxfb,{ output_layout.size.feature[0], output_layout.size.feature[0], 1, 1 });
+                cldnn::format::yxfb,{ output_layout.size.feature(0), output_layout.size.feature(0), 1, 1 });
                 AddRandomMemory(topology, weights_id, weights_layout);
                 cldnn::primitive_id bias_id = id + "_bias";
                 cldnn::layout bias_layout(output_layout.data_type,
-                cldnn::format::bfyx,{ 1, 1, output_layout.size.feature[0], 1 });
+                cldnn::format::bfyx,{ 1, 1, output_layout.size.feature(0), 1 });
                 AddRandomMemory(topology, bias_id, bias_layout);
 
                 cldnn::primitive_id input_id = topology_generator::CreateLayerId();
@@ -179,7 +179,7 @@ protected:
         {
             virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts)
             {
-                if (output_layout.size.spatial.size() != 2)
+                if (output_layout.size.rank().get_length() - 2 != 2)
                 {
                     return false;
                 }
@@ -206,14 +206,14 @@ protected:
                 // for now using just one set of params
                 // todo: randomize params
 
-                cldnn::layout input_layout(output_layout.data_type, cldnn::format::bfyx,{ output_layout.size.batch[0] , output_layout.size.feature[0], 100, 100 } );
+                cldnn::layout input_layout(output_layout.data_type, cldnn::format::bfyx,{ output_layout.size.batch(0) , output_layout.size.feature(0), 100, 100 } );
                 cldnn::primitive_id weights_id = id + "_weights";
                 cldnn::layout weights_layout(output_layout.data_type,
-                cldnn::format::bfyx,{ output_layout.size.feature[0], input_layout.size.feature[0], input_layout.size.spatial[0], input_layout.size.spatial[1] });
+                cldnn::format::bfyx,{ output_layout.size.feature(0), input_layout.size.feature(0), input_layout.size.spatial(0), input_layout.size.spatial(1) });
                 AddRandomMemory(topology, weights_id, weights_layout);
                 cldnn::primitive_id bias_id = id + "_bias";
                 cldnn::layout bias_layout(output_layout.data_type,
-                cldnn::format::bfyx,{ 1, 1, output_layout.size.feature[0], 1 });
+                cldnn::format::bfyx,{ 1, 1, output_layout.size.feature(0), 1 });
                 AddRandomMemory(topology, bias_id, bias_layout);
 
                 cldnn::primitive_id input_id = topology_generator::CreateLayerId();
@@ -254,7 +254,7 @@ protected:
                 // for now using just one set of params
                 // todo: randomize params
                 if (output_layout.format != cldnn::format::bfyx// should be "output_layout.size.format.dimension() < 4" but requires too many case handling since tensor is immutable
-                    || output_layout.size.feature[0] < 2)
+                    || output_layout.size.feature(0) < 2)
                 {
                     return false;
                 }
@@ -264,20 +264,20 @@ protected:
                     output_layout.data_type,
                     cldnn::format::bfyx,
                         {
-                            output_layout.size.batch[0],
-                            output_layout.size.feature[0] - 1,
-                            output_layout.size.spatial[0],
-                            output_layout.size.spatial[1]
+                            output_layout.size.batch(0),
+                            output_layout.size.feature(0) - 1,
+                            output_layout.size.spatial(0),
+                            output_layout.size.spatial(1)
                         }
                 );
                 cldnn::layout input_layout2(
                     output_layout.data_type,
                     cldnn::format::bfyx,
                         {
-                            output_layout.size.batch[0],
+                            output_layout.size.batch(0),
                             1,
-                            output_layout.size.spatial[0],
-                            output_layout.size.spatial[1]
+                            output_layout.size.spatial(0),
+                            output_layout.size.spatial(1)
                         }
                 );
                 input_layouts.push_back({ input_id1, input_layout1 });
@@ -431,7 +431,7 @@ public:
         }
         ss << cldnn::data_type_traits::name(output_layout.data_type) << "_";
         ss << cldnn::format::traits(output_layout.format).order;
-        for (const auto& d : output_layout.size.raw)
+        for (const auto& d : output_layout.size)
         {
             ss << "_" << d;
         }

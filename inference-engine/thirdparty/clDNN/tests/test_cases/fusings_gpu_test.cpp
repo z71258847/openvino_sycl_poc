@@ -290,32 +290,29 @@ public:
     layout get_weights_layout(T& p, const int32_t /* split */ = 1) {
         cldnn::tensor weights_tensor;
         if (p.groups == 1) {
-            weights_tensor = cldnn::tensor(batch(p.out_shape.feature[0]), feature(p.in_shape.feature[0]),
-                                           spatial(p.kernel.spatial[0], p.kernel.spatial[1], p.kernel.spatial[2]));
+            weights_tensor = cldnn::tensor({p.out_shape.feature(0), p.in_shape.feature(0), p.kernel.spatial(2), p.kernel.spatial(1), p.kernel.spatial(0)});
         } else {
-            weights_tensor = cldnn::tensor(group(p.groups), batch(p.out_shape.feature[0] / p.groups), feature(p.in_shape.feature[0] / p.groups),
-                                           spatial(p.kernel.spatial[0], p.kernel.spatial[1], p.kernel.spatial[2]));
+            weights_tensor = cldnn::tensor({p.groups, p.out_shape.feature(0) / p.groups, p.in_shape.feature(0) / p.groups, p.kernel.spatial(2), p.kernel.spatial(1), p.kernel.spatial(0)});
         }
         return layout{p.weights_type, p.weights_format, weights_tensor};
     }
 
     layout get_weights_layout(T& p, const int32_t /* split */, cldnn::format f) {
         cldnn::tensor weights_tensor;
-        weights_tensor = cldnn::tensor(batch(p.out_shape.feature[0]), feature(static_cast<int32_t>(p.in_shape.feature[0] / p.groups)),
-                                       spatial(p.kernel.spatial[0], p.kernel.spatial[1], p.kernel.spatial[2]));
+        weights_tensor = cldnn::tensor({p.out_shape.feature(0), static_cast<int32_t>(p.in_shape.feature(0) / p.groups), p.kernel.spatial(2), p.kernel.spatial(1), p.kernel.spatial(1)});
         return layout{p.weights_type, f, weights_tensor};
     }
 
     layout get_bias_layout(T& p) {
-        return layout{ p.default_type, format::bfyx, tensor{1, p.out_shape.feature[0], 1, 1} };
+        return layout{ p.default_type, format::bfyx, tensor{1, p.out_shape.feature(0), 1, 1} };
     }
 
     layout get_weights_zp_layout(T& p) {
-        return layout{ p.weights_type, p.default_format, tensor{p.out_shape.feature[0], 1, 1, 1} };
+        return layout{ p.weights_type, p.default_format, tensor{p.out_shape.feature(0), 1, 1, 1} };
     }
 
     layout get_activations_zp_layout(T& p) {
-        return layout{ p.data_type, p.default_format, tensor{1, p.in_shape.feature[0], 1, 1} };
+        return layout{ p.data_type, p.default_format, tensor{1, p.in_shape.feature(0), 1, 1} };
     }
 
 
@@ -347,18 +344,18 @@ public:
 
     layout get_input_layout(T& p) {
         auto pad = p.pad.negate();
-        std::vector<int> pad_ = { 0, 0, pad.spatial[0], pad.spatial[1] };
+        std::vector<tensor::value_type> pad_ = { 0, 0, pad.spatial(0), pad.spatial(1) };
         return layout{ p.data_type, p.input_format, p.in_shape, padding{pad_} };
     }
 
     layout get_per_channel_layout(T& p) {
-        return layout{ p.default_type, p.default_format, tensor{1, p.out_shape.feature[0], 1, 1} };
+        return layout{ p.default_type, p.default_format, tensor{1, p.out_shape.feature(0), 1, 1} };
     }
 
     size_t get_fc_output_dim_size(bc_test_params& p) {
         size_t size = 2;
-        for (auto i : p.out_shape.spatial) {
-            if (i > 1)
+        for (auto i = 0; i < p.out_shape.rank().get_length(); i++) {
+            if (i > 1 && p.out_shape[i].get_length() > 1)
                 size++;
         }
         return size;
@@ -366,24 +363,24 @@ public:
 
     layout get_fc_weights_layout(T& p) {
         cldnn::tensor weights_tensor;
-        if (p.out_shape.spatial[1] > 1) {
+        if (p.out_shape.spatial(1) > 1) {
             // 3d case
-            weights_tensor = cldnn::tensor(p.kernel.batch[0], p.kernel.feature[0], 1, 1);
+            weights_tensor = cldnn::tensor({p.kernel.batch(0), p.kernel.feature(0), 1, 1});
         }
         else {
-            weights_tensor = cldnn::tensor(batch(p.out_shape.feature[0]), feature(p.in_shape.feature[0]),
-                   spatial(p.kernel.spatial[0], p.kernel.spatial[1], p.kernel.spatial[2]));
+            weights_tensor = cldnn::tensor({p.out_shape.feature(0), p.in_shape.feature(0),
+                   p.kernel.spatial(2), p.kernel.spatial(1), p.kernel.spatial(0)});
         }
         return layout{p.weights_type, p.weights_format, weights_tensor};
     }
 
     layout get_fc_bias_layout(T& p) {
-        if (p.out_shape.spatial[1] > 1) {
+        if (p.out_shape.spatial(1) > 1) {
             // 3d case
-            return layout{ p.default_type, format::bfyx, tensor{1, p.out_shape.spatial[1], 1, 1} };
+            return layout{ p.default_type, format::bfyx, tensor{1, p.out_shape.spatial(1), 1, 1} };
         }
         else {
-            return layout{ p.default_type, format::bfyx, tensor{1, p.out_shape.feature[0], 1, 1} };
+            return layout{ p.default_type, format::bfyx, tensor{1, p.out_shape.feature(0), 1, 1} };
         }
     }
 };
@@ -406,7 +403,7 @@ public:
     }
 
     layout get_per_channel_layout(resample_test_params& p) {
-        return layout{ p.default_type, p.default_format, tensor{1, p.out_shape.feature[0], 1, 1} };
+        return layout{ p.default_type, p.default_format, tensor{1, p.out_shape.feature(0), 1, 1} };
     }
 };
 
@@ -434,7 +431,7 @@ public:
 
     layout get_input_layout(gemm_test_params& p, int in_no) {
         auto pad = p.pad.negate();
-        std::vector<int> pad_ = { 0, 0, pad.spatial[0], pad.spatial[1] };
+        std::vector<tensor::value_type> pad_ = { 0, 0, pad.spatial(0), pad.spatial(1) };
         if (in_no == 0)
             return layout{ p.data_type_in0, p.input_format, p.in_shapes.at(0), padding{pad_} };
         else if (in_no == 1)
@@ -444,7 +441,7 @@ public:
     }
 
     layout get_per_channel_layout(gemm_test_params& p) {
-        return layout{ p.default_type, p.default_format, tensor{1, p.in_shapes.at(0).feature[0], 1, 1} };
+        return layout{ p.default_type, p.default_format, tensor{1, p.in_shapes.at(0).feature(0), 1, 1} };
     }
 
     layout get_output_layout(gemm_test_params& p) {
@@ -478,12 +475,12 @@ public:
 
     layout get_input_layout(conv_eltw_test_params& p) {
         auto pad = p.pad.negate();
-        std::vector<int> pad_ = { 0, 0, pad.spatial[0], pad.spatial[1] };
+        std::vector<tensor::value_type> pad_ = { 0, 0, pad.spatial(0), pad.spatial(1) };
         return layout{ p.data_type, p.input_format, p.in_shape, padding{pad_} };
     }
 
     layout get_per_channel_layout(conv_eltw_test_params& p) {
-        return layout{ p.default_type, p.default_format, tensor{1, p.out_shape.feature[0], 1, 1} };
+        return layout{ p.default_type, p.default_format, tensor{1, p.out_shape.feature(0), 1, 1} };
     }
 };
 
@@ -544,14 +541,14 @@ public:
 #define CASE_CONV3D_U8S8_1 {1, 15, 5, 4, 5}, {1, 30, 3, 2, 3}, {1, 1, 3, 3, 3}, tensor{1}, tensor{0}, tensor{1}, 1, data_types::u8, format::bfzyx, data_types::i8, format::bfzyx, data_types::f32, format::bfzyx
 #define CASE_CONV3D_U8S8_2 {1, 15, 5, 5, 5}, {1, 30, 3, 3, 3}, {1, 1, 3, 3, 3}, tensor{1}, tensor{0}, tensor{1}, 1, data_types::u8, format::bfzyx, data_types::i8, format::bfzyx, data_types::f32, format::bfzyx
 #define CASE_CONV3D_U8S8_3 {1, 16, 5, 4, 5}, {1, 32, 5, 4, 5}, {1, 1, 1, 1, 1}, tensor{1}, tensor{0}, tensor{1}, 1, data_types::u8, format::bfzyx, data_types::i8, format::bfzyx, data_types::f32, format::bfzyx
-#define CASE_CONV3D_U8S8_4 {1, 17, 5, 4, 5}, {1, 17, 5, 4, 5}, {1, 1, 3, 3, 3}, tensor{1}, tensor{{0, 0, -1, -1, -1}, 0}, tensor{1}, 17, data_types::u8, format::bfzyx, data_types::i8, format::goizyx, data_types::f32, format::bfzyx
-#define CASE_CONV3D_U8S8_5 {1, 3, 5, 4, 5},  {1, 32, 5, 4, 5}, {1, 1, 3, 3, 3}, tensor{1}, tensor{{0, 0, -1, -1, -1}, 0}, tensor{1}, 1, data_types::u8, format::bfzyx, data_types::i8, format::bfzyx, data_types::f32, format::bfzyx
+#define CASE_CONV3D_U8S8_4 {1, 17, 5, 4, 5}, {1, 17, 5, 4, 5}, {1, 1, 3, 3, 3}, tensor{1}, tensor{{0, 0, -1, -1, -1}}, tensor{1}, 17, data_types::u8, format::bfzyx, data_types::i8, format::goizyx, data_types::f32, format::bfzyx
+#define CASE_CONV3D_U8S8_5 {1, 3, 5, 4, 5},  {1, 32, 5, 4, 5}, {1, 1, 3, 3, 3}, tensor{1}, tensor{{0, 0, -1, -1, -1}}, tensor{1}, 1, data_types::u8, format::bfzyx, data_types::i8, format::bfzyx, data_types::f32, format::bfzyx
 
 #define CASE_CONV3D_S8S8_1 {1, 15, 5, 4, 5}, {1, 30, 3, 2, 3}, {1, 1, 3, 3, 3}, tensor{1}, tensor{0}, tensor{1}, 1, data_types::i8, format::bfzyx, data_types::i8, format::bfzyx, data_types::f32, format::bfzyx
 #define CASE_CONV3D_S8S8_2 {1, 15, 5, 5, 5}, {1, 30, 3, 3, 3}, {1, 1, 3, 3, 3}, tensor{1}, tensor{0}, tensor{1}, 1, data_types::i8, format::bfzyx, data_types::i8, format::bfzyx, data_types::f32, format::bfzyx
 #define CASE_CONV3D_S8S8_3 {1, 16, 5, 4, 5}, {1, 32, 5, 4, 5}, {1, 1, 1, 1, 1}, tensor{1}, tensor{0}, tensor{1}, 1, data_types::i8, format::bfzyx, data_types::i8, format::bfzyx, data_types::f32, format::bfzyx
-#define CASE_CONV3D_S8S8_4 {1, 17, 5, 4, 5}, {1, 17, 5, 4, 5}, {1, 1, 3, 3, 3}, tensor{1}, tensor{{0, 0, -1, -1, -1}, 0}, tensor{1}, 17, data_types::i8, format::bfzyx, data_types::i8, format::goizyx, data_types::f32, format::bfzyx
-#define CASE_CONV3D_S8S8_5 {1, 3, 5, 4, 5},  {1, 18, 5, 4, 5}, {1, 1, 3, 3, 3}, tensor{1}, tensor{{0, 0, -1, -1, -1}, 0}, tensor{1}, 1, data_types::i8, format::bfzyx, data_types::i8, format::bfzyx, data_types::f32, format::bfzyx
+#define CASE_CONV3D_S8S8_4 {1, 17, 5, 4, 5}, {1, 17, 5, 4, 5}, {1, 1, 3, 3, 3}, tensor{1}, tensor{{0, 0, -1, -1, -1}}, tensor{1}, 17, data_types::i8, format::bfzyx, data_types::i8, format::goizyx, data_types::f32, format::bfzyx
+#define CASE_CONV3D_S8S8_5 {1, 3, 5, 4, 5},  {1, 18, 5, 4, 5}, {1, 1, 3, 3, 3}, tensor{1}, tensor{{0, 0, -1, -1, -1}}, tensor{1}, 1, data_types::i8, format::bfzyx, data_types::i8, format::bfzyx, data_types::f32, format::bfzyx
 
 // in_shape; out_shape; eltw_shape; kernel; stride; pad; dilation; groups; data_type; input_format; weights_type; weights_format; default_type; default_format;
 #define CASE_CONV_ELTW_FP32_1 {1, 16, 4, 5}, {1, 32, 2, 3}, {1, 32, 1, 1}, {1, 1, 3, 3}, tensor{1}, tensor{0}, tensor{1}, 1, data_types::f32, format::b_fs_yx_fsv16, data_types::f32, format::oiyx, data_types::f32, format::bfyx
@@ -801,7 +798,7 @@ TEST_P(conv_fp32_prelu_eltwise, vector_ops_mixed_types) {
     create_topologies(input_layout("input", get_input_layout(p)),
                  data("weights", get_mem(get_weights_layout(p))),
                  data("bias", get_mem(get_bias_layout(p))),
-                 data("slope_data", get_mem(layout{ slope_type, p.default_format, tensor{1, p.out_shape.feature[0], 1, 1} })),
+                 data("slope_data", get_mem(layout{ slope_type, p.default_format, tensor{1, p.out_shape.feature(0), 1, 1} })),
                  data("eltwise_data", get_mem(get_output_layout(p))),
                  convolution("conv_prim", "input", {"weights"}, {"bias"}, p.groups, p.stride, p.pad, p.dilation),
                  activation("activation", "conv_prim", "slope_data", activation_func::relu_negative_slope),
@@ -1538,7 +1535,7 @@ INSTANTIATE_TEST_SUITE_P(fusings_gpu, conv_bin_quantize_bin,
 class conv_bin_scale_conv_dw : public ConvFusingTest {};
 TEST_P(conv_bin_scale_conv_dw, dw_kernel_3x3_stride2) {
     auto p = GetParam();
-    auto dw_tensor = cldnn::tensor(group(p.out_shape.feature[0]), batch(1), feature(1), spatial(3, 3));
+    auto dw_tensor = cldnn::tensor({p.out_shape.feature(0), 1, 1, 3, 3});
     auto dw_weights_layout = layout{p.default_type, format::goiyx, dw_tensor};
 
     auto dw_stride = tensor{1, 1, 2, 2};
@@ -1548,7 +1545,7 @@ TEST_P(conv_bin_scale_conv_dw, dw_kernel_3x3_stride2) {
                  data("scale_data", get_mem(get_per_channel_layout(p), 1e-1f)),
                  binary_convolution("bin_conv_prim", "input", {"weights"}, p.stride, p.pad, p.dilation, p.out_shape, p.groups),
                  scale("scale", "bin_conv_prim", "scale_data"),
-                 convolution("conv_dw", "scale", {"weights_dw"}, p.out_shape.feature[0], dw_stride, p.pad, p.dilation),
+                 convolution("conv_dw", "scale", {"weights_dw"}, p.out_shape.feature(0), dw_stride, p.pad, p.dilation),
                  reorder("reorder_bfyx", "conv_dw", p.default_format, data_types::f32)
     );
     tolerance = 1e-5f;
@@ -1557,7 +1554,7 @@ TEST_P(conv_bin_scale_conv_dw, dw_kernel_3x3_stride2) {
 
 TEST_P(conv_bin_scale_conv_dw, dw_kernel_3x3_stride1) {
     auto p = GetParam();
-    auto dw_tensor = cldnn::tensor(group(p.out_shape.feature[0]), batch(1), feature(1), spatial(3, 3));
+    auto dw_tensor = cldnn::tensor({p.out_shape.feature(0), 1, 1, 3, 3});
     auto dw_weights_layout = layout{p.default_type, format::goiyx, dw_tensor};
 
     auto dw_stride = tensor{1, 1, 1, 1};
@@ -1567,7 +1564,7 @@ TEST_P(conv_bin_scale_conv_dw, dw_kernel_3x3_stride1) {
                  data("scale_data", get_mem(get_per_channel_layout(p), 1e-1f)),
                  binary_convolution("bin_conv_prim", "input", {"weights"}, p.stride, p.pad, p.dilation, p.out_shape, p.groups),
                  scale("scale", "bin_conv_prim", "scale_data"),
-                 convolution("conv_dw", "scale", {"weights_dw"}, p.out_shape.feature[0], dw_stride, p.pad, p.dilation),
+                 convolution("conv_dw", "scale", {"weights_dw"}, p.out_shape.feature(0), dw_stride, p.pad, p.dilation),
                  reorder("reorder_bfyx", "conv_dw", p.default_format, data_types::f32)
     );
     tolerance = 1e-5f;
@@ -1583,7 +1580,7 @@ INSTANTIATE_TEST_SUITE_P(fusings_gpu, conv_bin_scale_conv_dw,
 class conv_bin_scale_conv_dw_prelu : public ConvFusingTest {};
 TEST_P(conv_bin_scale_conv_dw_prelu, dw_kernel_3x3_stride2) {
     auto p = GetParam();
-    auto dw_tensor = cldnn::tensor(group(p.out_shape.feature[0]), batch(1), feature(1), spatial(3, 3));
+    auto dw_tensor = cldnn::tensor({p.out_shape.feature(0), 1, 1, 3, 3});
     auto dw_weights_layout = layout{p.default_type, format::goiyx, dw_tensor};
 
     auto dw_stride = tensor{1, 1, 2, 2};
@@ -1594,7 +1591,7 @@ TEST_P(conv_bin_scale_conv_dw_prelu, dw_kernel_3x3_stride2) {
                  data("scale_data", get_mem(get_per_channel_layout(p), 1e-1f)),
                  binary_convolution("bin_conv_prim", "input", {"weights"}, p.stride, p.pad, p.dilation, p.out_shape, p.groups),
                  scale("scale", "bin_conv_prim", "scale_data"),
-                 convolution("conv_dw", "scale", {"weights_dw"}, p.out_shape.feature[0], dw_stride, p.pad, p.dilation),
+                 convolution("conv_dw", "scale", {"weights_dw"}, p.out_shape.feature(0), dw_stride, p.pad, p.dilation),
                  data("slope_data", get_mem(get_per_channel_layout(p))),
                  activation("activation", "conv_dw", "slope_data", activation_func::relu_negative_slope),
                  reorder("reorder_bfyx", "activation", p.default_format, data_types::f32)
@@ -1605,7 +1602,7 @@ TEST_P(conv_bin_scale_conv_dw_prelu, dw_kernel_3x3_stride2) {
 
 TEST_P(conv_bin_scale_conv_dw_prelu, dw_kernel_3x3_stride1) {
     auto p = GetParam();
-    auto dw_tensor = cldnn::tensor(group(p.out_shape.feature[0]), batch(1), feature(1), spatial(3, 3));
+    auto dw_tensor = cldnn::tensor({p.out_shape.feature(0), 1, 1, 3, 3});
     auto dw_weights_layout = layout{p.default_type, format::goiyx, dw_tensor};
 
     auto dw_stride = tensor{1, 1, 1, 1};
@@ -1616,7 +1613,7 @@ TEST_P(conv_bin_scale_conv_dw_prelu, dw_kernel_3x3_stride1) {
                  data("scale_data", get_mem(get_per_channel_layout(p), 1e-1f)),
                  binary_convolution("bin_conv_prim", "input", {"weights"}, p.stride, p.pad, p.dilation, p.out_shape, p.groups),
                  scale("scale", "bin_conv_prim", "scale_data"),
-                 convolution("conv_dw", "scale", {"weights_dw"}, p.out_shape.feature[0], dw_stride, p.pad, p.dilation),
+                 convolution("conv_dw", "scale", {"weights_dw"}, p.out_shape.feature(0), dw_stride, p.pad, p.dilation),
                  data("slope_data", get_mem(get_per_channel_layout(p))),
                  activation("activation", "conv_dw", "slope_data", activation_func::relu_negative_slope),
                  reorder("reorder_bfyx", "activation", p.default_format, data_types::f32)
@@ -2421,7 +2418,7 @@ TEST_P(conv_int8_scale_prelu_quantize_i8_eltwise_fp32_quantize_i8_vec, vector_op
                  data("out_hi", get_mem(get_single_element_layout(p), 127)),
                  data("out_hi1", get_mem(get_single_element_layout(p), 127)),
                  data("scale_data", get_mem(get_per_channel_layout(p), 1.0f/p.kernel.count()/255)),
-                 data("slope_data", get_mem(layout{ data_types::f16, p.default_format, tensor{1, p.out_shape.feature[0], 1, 1} })),
+                 data("slope_data", get_mem(layout{ data_types::f16, p.default_format, tensor{1, p.out_shape.feature(0), 1, 1} })),
                  data("eltwise_data", get_mem(layout{data_types::u8, format::b_fs_yx_fsv4, p.out_shape})),
                  convolution("conv_prim", "input", {"weights"}, {"bias"}, p.groups, p.stride, p.pad, p.dilation),
                  scale("scale", "conv_prim", "scale_data"),
@@ -3206,7 +3203,7 @@ TEST_P(resample_quantize, basic) {
         data("in_hi", get_mem(get_per_channel_layout(p), 1, max_random)),
         data("out_lo", get_mem(get_single_element_layout(p), -127)),
         data("out_hi", get_mem(get_single_element_layout(p), 127)),
-        resample("resample_prim", "input", p.out_shape, p.in_shape.feature[0], p.type),
+        resample("resample_prim", "input", p.out_shape, p.in_shape.feature(0), p.type),
         quantize("quantize", "resample_prim", "in_lo", "in_hi", "out_lo", "out_hi", 255, data_types::i8),
         reorder("reorder_bfyx", "quantize", p.default_format, data_types::f32)
     );
@@ -3246,7 +3243,7 @@ TEST_P(resample_scale_activation_eltwise, basic) {
     create_topologies(input_layout("input", get_input_layout(p)),
         data("scale_data", get_mem(get_per_channel_layout(p), -10, 10)),
         data("eltwise_data", get_mem(get_output_layout(p), -10, 10)),
-        resample("resample_prim", "input", p.out_shape, p.in_shape.feature[0], p.type),
+        resample("resample_prim", "input", p.out_shape, p.in_shape.feature(0), p.type),
         scale("scale", "resample_prim", "scale_data"),
         activation("activation", "scale", activation_func::abs),
         eltwise("eltwise", { "activation", "eltwise_data"}, eltwise_mode::sum),
@@ -3301,13 +3298,13 @@ TEST_P(resample_quantize_concat, along_f) {
     auto p = GetParam();
     create_topologies(
         input_layout("input", get_input_layout(p)),
-        resample("resample1", "input", p.out_shape, p.in_shape.feature[0], p.type),
+        resample("resample1", "input", p.out_shape, p.in_shape.feature(0), p.type),
         data("in_lo_1", get_mem(get_per_channel_layout(p), min_random, 0)),
         data("in_hi_1", get_mem(get_per_channel_layout(p), 1, max_random)),
         data("out_lo_1", get_mem(get_single_element_layout(p), -128)),
         data("out_hi_1", get_mem(get_single_element_layout(p), 127)),
         quantize("quant1", "resample1", "in_lo_1", "in_hi_1", "out_lo_1", "out_hi_1", 256, data_types::i8),
-        resample("resample2", "input", p.out_shape, p.in_shape.feature[0], p.type),
+        resample("resample2", "input", p.out_shape, p.in_shape.feature(0), p.type),
         data("in_lo_2", get_mem(get_per_channel_layout(p), min_random, 0)),
         data("in_hi_2", get_mem(get_per_channel_layout(p), 1, max_random)),
         data("out_lo_2", get_mem(get_single_element_layout(p), -127)),
@@ -3361,11 +3358,11 @@ TEST_P(resample_scale_concat, along_f) {
     auto p = GetParam();
     create_topologies(
         input_layout("input", get_input_layout(p)),
-        resample("resample1", "input", p.out_shape, p.in_shape.feature[0], p.type),
+        resample("resample1", "input", p.out_shape, p.in_shape.feature(0), p.type),
         data("scale1_scale", get_mem(get_per_channel_layout(p), -10, 10)),
         data("scale1_shift", get_mem(get_per_channel_layout(p), -10, 10)),
         scale("scale1", "resample1", "scale1_scale", "scale1_shift"),
-        resample("resample2", "input", p.out_shape, p.in_shape.feature[0], p.type),
+        resample("resample2", "input", p.out_shape, p.in_shape.feature(0), p.type),
         data("scale2_scale", get_mem(get_per_channel_layout(p), -10, 10)),
         data("scale2_shift", get_mem(get_per_channel_layout(p), -10, 10)),
         scale("scale2", "resample2", "scale2_scale", "scale2_shift"),
@@ -3485,7 +3482,7 @@ public:
     }
 
     layout get_per_channel_layout(mvn_test_params& p) {
-        return layout{ p.default_type, p.default_format, tensor{1, p.input_size.feature[0], 1, 1} };
+        return layout{ p.default_type, p.default_format, tensor{1, p.input_size.feature(0), 1, 1} };
     }
 };
 
@@ -3759,7 +3756,7 @@ public:
     layout get_input_layout(lrn_test_params& p) { return layout{p.data_type, p.input_format, p.in_shape}; }
 
     layout get_per_channel_layout(lrn_test_params& p) {
-        return layout{p.default_type, p.default_format, tensor{1, p.in_shape.feature[0], 1, 1}};
+        return layout{p.default_type, p.default_format, tensor{1, p.in_shape.feature(0), 1, 1}};
     }
 };
 
@@ -4026,7 +4023,7 @@ public:
     layout get_input_layout(activation_test_params& p) { return layout{p.input_type, p.input_format, p.input_size}; }
 
     layout get_per_channel_layout(activation_test_params& p) {
-        return layout{p.default_type, p.default_format, tensor{1, p.input_size.feature[0], 1, 1}};
+        return layout{p.default_type, p.default_format, tensor{1, p.input_size.feature(0), 1, 1}};
     }
 
     format get_input_format(activation_test_params &p) { return p.input_format; }
@@ -5070,7 +5067,7 @@ public:
 
     layout get_input_layout(pooling_test_params& p) { return layout{p.data_type, p.input_format, p.in_shape}; }
     layout get_per_channel_layout(pooling_test_params& p) {
-        return layout{p.default_type, p.default_format, tensor{1, p.in_shape.feature[0], 1, 1}};
+        return layout{p.default_type, p.default_format, tensor{1, p.in_shape.feature(0), 1, 1}};
     }
 };
 
@@ -5160,7 +5157,7 @@ TEST_P(pooling_scale_activation_quantize, basic) {
                       data("out_lo", get_mem(get_single_element_layout(p), 0)),
                       data("out_hi", get_mem(get_single_element_layout(p), 255)),
                       data("scale_data", get_mem(get_per_channel_layout(p), 1.0f / tensor{1, 1, 4, 4}.count())),
-                      pooling("pooling", "input", "", p.pool_mode, tensor(1, 1, 4, 4), tensor(1, 1, 2, 2)),
+                      pooling("pooling", "input", "", p.pool_mode, tensor({1, 1, 4, 4}), tensor({1, 1, 2, 2})),
                       scale("scale", "pooling", "scale_data"),
                       activation("activation", "scale", activation_func::relu),
                       quantize("quantize", "activation", "in_lo", "in_hi", "out_lo", "out_hi", 255, data_types::u8),
@@ -5179,7 +5176,7 @@ TEST_P(pooling_scale_activation_quantize, i8_output_data_type) {
                       data("out_lo", get_mem(get_single_element_layout(p), -127, 127)),
                       data("out_hi", get_mem(get_single_element_layout(p), -127, 127)),
                       data("scale_data",  get_mem(get_per_channel_layout(p), 1.0f / tensor{1, 1, 4, 4}.count())),
-                      pooling("pooling", "input", "", p.pool_mode, tensor(1, 1, 4, 4), tensor(1, 1, 2, 2)),
+                      pooling("pooling", "input", "", p.pool_mode, tensor({1, 1, 4, 4}), tensor({1, 1, 2, 2})),
                       scale("scale", "pooling", "scale_data"),
                       activation("activation", "scale", activation_func::relu),
                       quantize("quantize", "activation", "in_lo", "in_hi", "out_lo", "out_hi", 255, data_types::i8),
@@ -5198,7 +5195,7 @@ TEST_P(pooling_scale_activation_quantize, per_channel) {
                       data("out_lo", get_mem(get_single_element_layout(p), 0)),
                       data("out_hi", get_mem(get_single_element_layout(p), 255)),
                       data("scale_data", get_mem(get_per_channel_layout(p), 1.0f / tensor{1, 1, 4, 4}.count())),
-                      pooling("pooling", "input", "", p.pool_mode, tensor(1, 1, 4, 4), tensor(1, 1, 2, 2)),
+                      pooling("pooling", "input", "", p.pool_mode, tensor({1, 1, 4, 4}), tensor({1, 1, 2, 2})),
                       scale("scale", "pooling", "scale_data"),
                       activation("activation", "scale", activation_func::atan),
                       quantize("quantize", "activation", "in_lo", "in_hi", "out_lo", "out_hi", 255, data_types::u8),
@@ -5260,7 +5257,7 @@ TEST_P(pooling_scale_activation, basic) {
 
     create_topologies(input_layout("input", get_input_layout(p)),
                       data("scale_data", get_mem(get_per_channel_layout(p), 1.0f / tensor{1, 1, 4, 4}.count())),
-                      pooling("pooling", "input", "", p.pool_mode, tensor(1, 1, 4, 4), tensor(1, 1, 2, 2)),
+                      pooling("pooling", "input", "", p.pool_mode, tensor({1, 1, 4, 4}), tensor({1, 1, 2, 2})),
                       scale("scale", "pooling", "scale_data"),
                       activation("activation", "scale", activation_func::relu),
                       reorder("output_reorder", "activation", p.default_format, data_types::f32));
@@ -5274,7 +5271,7 @@ TEST_P(pooling_scale_activation, eltwise_mul) {
 
     create_topologies(input_layout("input", get_input_layout(p)),
                       data("scale_data", get_mem(get_per_channel_layout(p), 1.0f / tensor{1, 1, 4, 4}.count())),
-                      pooling("pooling", "input", "", p.pool_mode, tensor(1, 1, 4, 4), tensor(1, 1, 2, 2)),
+                      pooling("pooling", "input", "", p.pool_mode, tensor({1, 1, 4, 4}), tensor({1, 1, 2, 2})),
                       eltwise("scale", {"pooling", "scale_data"}, eltwise_mode::prod, p.default_type),
                       activation("activation", "scale", activation_func::relu),
                       reorder("output_reorder", "activation", p.default_format, data_types::f32));
@@ -5441,7 +5438,7 @@ public:
     layout get_input_layout(depth_to_space_test_params& p) { return layout{p.input_type, p.input_format, p.input_size}; }
 
     layout get_per_channel_layout(depth_to_space_test_params& p) {
-        return layout{p.default_type, p.default_format, tensor{1, p.output_size.feature[0], 1, 1}};
+        return layout{p.default_type, p.default_format, tensor{1, p.output_size.feature(0), 1, 1}};
     }
     format get_input_format(depth_to_space_test_params &p) { return p.input_format; }
 };
@@ -5580,7 +5577,7 @@ public:
     layout get_input_layout(space_to_depth_params& p) { return layout{p.input_type, p.input_format, p.input_size}; }
 
     layout get_per_channel_layout(space_to_depth_params& p) {
-        return layout{p.default_type, p.default_format, tensor{1, p.output_size.feature[0], 1, 1}};
+        return layout{p.default_type, p.default_format, tensor{1, p.output_size.feature(0), 1, 1}};
     }
     format get_input_format(space_to_depth_params &p) { return p.input_format; }
 };
@@ -5741,24 +5738,24 @@ public:
     size_t get_axis_dim(gather_test_params& p) {
         switch (p.axis) {
             case cldnn::gather::gather_axis::along_x:
-                return p.dictionary_shape.spatial[0];
+                return p.dictionary_shape.spatial(0);
             case cldnn::gather::gather_axis::along_y:
-                return p.dictionary_shape.spatial[1];
+                return p.dictionary_shape.spatial(1);
             case cldnn::gather::gather_axis::along_z:
-                return p.dictionary_shape.spatial[2];
+                return p.dictionary_shape.spatial(2);
             case cldnn::gather::gather_axis::along_w:
-                return p.dictionary_shape.spatial[3];
+                return p.dictionary_shape.spatial(3);
             case cldnn::gather::gather_axis::along_f:
-                return p.dictionary_shape.feature[0];
+                return p.dictionary_shape.feature(0);
             case cldnn::gather::gather_axis::along_b:
-                return p.dictionary_shape.batch[0];
+                return p.dictionary_shape.batch(0);
             default:
                 return 1;
         }
     }
 
     layout get_per_channel_layout(gather_test_params& p) {
-        return layout{ p.default_type, p.default_format, tensor{1, p.out_shape.feature[0], 1, 1} };
+        return layout{ p.default_type, p.default_format, tensor{1, p.out_shape.feature(0), 1, 1} };
     }
 };
 
@@ -5918,24 +5915,24 @@ public:
     size_t get_axis_dim(scatter_update_test_params& p) {
         switch (p.axis) {
             case cldnn::scatter_update::scatter_update_axis::along_x:
-                return p.dictionary_shape.spatial[0];
+                return p.dictionary_shape.spatial(0);
             case cldnn::scatter_update::scatter_update_axis::along_y:
-                return p.dictionary_shape.spatial[1];
+                return p.dictionary_shape.spatial(1);
             case cldnn::scatter_update::scatter_update_axis::along_z:
-                return p.dictionary_shape.spatial[2];
+                return p.dictionary_shape.spatial(2);
             case cldnn::scatter_update::scatter_update_axis::along_w:
-                return p.dictionary_shape.spatial[3];
+                return p.dictionary_shape.spatial(3);
             case cldnn::scatter_update::scatter_update_axis::along_f:
-                return p.dictionary_shape.feature[0];
+                return p.dictionary_shape.feature(0);
             case cldnn::scatter_update::scatter_update_axis::along_b:
-                return p.dictionary_shape.batch[0];
+                return p.dictionary_shape.batch(0);
             default:
                 return 1;
         }
     }
 
     layout get_per_channel_layout(scatter_update_test_params& p) {
-        return layout{ p.default_type, p.default_format, tensor{1, p.dictionary_shape.feature[0], 1, 1} };
+        return layout{ p.default_type, p.default_format, tensor{1, p.dictionary_shape.feature(0), 1, 1} };
     }
 };
 
@@ -6135,24 +6132,24 @@ public:
     size_t get_axis_dim(scatter_elements_update_test_params& p) {
         switch (p.axis) {
             case cldnn::scatter_elements_update::scatter_elements_update_axis::along_x:
-                return p.input_shape.spatial[0];
+                return p.input_shape.spatial(0);
             case cldnn::scatter_elements_update::scatter_elements_update_axis::along_y:
-                return p.input_shape.spatial[1];
+                return p.input_shape.spatial(1);
             case cldnn::scatter_elements_update::scatter_elements_update_axis::along_z:
-                return p.input_shape.spatial[2];
+                return p.input_shape.spatial(2);
             case cldnn::scatter_elements_update::scatter_elements_update_axis::along_w:
-                return p.input_shape.spatial[3];
+                return p.input_shape.spatial(3);
             case cldnn::scatter_elements_update::scatter_elements_update_axis::along_f:
-                return p.input_shape.feature[0];
+                return p.input_shape.feature(0);
             case cldnn::scatter_elements_update::scatter_elements_update_axis::along_b:
-                return p.input_shape.batch[0];
+                return p.input_shape.batch(0);
             default:
                 return 1;
         }
     }
 
     layout get_per_channel_layout(scatter_elements_update_test_params& p) {
-        return layout{ p.default_type, p.default_format, tensor{1, p.input_shape.feature[0], 1, 1} };
+        return layout{ p.default_type, p.default_format, tensor{1, p.input_shape.feature(0), 1, 1} };
     }
 };
 
@@ -6335,7 +6332,7 @@ public:
     }
 
     layout get_per_channel_layout(permute_params& p) {
-        return layout{ p.default_type, p.default_format, tensor{1, p.out_shape.feature[0], 1, 1} };
+        return layout{ p.default_type, p.default_format, tensor{1, p.out_shape.feature(0), 1, 1} };
     }
 };
 
@@ -6818,9 +6815,9 @@ public:
     }
     layout get_input_layout(normalize_test_params& p) { return layout{p.data_type, p.input_format, p.in_shape}; }
     layout get_per_channel_layout(normalize_test_params& p) {
-        return layout{p.default_type, p.default_format, tensor{1, p.in_shape.feature[0], 1, 1}};
+        return layout{p.default_type, p.default_format, tensor{1, p.in_shape.feature(0), 1, 1}};
     }
-    layout get_weights_layout(normalize_test_params& p) { return layout {p.default_type, p.default_format, tensor{1, p.in_shape.feature[0], 1, 1}}; }
+    layout get_weights_layout(normalize_test_params& p) { return layout {p.default_type, p.default_format, tensor{1, p.in_shape.feature(0), 1, 1}}; }
 };
 
 class normalize_i8_quantize : public NormalizeFusingTest {};
@@ -6916,7 +6913,7 @@ public:
     }
 
     layout get_per_channel_layout(batch_to_space_test_params& p) {
-        return layout{p.default_type, p.default_format, tensor{1, p.output_size.feature[0], 1, 1}};
+        return layout{p.default_type, p.default_format, tensor{1, p.output_size.feature(0), 1, 1}};
     }
 };
 
@@ -7057,7 +7054,7 @@ public:
     }
 
     layout get_per_channel_layout(space_to_batch_test_params& p) {
-        return layout{p.default_type, p.default_format, tensor{1, p.output_size.feature[0], 1, 1}};
+        return layout{p.default_type, p.default_format, tensor{1, p.output_size.feature(0), 1, 1}};
     }
 };
 
@@ -7233,7 +7230,7 @@ public:
     layout get_input_layout2(eltwise_test_params& p) { return layout{p.input_type2, p.input_format, p.input_size}; }
 
     layout get_per_channel_layout(eltwise_test_params& p) {
-        return layout{p.default_type, p.default_format, tensor{1, p.input_size.feature[0], 1, 1}};
+        return layout{p.default_type, p.default_format, tensor{1, p.input_size.feature(0), 1, 1}};
     }
 };
 
@@ -7619,7 +7616,7 @@ public:
     layout get_input_layout(scale_test_params& p) { return layout{p.input_type, p.input_format, p.input_size}; }
 
     layout get_per_channel_layout(scale_test_params& p) {
-        return layout{p.default_type, p.default_format, tensor{1, p.input_size.feature[0], 1, 1}};
+        return layout{p.default_type, p.default_format, tensor{1, p.input_size.feature(0), 1, 1}};
     }
 };
 
@@ -7831,22 +7828,22 @@ public:
        for (auto& axis : p.reduce_axes) {
             switch (axis) {
                 case 0:  // batch
-                    p.out_shape.batch[0] = 1;
+                    p.out_shape.set_batch(0, 1);
                     break;
                 case 1:  // feature
-                    p.out_shape.feature[0] = 1;
+                    p.out_shape.set_feature(0, 1);
                     break;
                 case 2:  // x
-                    p.out_shape.spatial[0] = 1;
+                    p.out_shape.set_spatial(0, 1);
                     break;
                 case 3:  // y
-                    p.out_shape.spatial[1] = 1;
+                    p.out_shape.set_spatial(1, 1);
                     break;
                 case 4:  // z
-                    p.out_shape.spatial[2] = 1;
+                    p.out_shape.set_spatial(2, 1);
                     break;
                 case 5:  // w
-                    p.out_shape.spatial[3] = 1;
+                    p.out_shape.set_spatial(3, 1);
                     break;
             }
         }
@@ -7854,7 +7851,7 @@ public:
 
     layout get_input_layout(reduce_test_params& p) { return layout{p.data_type, p.input_format, p.in_shape}; }
     layout get_per_channel_layout(reduce_test_params& p) {
-        return layout{p.default_type, p.default_format, tensor{1, p.in_shape.feature[0], 1, 1}};
+        return layout{p.default_type, p.default_format, tensor{1, p.in_shape.feature(0), 1, 1}};
     }
 };
 
@@ -8111,7 +8108,7 @@ public:
     }
 
     layout get_per_channel_layout(scatter_nd_update_test_params& p) {
-        return layout{ p.default_type, p.default_format, tensor{1, p.input_shape.feature[0], 1, 1} };
+        return layout{ p.default_type, p.default_format, tensor{1, p.input_shape.feature(0), 1, 1} };
     }
 
     format get_default_format(int rank = 4) {
@@ -8396,7 +8393,7 @@ public:
     }
 
     layout get_per_channel_layout(gather_nd_test_params& p) {
-        return layout{ p.default_type, p.default_format, tensor{1, p.output_shape.feature[0], 1, 1} };
+        return layout{ p.default_type, p.default_format, tensor{1, p.output_shape.feature(0), 1, 1} };
     }
 };
 
@@ -8569,17 +8566,17 @@ public:
     size_t get_axis_dim(gather_elements_test_params& p) {
         switch (p.axis) {
             case cldnn::gather_elements::gather_elements_axis::along_x:
-                return p.input_shape.spatial[0];
+                return p.input_shape.spatial(0);
             case cldnn::gather_elements::gather_elements_axis::along_y:
-                return p.input_shape.spatial[1];
+                return p.input_shape.spatial(1);
             case cldnn::gather_elements::gather_elements_axis::along_z:
-                return p.input_shape.spatial[2];
+                return p.input_shape.spatial(2);
             case cldnn::gather_elements::gather_elements_axis::along_w:
-                return p.input_shape.spatial[3];
+                return p.input_shape.spatial(3);
             case cldnn::gather_elements::gather_elements_axis::along_f:
-                return p.input_shape.feature[0];
+                return p.input_shape.feature(0);
             case cldnn::gather_elements::gather_elements_axis::along_b:
-                return p.input_shape.batch[0];
+                return p.input_shape.batch(0);
             default:
                 return 1;
         }
@@ -8598,7 +8595,7 @@ public:
     }
 
     layout get_per_channel_layout(gather_elements_test_params& p) {
-        return layout{ p.default_type, p.default_format, tensor{1, p.output_shape.feature[0], 1, 1} };
+        return layout{ p.default_type, p.default_format, tensor{1, p.output_shape.feature(0), 1, 1} };
     }
 };
 

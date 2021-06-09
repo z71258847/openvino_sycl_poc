@@ -63,13 +63,13 @@ void copyResultToOutputBlob(cldnn::memory::ptr src, Blob::Ptr dst, CLDNNPlugin::
     dst_ptr += offset;
 
     if (layout.data_padding) {
-        for (size_t b = 0; b < size.batch[0]; b++) {
-            for (size_t f = 0; f < size.feature[0]; f++) {
-                for (size_t w = 0; w < size.spatial[3]; w++) {
-                    for (size_t z = 0; z < size.spatial[2]; z++) {
-                        for (size_t y = 0; y < size.spatial[1]; y++) {
-                            for (size_t x = 0; x < size.spatial[0]; x++) {
-                                *dst_ptr++ = src_ptr[layout.get_linear_offset(cldnn::tensor(b, f, x, y, z, w))];
+        for (size_t b = 0; b < size.batch(0); b++) {
+            for (size_t f = 0; f < size.feature(0); f++) {
+                for (size_t w = 0; w < size.spatial(3); w++) {
+                    for (size_t z = 0; z < size.spatial(2); z++) {
+                        for (size_t y = 0; y < size.spatial(1); y++) {
+                            for (size_t x = 0; x < size.spatial(0); x++) {
+                                *dst_ptr++ = src_ptr[layout.get_linear_offset(cldnn::tensor({b, f, w, z, y, x}))];
                             }
                         }
                     }
@@ -395,7 +395,7 @@ void CLDNNInferRequest::SetBatch(int new_batch) {
     // tune expected inputs
     for (auto &input : m_graph->GetInputLayouts()) {
         cldnn::tensor dims = input.second.size;
-        const SizeVector sz = { 1, size_t(dims.feature[0]), size_t(dims.spatial[1]), size_t(dims.spatial[0]) };
+        const SizeVector sz = { 1, size_t(dims.feature(0)), size_t(dims.spatial(1)), size_t(dims.spatial(0)) };
         size_t single_batch = std::accumulate(std::begin(sz), std::end(sz), (size_t)1, std::multiplies<size_t>());
         std::vector<buf_info> in_buf;
 
@@ -732,7 +732,7 @@ void CLDNNInferRequest::exec_and_parse_dynamic() {
                 const Blob::Ptr inputBlob = item.second;
 
                 auto inputLayout = m_graph->GetInputLayouts().at(inputName);
-                inputLayout.size.batch[0] = mask;
+                inputLayout.size.set_batch(0, mask);
                 copy_input_data(m_graph->GetNetwork(nb), inputName, inputLayout, *inputBlob, &batchInputs[inputName][nb]);
             }
             networkOutputs[nb] = m_graph->GetNetwork(nb)->execute();

@@ -201,7 +201,7 @@ inline params_t get_weights_bias_default_params(const arg_t& arg, uint32_t split
         auto bias_layout = arg.bias().get_output_layout();
         // bias per output is not supported on cldnn
         if (groups != 1) {
-            bias_layout.size.feature[0] /= static_cast<int>(groups);
+            bias_layout.size.set_feature(0, bias_layout.size.feature(0) / static_cast<int>(groups));
         }
         params.bias.push_back(convert_data_tensor(bias_layout).FlattenFeatureAndSpatials());
     }

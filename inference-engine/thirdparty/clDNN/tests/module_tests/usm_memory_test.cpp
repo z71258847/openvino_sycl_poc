@@ -117,7 +117,7 @@ TEST_P(copy_and_read_buffer, basic) {
         size_t values_bytes_count = values_count * sizeof(float);
         std::vector<float> src_buffer(values_count);
         std::iota(src_buffer.begin(), src_buffer.end(), 0.0f);
-        cldnn::layout linear_layout = cldnn::layout(cldnn::data_types::f32, cldnn::format::bfyx, cldnn::tensor(1, 1, int32_t(values_count), 1));
+        cldnn::layout linear_layout = cldnn::layout(cldnn::data_types::f32, cldnn::format::bfyx, cldnn::tensor({1, 1, int32_t(values_count), 1}));
         auto cldnn_mem_src = _engine->allocate_memory(linear_layout, p.type);
 
         // Fill src buffer

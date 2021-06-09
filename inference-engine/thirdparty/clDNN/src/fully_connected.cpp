@@ -54,25 +54,25 @@ format::type get_preferred_format(const fully_connected_node& node) {
 
     bool no_spatial_padding = true;
     // C++ 11 range loop shouldn't be used here because of incorrect iterator functionality in mutable_array_ref<>
-    for (size_t i = 0; i < input_layout.data_padding.lower_size().spatial.size(); ++i) {
-        no_spatial_padding &= (input_layout.data_padding.lower_size().spatial[i] == 0);
+    for (size_t i = 0; i < input_layout.data_padding.lower_size().rank().get_length() - 2; ++i) {
+        no_spatial_padding &= (input_layout.data_padding.lower_size().spatial(i) == 0);
     }
-    for (size_t i = 0; i < input_layout.data_padding.upper_size().spatial.size(); ++i) {
-        no_spatial_padding &= (input_layout.data_padding.upper_size().spatial[i] == 0);
+    for (size_t i = 0; i < input_layout.data_padding.upper_size().rank().get_length() - 2; ++i) {
+        no_spatial_padding &= (input_layout.data_padding.upper_size().spatial(i) == 0);
     }
 
     if (input_layout.data_type == data_types::f32 &&
         input_layout.format == format::bfyx &&
         no_spatial_padding &&
-        input_layout.size.batch[0] != 8)
+        input_layout.size.batch(0) != 8)
         return format::bfyx;
 
     auto input_pitches = input_layout.get_pitches();
     if (input_layout.data_type == data_types::f16 &&
         input_layout.format == format::bfyx &&
         no_spatial_padding &&
-        input_pitches.batch[0] % 2 == 0 &&
-        input_layout.size.batch[0] != 16)
+        input_pitches.batch(0) % 2 == 0 &&
+        input_layout.size.batch(0) != 16)
         return format::bfyx;
 
     // this condition tests whether our input is batch>1 in bfyx format, if yes there will be
@@ -80,7 +80,7 @@ format::type get_preferred_format(const fully_connected_node& node) {
     // "is_batch_after_spatial" should return true)
     if (data_type_traits::is_floating_point(input_layout.data_type) &&
         input_layout.format == format::bfyx &&
-        input_layout.size.batch[0] > 1)
+        input_layout.size.batch(0) > 1)
         return format::yxfb;
 
     return format::bfyx;
@@ -101,9 +101,9 @@ layout fully_connected_inst::calc_output_layout(fully_connected_node const& node
         output_type = node.get_fused_output_layout().data_type;
     }
 
-    auto output_size = tensor(input_layout.size.batch[0], weights_layout.size.batch[0], 1, 1);
+    auto output_size = tensor({input_layout.size.batch(0), weights_layout.size.batch(0), 1, 1});
     if (desc->input_size == 3) {
-        output_size = tensor(input_layout.size.batch[0], input_layout.size.feature[0], 1, weights_layout.size.batch[0]);
+        output_size = tensor({input_layout.size.batch(0), input_layout.size.feature(0), weights_layout.size.batch(0), 1});
     }
     format output_format = get_preferred_format(node);
 
@@ -134,9 +134,9 @@ fully_connected_inst::typed_primitive_inst(network& network, fully_connected_nod
     auto output_layout = node.get_output_layout();
     CLDNN_ERROR_NOT_EQUAL(node.id(),
                           "Input size",
-                          input_layout.size.raw.size(),
+                          input_layout.size.rank().get_length(),
                           "output size",
-                          output_layout.size.raw.size(),
+                          output_layout.size.rank().get_length(),
                           "");
 }
 }  // namespace cldnn

@@ -474,7 +474,7 @@ public:
         using input_t = typename input_data_type<InputT>::type;
         using output_t = typename output_data_type<OutputT>::type;
 
-        auto input_size = tensor(batch(batch_num), feature(input_f), spatial(input_x, input_y, input_z, input_w));
+        auto input_size = tensor({TensorValue(batch_num), TensorValue(input_f), TensorValue(input_w), TensorValue(input_z), TensorValue(input_y), TensorValue(input_x)});
         auto input_data = generate_random_6d<input_t>(batch_num, input_f, input_x, input_y, input_z, input_w, 1, 10);
         auto input_lay = layout(input_dt, layout_format, input_size);
         auto input_mem = engine.allocate_memory(input_lay);
@@ -487,7 +487,7 @@ public:
                         for (int yi = 0; yi < input_y; yi++)
                             for (int xi = 0; xi < input_x; xi++) {
                                 for (int bi = 0; bi < batch_num; bi++) {
-                                    tensor coords = tensor(batch(bi), feature(fi), spatial(xi, yi, zi, wi));
+                                    tensor coords = tensor({TensorValue(bi), TensorValue(fi), TensorValue(wi), TensorValue(zi), TensorValue(yi), TensorValue(xi)});
                                     size_t offset = input_lay.get_linear_offset(coords);
                                     input_ptr[offset] = input_data[bi][fi][xi][yi][zi][wi];
                                 }
@@ -519,10 +519,10 @@ public:
 
         ASSERT_EQ(out_lay.size.sizes()[0], reference_result.size());                 // b
         ASSERT_EQ(out_lay.size.sizes()[1], reference_result[0].size());              // f
-        ASSERT_EQ(out_lay.size.spatial[3], reference_result[0][0].size());           // w
-        ASSERT_EQ(out_lay.size.spatial[2], reference_result[0][0][0].size());        // z
-        ASSERT_EQ(out_lay.size.spatial[1], reference_result[0][0][0][0].size());     // y
-        ASSERT_EQ(out_lay.size.spatial[0], reference_result[0][0][0][0][0].size());  // x
+        ASSERT_EQ(out_lay.size.spatial(3), reference_result[0][0].size());           // w
+        ASSERT_EQ(out_lay.size.spatial(2), reference_result[0][0][0].size());        // z
+        ASSERT_EQ(out_lay.size.spatial(1), reference_result[0][0][0][0].size());     // y
+        ASSERT_EQ(out_lay.size.spatial(0), reference_result[0][0][0][0][0].size());  // x
 
         for (size_t bi = 0; bi < reference_result.size(); bi++)
             for (size_t fi = 0; fi < reference_result[0].size(); fi++)
@@ -530,7 +530,7 @@ public:
                     for (size_t zi = 0; zi < reference_result[0][0][0].size(); zi++)
                         for (size_t yi = 0; yi < reference_result[0][0][0][0].size(); yi++) {
                             for (size_t xi = 0; xi < reference_result[0][0][0][0][0].size(); xi++) {
-                                tensor coords = tensor(batch(bi), feature(fi), spatial(xi, yi, zi, wi));
+                                tensor coords = tensor({TensorValue(bi), TensorValue(fi), TensorValue(wi), TensorValue(zi), TensorValue(yi), TensorValue(xi)});
                                 size_t offset = out_lay.get_linear_offset(coords);
                                 auto val = out_ptr[offset];
                                 auto val_ref = static_cast<output_t>(reference_result[bi][fi][wi][zi][yi][xi]);
@@ -900,7 +900,7 @@ TEST(reduce_gpu, common_bfzyx_keepdims) {
 
 TEST(reduce_gpu, common_bfwzyx) {
     auto& engine = get_test_engine();
-    auto input = engine.allocate_memory({data_types::f32, format::bfwzyx, tensor(format::bfwzyx, {1, 3, 4, 1, 1, 1})});
+    auto input = engine.allocate_memory({data_types::f32, format::bfwzyx, tensor({1, 3, 4, 1, 1, 1})});
 
     set_values(input, {0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f});
 
@@ -930,7 +930,7 @@ TEST(reduce_gpu, common_bfwzyx) {
 
 TEST(reduce_gpu, common_bfwzyx_keepdims) {
     auto& engine = get_test_engine();
-    auto input = engine.allocate_memory({data_types::f32, format::bfwzyx, tensor(format::bfwzyx, {1, 3, 4, 1, 1, 1})});
+    auto input = engine.allocate_memory({data_types::f32, format::bfwzyx, tensor({1, 3, 4, 1, 1, 1})});
 
     set_values(input, {0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f});
 
@@ -1669,7 +1669,7 @@ public:
         using input_t = typename input_data_type<InputT>::type;
         using output_t = typename output_data_type<OutputT>::type;
 
-        auto input_size = tensor(batch(batch_num), feature(input_f), spatial(input_x, input_y, input_z, input_w));
+        auto input_size = tensor({TensorValue(batch_num), TensorValue(input_f), TensorValue(input_w), TensorValue(input_z), TensorValue(input_y), TensorValue(input_x)});
         auto input_data = generate_random_6d<input_t>(batch_num, input_f, input_x, input_y, input_z, input_w, 1, 5, 9);
         auto input_lay = layout(input_dt, layout_format, input_size);
         auto input_mem = engine.allocate_memory(input_lay);
@@ -1683,7 +1683,7 @@ public:
                         for (int yi = 0; yi < input_y; yi++)
                             for (int xi = 0; xi < input_x; xi++) {
                                 for (int bi = 0; bi < batch_num; bi++) {
-                                    tensor coords = tensor(batch(bi), feature(fi), spatial(xi, yi, zi, wi));
+                                    tensor coords = tensor({TensorValue(bi), TensorValue(fi), TensorValue(wi), TensorValue(zi), TensorValue(yi), TensorValue(xi)});
                                     size_t offset = input_lay.get_linear_offset(coords);
                                     input_ptr[offset] = input_data[bi][fi][xi][yi][zi][wi];
                                 }
@@ -1733,10 +1733,10 @@ public:
 
             ASSERT_EQ(out_lay.size.sizes()[0], reference_result.size());                 // b
             ASSERT_EQ(out_lay.size.sizes()[1], reference_result[0].size());              // f
-            ASSERT_EQ(out_lay.size.spatial[3], reference_result[0][0].size());           // w
-            ASSERT_EQ(out_lay.size.spatial[2], reference_result[0][0][0].size());        // z
-            ASSERT_EQ(out_lay.size.spatial[1], reference_result[0][0][0][0].size());     // y
-            ASSERT_EQ(out_lay.size.spatial[0], reference_result[0][0][0][0][0].size());  // x
+            ASSERT_EQ(out_lay.size.spatial(3), reference_result[0][0].size());           // w
+            ASSERT_EQ(out_lay.size.spatial(2), reference_result[0][0][0].size());        // z
+            ASSERT_EQ(out_lay.size.spatial(1), reference_result[0][0][0][0].size());     // y
+            ASSERT_EQ(out_lay.size.spatial(0), reference_result[0][0][0][0][0].size());  // x
 
             bool need_adjust_threshold = (typeid(output_t) == typeid(output_data_type<data_types::i8>::type));
             for (size_t bi = 0; bi < reference_result.size(); bi++)
@@ -1745,7 +1745,7 @@ public:
                         for (size_t zi = 0; zi < reference_result[0][0][0].size(); zi++)
                             for (size_t yi = 0; yi < reference_result[0][0][0][0].size(); yi++) {
                                 for (size_t xi = 0; xi < reference_result[0][0][0][0][0].size(); xi++) {
-                                    tensor coords = tensor(batch(bi), feature(fi), spatial(xi, yi, zi, wi));
+                                    tensor coords = tensor({TensorValue(bi), TensorValue(fi), TensorValue(wi), TensorValue(zi), TensorValue(yi), TensorValue(xi)});
                                     size_t offset = out_lay.get_linear_offset(coords);
                                     auto val = out_ptr[offset];
                                     auto val_ref = static_cast<output_t>(reference_result[bi][fi][wi][zi][yi][xi]);

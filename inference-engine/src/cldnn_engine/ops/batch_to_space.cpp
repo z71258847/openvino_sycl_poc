@@ -28,12 +28,12 @@ void CreateBatchToSpaceOp(Program& p, const std::shared_ptr<ngraph::op::v1::Batc
         if (!inConst)
             IE_THROW() << "Unsupported parameter nodes type in " << op->get_friendly_name() << " (" << op->get_type_name() << ")";
 
-        std::vector<int32_t> sizes = inConst->cast_vector<int32_t>();
-        int32_t default_size = i == 1 ? 1 : 0;
+        std::vector<cldnn::tensor::value_type> sizes = inConst->cast_vector<cldnn::tensor::value_type>();
+        cldnn::tensor::value_type default_size = i == 1 ? 1 : 0;
         for (size_t s = sizes.size(); s < rank; s++) {
             sizes.push_back(default_size);
         }
-        inputs.emplace_back(format, sizes, default_size);
+        inputs.emplace_back(sizes);
     }
     auto out_size = CldnnTensorFromIEDims(op->get_output_shape(0));
 

@@ -33,8 +33,8 @@ layout binary_convolution_inst::calc_output_layout(binary_convolution_node const
         auto conv_split = users.front()->as<convolution>().get_split();
         auto conv_groups = (int32_t)users.front()->as<convolution>().get_groups();
 
-        bool next_is_dw = ((conv_split > 1 && conv_split == output_size.feature[0]) ||
-                           (conv_groups > 1 && conv_groups == output_size.feature[0]));
+        bool next_is_dw = ((conv_split > 1 && conv_split == output_size.feature(0)) ||
+                           (conv_groups > 1 && conv_groups == output_size.feature(0)));
 
         if ((layout.data_type == data_types::f16 || layout.data_type == data_types::f32) && next_is_dw) {
             layout.format = cldnn::format::b_fs_yx_fsv16;
@@ -53,9 +53,12 @@ std::string binary_convolution_inst::to_string(binary_convolution_node const& no
 
     std::stringstream primitive_description;
 
+    std::stringstream offset;
+    offset << desc->input_offset;
+
     json_composite conv_info;
     conv_info.add("stride", strd.to_string());
-    conv_info.add("input offset", desc->input_offset.to_string());
+    conv_info.add("input offset", offset.str());
     conv_info.add("split", split);
     conv_info.add("dilation", dilation.to_string());
     conv_info.add("out size", desc->output_size.to_string());
@@ -76,15 +79,15 @@ binary_convolution_inst::typed_primitive_inst(network& network, binary_convoluti
 
     CLDNN_ERROR_NOT_EQUAL(node.id(),
                           "Input number of dimensions",
-                          input_inst.size.raw.size(),
+                          input_inst.size.rank().get_length(),
                           "output number of dimensions",
-                          output_inst.size.raw.size(),
+                          output_inst.size.rank().get_length(),
                           "Input/output dims mismatch");
     CLDNN_ERROR_NOT_EQUAL(node.id(),
                           "Stride number of dimensions",
-                          stride.raw.size(),
+                          stride.rank().get_length(),
                           "output number of dimensions",
-                          output_inst.size.raw.size(),
+                          output_inst.size.rank().get_length(),
                           "stride/output dims mismatch");
 
     auto split = node.get_split();
@@ -95,9 +98,9 @@ binary_convolution_inst::typed_primitive_inst(network& network, binary_convoluti
 
         CLDNN_ERROR_NOT_EQUAL(node.id(),
                               "Weights number of dimensions",
-                              filter_inst.size.raw.size(),
+                              filter_inst.size.rank().get_length(),
                               "output number of dimensions",
-                              output_inst.size.raw.size(),
+                              output_inst.size.rank().get_length(),
                               "Weights/output dims mismatch");
         CLDNN_ERROR_NOT_EQUAL(node.id(),
                               "Convolution padding mode",
@@ -107,27 +110,15 @@ binary_convolution_inst::typed_primitive_inst(network& network, binary_convoluti
                               "Unknown padding mode.");
         CLDNN_ERROR_NOT_EQUAL(node.id(),
                               "Input offset number of dimensions",
-                              input_offset.raw.size(),
+                              input_offset.rank().get_length(),
                               "input number of dimensions",
-                              input_inst.size.raw.size(),
+                              input_inst.size.rank().get_length(),
                               "Input offset/ input size mismatch");
-        CLDNN_ERROR_NOT_EQUAL(node.id(),
-                              "Output feature size",
-                              output_size.feature.size(),
-                              "expected feature size",
-                              1,
-                              "Only one-dimensional features are supported");
-        CLDNN_ERROR_NOT_EQUAL(node.id(),
-                              "Output batch size",
-                              output_size.batch.size(),
-                              "expected output size",
-                              1,
-                              "Only one-dimensional batch size are supported");
         CLDNN_ERROR_LESS_THAN(node.id(),
                               "Weights feature maps number",
-                              (input_inst.size.feature[0] - input_offset.feature[0]) / split,
+                              (input_inst.size.feature(0)) / split,
                               "input feature maps number",
-                              filter_inst.size.feature[0],
+                              filter_inst.size.feature(0),
                               "Weights/ifm mismatch");
     }
 }

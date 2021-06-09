@@ -60,10 +60,10 @@ TEST(average_unpooling_gpu, basic_in2x2x2x1) {
     auto output_layout = output->get_layout();
 
     EXPECT_EQ(output_layout.format, format::bfyx);
-    EXPECT_EQ(output_layout.size.spatial[1], 2);
-    EXPECT_EQ(output_layout.size.spatial[0], 3);
-    EXPECT_EQ(output_layout.size.feature[0], 2);
-    EXPECT_EQ(output_layout.size.batch[0], 2);
+    EXPECT_EQ(output_layout.size.spatial(1), 2);
+    EXPECT_EQ(output_layout.size.spatial(0), 3);
+    EXPECT_EQ(output_layout.size.feature(0), 2);
+    EXPECT_EQ(output_layout.size.batch(0), 2);
 
     std::vector<float> expected_output_vec = {
         0.625f, -0.5f, -1.125,
@@ -132,10 +132,10 @@ TEST(average_unpooling_gpu, basic_in2x2x3x2_with_average_pooling_unpooling) {
     auto output_layout = output->get_layout();
 
     EXPECT_EQ(output_layout.format, format::bfyx);
-    EXPECT_EQ(output_layout.size.spatial[1], 2);
-    EXPECT_EQ(output_layout.size.spatial[0], 3);
-    EXPECT_EQ(output_layout.size.feature[0], 2);
-    EXPECT_EQ(output_layout.size.batch[0], 2);
+    EXPECT_EQ(output_layout.size.spatial(1), 2);
+    EXPECT_EQ(output_layout.size.spatial(0), 3);
+    EXPECT_EQ(output_layout.size.feature(0), 2);
+    EXPECT_EQ(output_layout.size.batch(0), 2);
 
     std::vector<float> expected_output_vec = {
         0.625f, 0.625f, -6,
@@ -199,10 +199,10 @@ TEST(average_unpooling_gpu, basic_in2x2x2x1_output_padding) {
     auto output_layout = output->get_layout();
 
     EXPECT_EQ(output_layout.format, format::bfyx);
-    EXPECT_EQ(output_layout.size.spatial[1], 2);
-    EXPECT_EQ(output_layout.size.spatial[0], 3);
-    EXPECT_EQ(output_layout.size.feature[0], 2);
-    EXPECT_EQ(output_layout.size.batch[0], 2);
+    EXPECT_EQ(output_layout.size.spatial(1), 2);
+    EXPECT_EQ(output_layout.size.spatial(0), 3);
+    EXPECT_EQ(output_layout.size.feature(0), 2);
+    EXPECT_EQ(output_layout.size.batch(0), 2);
 
     std::vector<float> expected_output_vec = {
         0.f, 0.f, 0.f, 0.f, 0.f,
@@ -280,10 +280,10 @@ TEST(average_unpooling_gpu, basic_in2x2x2x1_fp16) {
     auto output_layout = output->get_layout();
 
     EXPECT_EQ(output_layout.format, format::bfyx);
-    EXPECT_EQ(output_layout.size.spatial[1], 2);
-    EXPECT_EQ(output_layout.size.spatial[0], 3);
-    EXPECT_EQ(output_layout.size.feature[0], 2);
-    EXPECT_EQ(output_layout.size.batch[0], 2);
+    EXPECT_EQ(output_layout.size.spatial(1), 2);
+    EXPECT_EQ(output_layout.size.spatial(0), 3);
+    EXPECT_EQ(output_layout.size.feature(0), 2);
+    EXPECT_EQ(output_layout.size.batch(0), 2);
 
     std::vector<float> expected_output_vec = {
         0.625f, -0.5f, -1.125,

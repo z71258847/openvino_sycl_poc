@@ -112,6 +112,7 @@ target_link_libraries("${CLDNN_BUILD__PROJ}" PRIVATE
     cldnn_kernel_selector
     openvino::itt
     cldnn_runtime
+    ngraph
   )
 
 if(COMMAND add_cpplint_target)

@@ -37,59 +37,59 @@ layout fused_conv_eltwise_inst::calc_output_layout(fused_conv_eltwise_node const
     // TODO: Consider moving general parameter verification to arguments constructor.
     CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(),
                                    "Stride spatial X",
-                                   stride.spatial[0],
+                                   stride.spatial(0),
                                    "value",
                                    0,
                                    "Stride spatial X must be positive (>= 1)");
     CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(),
                                    "Stride spatial Y",
-                                   stride.spatial[1],
+                                   stride.spatial(1),
                                    "value",
                                    0,
                                    "Stride spatial Y must be positive (>= 1)");
     CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(),
                                    "Dilatation spatial X",
-                                   dilation.spatial[0],
+                                   dilation.spatial(0),
                                    "value",
                                    0,
                                    "Dilatation patial X must be positive (>= 1)");
     CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(),
                                    "Dilatation spatial Y",
-                                   dilation.spatial[1],
+                                   dilation.spatial(1),
                                    "value",
                                    0,
                                    "Dilatation spatial Y must be positive (>= 1)");
     CLDNN_ERROR_GREATER_THAN(node.id(),
                              "Input offset spatial X",
-                             2 * input_offset.spatial[0],
+                             2 * input_offset.spatial(0),
                              "input layout spatial X",
-                             input_layout.size.spatial[0],
+                             input_layout.size.spatial(0),
                              "There is no input data to process");
     CLDNN_ERROR_GREATER_THAN(node.id(),
                              "Input offset spatial Y",
-                             2 * input_offset.spatial[1],
+                             2 * input_offset.spatial(1),
                              "input layout spatial Y",
-                             input_layout.size.spatial[1],
+                             input_layout.size.spatial(1),
                              "There is no input data to process");
     CLDNN_ERROR_NOT_EQUAL(node.id(),
                           "Input offset feature",
-                          input_offset.feature[0],
+                          input_offset.feature(0),
                           "",
                           0,
                           "Input offset in feature is not supported");
     CLDNN_ERROR_NOT_EQUAL(node.id(),
                           "Input offset batch",
-                          input_offset.batch[0],
+                          input_offset.batch(0),
                           "",
                           0,
                           "Input offset in batch is not supported");
 
     // TODO: FCN and SSD used offset larger than convolution size. does it make sense to support it? do we support it on
     // the ref kernels?
-    //     CLDNN_ERROR_GREATER_THAN(node.id(), "Negate input offset spatial X", -input_offset.spatial[0], "input window
-    //     size spatial X", filter_size.spatial[0], "First convolution is outside of image. please reduce input offset
-    //     X"); CLDNN_ERROR_GREATER_THAN(node.id(), "Negate input offset spatial Y", -input_offset.spatial[1], "input
-    //     window size spatial Y", filter_size.spatial[1], "First convolution is outside of image. please reduce input
+    //     CLDNN_ERROR_GREATER_THAN(node.id(), "Negate input offset spatial X", -input_offset.spatial(0), "input window
+    //     size spatial X", filter_size.spatial(0), "First convolution is outside of image. please reduce input offset
+    //     X"); CLDNN_ERROR_GREATER_THAN(node.id(), "Negate input offset spatial Y", -input_offset.spatial(1), "input
+    //     window size spatial Y", filter_size.spatial(1), "First convolution is outside of image. please reduce input
     //     offset Y");
 
     if (input_layout.format == format::winograd_2x3_s1_weights ||
@@ -110,32 +110,32 @@ layout fused_conv_eltwise_inst::calc_output_layout(fused_conv_eltwise_node const
                               "Convolution with winograd input only supports split == 1");
         CLDNN_ERROR_NOT_EQUAL(node.id(),
                               "stride spatial X",
-                              stride.spatial[0],
+                              stride.spatial(0),
                               "expected value",
                               1,
                               "Convolution's input in winograd_2x3_s1_data format can only be used with stride 1x1");
         CLDNN_ERROR_NOT_EQUAL(node.id(),
                               "stride spatial Y",
-                              stride.spatial[1],
+                              stride.spatial(1),
                               "expected value",
                               1,
                               "Convolution's input in winograd_2x3_s1_data format can only be used with stride 1x1");
         CLDNN_ERROR_NOT_EQUAL(node.id(),
                               "Dilatation spatial X",
-                              dilation.spatial[0],
+                              dilation.spatial(0),
                               "expected value",
                               1,
                               "Winograd 2x3 convolution does not support dilatation");
         CLDNN_ERROR_NOT_EQUAL(node.id(),
                               "Dilatation spatial Y",
-                              dilation.spatial[1],
+                              dilation.spatial(1),
                               "expected value",
                               1,
                               "Winograd 2x3 convolution does not support dilatation");
-        if (input_layout.size.feature[0] % 32 != 0)
+        if (input_layout.size.feature(0) % 32 != 0)
             CLDNN_ERROR_MESSAGE(node.id(),
                                 "Input for winograd 2x3 convolution should have features count divisable by 32");
-        if (weights_layout.size.batch[0] % 32 != 0)
+        if (weights_layout.size.batch(0) % 32 != 0)
             CLDNN_ERROR_MESSAGE(node.id(),
                                 "Number of filters (OFM) for winograd 2x3 convolution should be divisable by 32");
 
@@ -146,13 +146,13 @@ layout fused_conv_eltwise_inst::calc_output_layout(fused_conv_eltwise_node const
 
         CLDNN_ERROR_LESS_THAN(node.id(),
                               "input width",
-                              input_layout.size.spatial[0],
+                              input_layout.size.spatial(0),
                               "filter width",
                               3,
                               "Convolution input is smaller than weights");
         CLDNN_ERROR_LESS_THAN(node.id(),
                               "input height",
-                              input_layout.size.spatial[1],
+                              input_layout.size.spatial(1),
                               "filter height",
                               3,
                               "Convolution input is smaller than weights");
@@ -165,42 +165,42 @@ layout fused_conv_eltwise_inst::calc_output_layout(fused_conv_eltwise_node const
 
         return layout{output_type,
                       input_layout.format,
-                      tensor{input_layout.size.batch[0],
-                             weights_layout.size.batch[0],
-                             input_layout.size.spatial[0],
-                             input_layout.size.spatial[1] - winograd_filter_height + 1},
+                      tensor{input_layout.size.batch(0),
+                             weights_layout.size.batch(0),
+                             input_layout.size.spatial(0),
+                             input_layout.size.spatial(1) - winograd_filter_height + 1},
                       input_layout.data_padding};
     }
 
     // get output feature map from weights. It should be the same as number of biases. Will be verifed in
     // convolution::create()
-    auto number_of_features = weights_layout.size.batch[0] * static_cast<int32_t>(split);
+    auto number_of_features = weights_layout.size.batch(0) * static_cast<int32_t>(split);
 
     if (desc->conv.with_output_size) {
         CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(),
                                        "User defined output spatial X",
-                                       desc->conv.output_size.spatial[0],
+                                       desc->conv.output_size.spatial(0),
                                        "value",
                                        0,
                                        "must be positive(>= 1)");
         CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(),
                                        "User defined output spatial Y",
-                                       desc->conv.output_size.spatial[1],
+                                       desc->conv.output_size.spatial(1),
                                        "value",
                                        0,
                                        "must be positive(>= 1)");
         CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(),
             "User defined output spatial Z",
-            desc->conv.output_size.spatial[2],
+            desc->conv.output_size.spatial(2),
             "value",
             0,
             "must be positive(>= 1)");
 
-        tensor output_size(input_layout.size.batch[0],
+        tensor output_size({input_layout.size.batch(0),
                            number_of_features,
-                           desc->conv.output_size.spatial[0],
-                           desc->conv.output_size.spatial[1],
-                           desc->conv.output_size.spatial[2]);
+                           desc->conv.output_size.spatial(0),
+                           desc->conv.output_size.spatial(1),
+                           desc->conv.output_size.spatial(2)});
         return {output_type, input_layout.format, output_size};
     }
 
@@ -212,11 +212,11 @@ layout fused_conv_eltwise_inst::calc_output_layout(fused_conv_eltwise_node const
                                                                          true,
                                                                          1);
 
-    tensor output_size(input_layout.size.batch[0],
+    tensor output_size({input_layout.size.batch(0),
                        number_of_features,
-                       output_range.spatial[0],
-                       output_range.spatial[1],
-                       output_range.spatial[2]);
+                       output_range.spatial(0),
+                       output_range.spatial(1),
+                       output_range.spatial(2)});
 
     return {output_type, input_layout.format, output_size};
 }
@@ -260,15 +260,15 @@ fused_conv_eltwise_inst::typed_primitive_inst(network& network, fused_conv_eltwi
 
     CLDNN_ERROR_NOT_EQUAL(node.id(),
                           "Input number of dimensions",
-                          input_inst.size.raw.size(),
+                          input_inst.size.rank().get_length(),
                           "output number of dimensions",
-                          output_inst.size.raw.size(),
+                          output_inst.size.rank().get_length(),
                           "Input/output dims mismatch");
     CLDNN_ERROR_NOT_EQUAL(node.id(),
                           "Stride number of dimensions",
-                          stride.raw.size(),
+                          stride.rank().get_length(),
                           "output number of dimensions",
-                          output_inst.size.raw.size(),
+                          output_inst.size.rank().get_length(),
                           "stride/output dims mismatch");
 
     auto split = node.get_split();
@@ -278,7 +278,7 @@ fused_conv_eltwise_inst::typed_primitive_inst(network& network, fused_conv_eltwi
             auto bias_inst = node.bias(j).get_output_layout();
             CLDNN_ERROR_NOT_EQUAL(node.id(),
                                   "Bias batch[0]",
-                                  bias_inst.size.batch[0],
+                                  bias_inst.size.batch(0),
                                   "expected size of batch",
                                   1,
                                   "Biases isn't 1D vector.");
@@ -286,20 +286,20 @@ fused_conv_eltwise_inst::typed_primitive_inst(network& network, fused_conv_eltwi
             if (node.get_output_layout().format != format::image_2d_rgba) {
                 CLDNN_ERROR_NOT_EQUAL(node.id(),
                                       "Bias feature[0]",
-                                      bias_inst.size.feature[0],
+                                      bias_inst.size.feature(0),
                                       "expected feature map number",
-                                      output_size.feature[0] / split,
+                                      output_size.feature(0) / split,
                                       "Bias/fm mismatch");
             }
             CLDNN_ERROR_NOT_EQUAL(node.id(),
                                   "Bias spatial[1]",
-                                  bias_inst.size.spatial[1],
+                                  bias_inst.size.spatial(1),
                                   "expected size of spatial[1]",
                                   1,
                                   "Biases isn't 1D vector.");
             CLDNN_ERROR_NOT_EQUAL(node.id(),
                                   "Bias spatial[0]",
-                                  bias_inst.size.spatial[0],
+                                  bias_inst.size.spatial(0),
                                   "expected size of spatial[0]",
                                   1,
                                   "Biases isn't 1D vector.");
@@ -309,9 +309,9 @@ fused_conv_eltwise_inst::typed_primitive_inst(network& network, fused_conv_eltwi
 
         CLDNN_ERROR_NOT_EQUAL(node.id(),
                               "Weights number of dimensions",
-                              filter_inst.size.raw.size(),
+                              filter_inst.size.rank().get_length(),
                               "output number of dimensions",
-                              output_inst.size.raw.size(),
+                              output_inst.size.rank().get_length(),
                               "Weights/output dims mismatch");
         CLDNN_ERROR_NOT_EQUAL(node.id(),
                               "Convolution padding mode",
@@ -321,27 +321,15 @@ fused_conv_eltwise_inst::typed_primitive_inst(network& network, fused_conv_eltwi
                               "Unknown padding mode.");
         CLDNN_ERROR_NOT_EQUAL(node.id(),
                               "Input offset number of dimensions",
-                              input_offset.raw.size(),
+                              input_offset.rank().get_length(),
                               "input number of dimensions",
-                              input_inst.size.raw.size(),
+                              input_inst.size.rank().get_length(),
                               "Input offset/ input size mismatch");
-        CLDNN_ERROR_NOT_EQUAL(node.id(),
-                              "Output feature size",
-                              output_size.feature.size(),
-                              "expected feature size",
-                              1,
-                              "Only one-dimensional features are supported");
-        CLDNN_ERROR_NOT_EQUAL(node.id(),
-                              "Output batch size",
-                              output_size.batch.size(),
-                              "expected output size",
-                              1,
-                              "Only one-dimensional batch size are supported");
         CLDNN_ERROR_LESS_THAN(node.id(),
                               "Weights feature maps number",
-                              (input_inst.size.feature[0] - input_offset.feature[0]) / split,
+                              (input_inst.size.feature(0) - input_offset.feature(0)) / split,
                               "input feature maps number",
-                              filter_inst.size.feature[0],
+                              filter_inst.size.feature(0),
                               "Weights/ifm mismatch");
     }
 }

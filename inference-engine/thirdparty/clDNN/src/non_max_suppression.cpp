@@ -19,7 +19,7 @@ layout non_max_suppression_inst::calc_output_layout(non_max_suppression_node con
 
     auto output_type = desc->output_data_type ? *desc->output_data_type : data_types::i32;
 
-    auto output_size = tensor(batch(desc->selected_indices_num), feature(3));
+    auto output_size = tensor({desc->selected_indices_num, 3});
 
     return layout(output_type, format::bfyx, output_size);
 }

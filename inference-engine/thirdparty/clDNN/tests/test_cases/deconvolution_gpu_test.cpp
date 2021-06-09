@@ -70,13 +70,13 @@ VVVF<OutputT> reference_deconvolution(
     auto in_y = static_cast<int>(input[0][0].size());
     auto in_x = static_cast<int>(input[0][0][0].size());
 
-    auto stride_x = stride.spatial[0];
-    auto stride_y = stride.spatial[1];
-    auto stride_z = stride.spatial[2];
+    auto stride_x = stride.spatial(0);
+    auto stride_y = stride.spatial(1);
+    auto stride_z = stride.spatial(2);
 
-    auto offset_x = offset.spatial[0];
-    auto offset_y = offset.spatial[1];
-    auto offset_z = offset.spatial[2];
+    auto offset_x = offset.spatial(0);
+    auto offset_y = offset.spatial(1);
+    auto offset_z = offset.spatial(2);
 
     int out_x = 2 * offset_x + (in_x - 1) * stride_x + filter_x;
     int out_y = 2 * offset_y + (in_y - 1) * stride_y + filter_y;
@@ -958,7 +958,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in1x2x2x2_bfyx_stride2_pad1_split2)
     auto& engine = get_test_engine();
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 2, 2, 2 } });
-    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor(group(2), batch(1), feature(1), spatial(2, 2)) });
+    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor({2, 1, 1, 2, 2}) });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 2, 1, 1 } });
 
     set_values(input, { 8.f, 0.5f, 6.f, 9.f, 1.f, 3.f, 2.f, 4.f });
@@ -1000,7 +1000,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in1x2x2x2_bfyx_stride2_pad1_group2)
     auto& engine = get_test_engine();
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 2, 2, 2 } });
-    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor(group(2), batch(1), feature(1), spatial(2, 2)) });
+    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor({2, 1, 1, 2, 2}) });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 2, 1, 1 } });
 
     set_values(input, { 8.f, 0.5f, 6.f, 9.f, 1.f, 3.f, 2.f, 4.f });
@@ -1062,7 +1062,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in1x2x2x2_bfyx_stride2_pad1_group16
     std::vector<primitive_id> weights_vec;
     std::vector<primitive_id> bias_vec;
 
-    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor(group(16), batch(1), feature(1), spatial(2, 2)) });
+    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor({16, 1, 1, 2, 2}) });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 16, 1, 1 } });
 
     set_values(weights,
@@ -1144,7 +1144,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in1x2x2x2_bfyx_stride2_pad1_group16
     std::vector<primitive_id> weights_vec;
     std::vector<primitive_id> bias_vec;
 
-    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor(group(16), batch(2), feature(1), spatial(2, 2)) });
+    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor({16, 2, 1, 2, 2}) });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 32, 1, 1 } });
 
     set_values(weights,
@@ -1216,7 +1216,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in1x6x1x1_bfyx_stride2_pad1_group2_
     auto& engine = get_test_engine();
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 4, 1, 1 } });
-    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor(group(2), batch(3), feature(2), spatial(1, 1)) });
+    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor({2, 3, 2, 1, 1}) });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 6, 1, 1 } });
 
     set_values(input, {
@@ -1860,7 +1860,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in1x2x2x2_b_fs_yx_fsv16_stride2_pad
     auto& engine = get_test_engine();
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 2, 2, 2 } });
-    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor(group(2), batch(1), feature(1), spatial(2, 2)) });
+    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor({2, 1, 1, 2, 2}) });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 2, 1, 1 } });
 
     set_values(input, { 8.f, 0.5f, 6.f, 9.f, 1.f, 3.f, 2.f, 4.f });
@@ -1908,7 +1908,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in1x2x2x2_b_fs_yx_fsv16_stride2_pad
     auto& engine = get_test_engine();
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 2, 2, 2 } });
-    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor(group(2), batch(1), feature(1), spatial(2, 2)) });
+    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor({2, 1, 1, 2, 2}) });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 2, 1, 1 } });
 
     set_values(input, { 8.f, 0.5f, 6.f, 9.f, 1.f, 3.f, 2.f, 4.f });
@@ -1956,7 +1956,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_nopad_b_fs_yx_fsv16_dw) {
     auto& engine = get_test_engine();
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 2, 2, 2 } });
-    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor(group(2), batch(1), feature(1), spatial(2, 2)) });
+    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor({2, 1, 1, 2, 2}) });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 2, 1, 1 } });
 
     set_values(input, { 8.f, 0.5f, 6.f, 9.f,  8.f, 0.5f, 6.f, 9.f });
@@ -2008,7 +2008,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_pad1_b_fs_yx_fsv16_dw) {
     auto& engine = get_test_engine();
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, { 1, 2, 2, 2 } });
-    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor(group(2), batch(1), feature(1), spatial(2, 2)) });
+    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor({2, 1, 1, 2, 2}) });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx, { 1, 2, 1, 1 } });
 
     set_values(input, { 8.f, 0.5f, 6.f, 9.f,
@@ -2051,7 +2051,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_stride2_nopad_b_fs_yx_fsv
     auto& engine = get_test_engine();
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, { 1, 2, 2, 2 } });
-    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor(group(2), batch(1), feature(1), spatial(2, 2)) });
+    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor({2, 1, 1, 2, 2}) });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx, { 1, 2, 1, 1 } });
 
     set_values(input, { 8.f, 0.5f, 6.f, 9.f,
@@ -2107,7 +2107,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_stride4_pad2_b_fs_yx_fsv1
     auto& engine = get_test_engine();
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, { 1, 2, 2, 2 } });
-    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor(group(2), batch(1), feature(1), spatial(3, 3)) });
+    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor({2, 1, 1, 3, 3}) });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx, { 1, 2, 1, 1 } });
 
     set_values(input, { 8.f, 0.5f, 6.f, 9.f,
@@ -2160,7 +2160,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_stride4_pad2_b_fs_yx_fsv1
     auto& engine = get_test_engine();
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, { 2, 2, 2, 2 } });
-    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor(group(2), batch(1), feature(1), spatial(3, 3)) });
+    auto weights = engine.allocate_memory({ data_types::f32, format::goiyx, tensor({2, 1, 1, 3, 3}) });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx, { 1, 2, 1, 1 } });
 
     set_values(input, { 8.f, 0.5f, 6.f, 9.f,
@@ -2368,11 +2368,14 @@ struct deconvolution_random_test_params {
         };
 
         auto print_tensor = [&](const tensor& size) {
-            return to_string_neg(size.batch[0]) + "x" +
-                to_string_neg(size.feature[0]) + "x" +
-                to_string_neg(size.spatial[0]) + "x" +
-                to_string_neg(size.spatial[1]) + "x" +
-                to_string_neg(size.spatial[2]);
+            std::stringstream s;
+            s << size;
+            return s.str();
+            // return to_string_neg(size.batch(0)) + "x" +
+            //     to_string_neg(size.feature(0)) + "x" +
+            //     to_string_neg(size.spatial(0)) + "x" +
+            //     to_string_neg(size.spatial(1)) + "x" +
+            //     to_string_neg(size.spatial(2));
         };
 
         // construct a readable name
@@ -2455,7 +2458,7 @@ public:
                 for (size_t zi = 0; zi < z; ++zi) {
                     for (size_t yi = 0; yi < y; ++yi) {
                         for (size_t xi = 0; xi < x; ++xi) {
-                            auto coords = cldnn::tensor(batch(bi), feature(fi), spatial(xi, yi, zi, 0));
+                            auto coords = cldnn::tensor({TensorValue(bi), TensorValue(fi), TensorValue(zi), TensorValue(yi), TensorValue(xi)});
                             auto offset = mem->get_layout().get_linear_offset(coords);
                             ptr[offset] = data[bi][fi][zi][yi][xi];
                         }
@@ -2482,7 +2485,7 @@ public:
                     for (size_t zi = 0; zi < z; ++zi) {
                         for (size_t yi = 0; yi < y; ++yi) {
                             for (size_t xi = 0; xi < x; ++xi) {
-                                auto coords = cldnn::tensor(group(gi), batch(bi), feature(fi), spatial(xi, yi, zi, 0));
+                                auto coords = cldnn::tensor({TensorValue(gi), TensorValue(bi), TensorValue(fi), TensorValue(zi), TensorValue(yi), TensorValue(xi)});
                                 auto offset = mem->get_layout().get_linear_offset(coords);
                                 ptr[offset] = data[gi][bi][fi][zi][yi][xi];
                             }
@@ -2496,11 +2499,11 @@ public:
     template <typename T>
     VVVVVF<T> generate_random(cldnn::tensor size) {
         return generate_random_5d<T>(
-            size.batch[0],
-            size.feature[0],
-            size.spatial[2],
-            size.spatial[1],
-            size.spatial[0],
+            size.batch(0),
+            size.feature(0),
+            size.spatial(2),
+            size.spatial(1),
+            size.spatial(0),
             type_test_ranges<T>::min,
             type_test_ranges<T>::max);
     }
@@ -2508,20 +2511,20 @@ public:
     template <typename T>
     VVVVVVF<T> generate_random_weights(cldnn::tensor size) {
         return generate_random_6d<T>(
-            size.group[0],
-            size.batch[0],
-            size.feature[0],
-            size.spatial[2],
-            size.spatial[1],
-            size.spatial[0],
+            size.group(0),
+            size.batch(0),
+            size.feature(0),
+            size.spatial(2),
+            size.spatial(1),
+            size.spatial(0),
             type_test_ranges<T>::min,
             type_test_ranges<T>::max);
     }
 
     void run(cldnn::engine& eng, const deconvolution_random_test_params& params, cldnn::build_options build_opts) {
-        uint32_t groups = params.weights_size.group[0];
-        size_t ifm = params.weights_size.feature[0];
-        size_t ofm = params.weights_size.batch[0];
+        uint32_t groups = params.weights_size.group(0);
+        size_t ifm = params.weights_size.feature(0);
+        size_t ofm = params.weights_size.batch(0);
 
         auto input_data = generate_random<InputT>(params.input_size);
         auto weights_data = generate_random_weights<WeightsT>(params.weights_size);
@@ -2543,10 +2546,10 @@ public:
         VF<OutputT> bias_data;
 
         if (params.with_bias) {
-            auto bias_size = cldnn::tensor(feature(params.weights_size.batch[0] * params.weights_size.group[0]));
+            auto bias_size = cldnn::tensor({params.weights_size.batch(0) * params.weights_size.group(0)});
             auto bias_lay = cldnn::layout(cldnn::type_to_data_type<OutputT>::value, cldnn::format::bfyx, bias_size);
             auto bias_mem = eng.allocate_memory(bias_lay);
-            bias_data = generate_random_1d<OutputT>(bias_lay.size.feature[0], -1, 1);
+            bias_data = generate_random_1d<OutputT>(bias_lay.size.feature(0), -1, 1);
             set_values(bias_mem, bias_data);
             topo.add(cldnn::data("bias", bias_mem));
             topo.add(cldnn::deconvolution("deconv", "input", { "weights" }, { "bias" }, groups, params.strides, params.input_offset));
@@ -2575,8 +2578,8 @@ public:
         {
             cldnn::mem_lock<OutputT> ptr(out_mem, get_test_stream());
 
-            auto b = static_cast<size_t>(out_mem->get_layout().size.batch[0]);
-            auto of = static_cast<size_t>(out_mem->get_layout().size.feature[0]);
+            auto b = static_cast<size_t>(out_mem->get_layout().size.batch(0));
+            auto of = static_cast<size_t>(out_mem->get_layout().size.feature(0));
 
             for (size_t bi = 0; bi < b; ++bi) {
                 for (size_t fi = 0; fi < of; ++fi) {
@@ -2589,15 +2592,15 @@ public:
                         params.input_offset,
                         group * ifm);
 
-                    ASSERT_EQ(reference.size(), out_mem->get_layout().size.spatial[2]);
-                    ASSERT_EQ(reference[0].size(), out_mem->get_layout().size.spatial[1]);
-                    ASSERT_EQ(reference[0][0].size(), out_mem->get_layout().size.spatial[0]);
+                    ASSERT_EQ(reference.size(), out_mem->get_layout().size.spatial(2));
+                    ASSERT_EQ(reference[0].size(), out_mem->get_layout().size.spatial(1));
+                    ASSERT_EQ(reference[0][0].size(), out_mem->get_layout().size.spatial(0));
 
                     for (size_t zi = 0; zi < reference.size(); zi++) {
                         for (size_t yi = 0; yi < reference[0].size(); yi++) {
                             for (size_t xi = 0; xi < reference[0][0].size(); xi++) {
                                 auto ref_val = reference[zi][yi][xi];
-                                auto out_coords = cldnn::tensor(batch(bi), feature(fi), spatial(xi, yi, zi, 0));
+                                auto out_coords = cldnn::tensor({TensorValue(bi), TensorValue(fi), TensorValue(zi), TensorValue(yi), TensorValue(xi)});
                                 auto out_offset = out_mem->get_layout().get_linear_offset(out_coords);
                                 auto out_val = ptr[out_offset];
                                 TYPED_ASSERT_EQ(ref_val, out_val)
@@ -2700,21 +2703,21 @@ public:
         std::vector<int> batches = { 1, 2 };
         for (auto b : batches) {
             // 1x1
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7}, wei_dt, format::oiyx, {15, 15, 1, 1}, tensor(1), tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7}, wei_dt, format::oiyx, {15, 15, 1, 1}, {1, 1, 2, 2}, tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7}, wei_dt, format::oiyx, {15, 15, 1, 1}, tensor({1}), tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7}, wei_dt, format::oiyx, {15, 15, 1, 1}, {1, 1, 2, 2}, tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
             // 3x3
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7}, wei_dt, format::oiyx, {15, 15, 3, 3}, tensor(1), {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7}, wei_dt, format::oiyx, {15, 15, 3, 3}, tensor({1}), {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
             push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7}, wei_dt, format::oiyx, {15, 15, 3, 3}, {1, 1, 2, 2}, {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
             // Grouped
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 8, 7, 7}, wei_dt, format::goiyx, tensor(group(2), batch(16), feature(4), spatial(1, 1)), tensor(1), tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 8, 7, 7}, wei_dt, format::goiyx, tensor(group(2), batch(16), feature(4), spatial(1, 1)), {1, 1, 2, 2}, tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 8, 7, 7}, wei_dt, format::goiyx, tensor(group(2), batch(16), feature(4), spatial(3, 3)), tensor(1), {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 8, 7, 7}, wei_dt, format::goiyx, tensor(group(2), batch(16), feature(4), spatial(3, 3)), {1, 1, 2, 2}, {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 8, 7, 7}, wei_dt, format::goiyx, tensor({2, 16, 4, 1, 1}), tensor({1}), tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 8, 7, 7}, wei_dt, format::goiyx, tensor({2, 16, 4, 1, 1}), {1, 1, 2, 2}, tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 8, 7, 7}, wei_dt, format::goiyx, tensor({2, 16, 4, 3, 3}), tensor({1}), {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 8, 7, 7}, wei_dt, format::goiyx, tensor({2, 16, 4, 3, 3}), {1, 1, 2, 2}, {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
             // Depthwise
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 16, 7, 7}, wei_dt, format::goiyx, tensor(group(16), spatial(1, 1)), tensor(1), tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 16, 7, 7}, wei_dt, format::goiyx, tensor(group(16), spatial(1, 1)), {1, 1, 2, 2}, tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 16, 7, 7}, wei_dt, format::goiyx, tensor(group(16), spatial(3, 3)), tensor(1), {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 16, 7, 7}, wei_dt, format::goiyx, tensor(group(16), spatial(3, 3)), {1, 1, 2, 2}, {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 16, 7, 7}, wei_dt, format::goiyx, tensor({16, 1, 1, 1, 1}), tensor({1}), tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 16, 7, 7}, wei_dt, format::goiyx, tensor({16, 1, 1, 1, 1}), {1, 1, 2, 2}, tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 16, 7, 7}, wei_dt, format::goiyx, tensor({16, 1, 1, 3, 3}), tensor({1}), {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 16, 7, 7}, wei_dt, format::goiyx, tensor({16, 1, 1, 3, 3}), {1, 1, 2, 2}, {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
 
         }
         return *this;
@@ -2724,21 +2727,21 @@ public:
         std::vector<int> batches = { 1, 2 };
         for (auto b : batches) {
             // 1x1
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7, 7}, wei_dt, format::oizyx, {15, 15, 1, 1, 1}, tensor(1), tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7, 7}, wei_dt, format::oizyx, {15, 15, 1, 1, 1}, {1, 1, 2, 2, 2}, tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7, 7}, wei_dt, format::oizyx, {15, 15, 1, 1, 1}, tensor({1}), tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7, 7}, wei_dt, format::oizyx, {15, 15, 1, 1, 1}, {1, 1, 2, 2, 2}, tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
             // 3x3
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7, 7}, wei_dt, format::oizyx, {15, 15, 3, 3, 3}, tensor(1), {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7, 7}, wei_dt, format::oizyx, {15, 15, 3, 3, 3}, tensor({1}), {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
             push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7, 7}, wei_dt, format::oizyx, {15, 15, 3, 3, 3}, {1, 1, 2, 2, 2}, {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
             // Grouped
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 8, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(2), batch(16), feature(4), spatial(1, 1, 1)), tensor(1), tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 8, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(2), batch(16), feature(4), spatial(1, 1, 1)), {1, 1, 2, 2, 2}, tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 8, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(2), batch(16), feature(4), spatial(3, 3, 3)), tensor(1), {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 8, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(2), batch(16), feature(4), spatial(3, 3, 3)), {1, 1, 2, 2, 2}, {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 8, 7, 7, 7}, wei_dt, format::goizyx, tensor({2, 16, 4, 1, 1, 1}), tensor({1}), tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 8, 7, 7, 7}, wei_dt, format::goizyx, tensor({2, 16, 4, 1, 1, 1}), {1, 1, 2, 2, 2}, tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 8, 7, 7, 7}, wei_dt, format::goizyx, tensor({2, 16, 4, 3, 3, 3}), tensor({1}), {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 8, 7, 7, 7}, wei_dt, format::goizyx, tensor({2, 16, 4, 3, 3, 3}), {1, 1, 2, 2, 2}, {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
             // Depthwise
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 16, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(16), spatial(1, 1, 1)), tensor(1), tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 16, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(16), spatial(1, 1, 1)), {1, 1, 2, 2, 2}, tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 16, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(16), spatial(3, 3, 3)), tensor(1), {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 16, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(16), spatial(3, 3, 3)), {1, 1, 2, 2, 2}, {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 16, 7, 7, 7}, wei_dt, format::goizyx, tensor({16, 1, 1, 1, 1, 1}), tensor({1}), tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 16, 7, 7, 7}, wei_dt, format::goizyx, tensor({16, 1, 1, 1, 1, 1}), {1, 1, 2, 2, 2}, tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 16, 7, 7, 7}, wei_dt, format::goizyx, tensor({16, 1, 1, 3, 3, 3}), tensor({1}), {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 16, 7, 7, 7}, wei_dt, format::goizyx, tensor({16, 1, 1, 3, 3, 3}), {1, 1, 2, 2, 2}, {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
         }
         return *this;
     }
@@ -2747,19 +2750,19 @@ public:
         std::vector<int> batches = { 1, 2, 16 };
         for (auto b : batches) {
             // 1x1
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 1, 1}, tensor(1), tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 1, 1}, {1, 1, 2, 2}, tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 1, 1}, tensor({1}), tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 1, 1}, {1, 1, 2, 2}, tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
             // 3x3
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 3, 3}, tensor(1), {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 3, 3}, tensor({1}), {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
             push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 3, 3}, {1, 1, 2, 2}, {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
             // Asymmetric weights
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 3, 2}, tensor(1), {0, 0, 0, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 3, 2}, tensor({1}), {0, 0, 0, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
             push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 3, 2}, {1, 1, 2, 2}, {0, 0, 0, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
             // Uneven groups
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17}, wei_dt, format::goiyx, tensor(group(3), batch(7), feature(9), spatial(1, 1)), tensor(1), tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17}, wei_dt, format::goiyx, tensor(group(3), batch(7), feature(9), spatial(1, 1)), {1, 1, 2, 2}, tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17}, wei_dt, format::goiyx, tensor(group(3), batch(7), feature(9), spatial(3, 3)), tensor(1), {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17}, wei_dt, format::goiyx, tensor(group(3), batch(7), feature(9), spatial(3, 3)), {1, 1, 2, 2}, {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17}, wei_dt, format::goiyx, tensor({3, 7, 9, 1, 1}), tensor({1}), tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17}, wei_dt, format::goiyx, tensor({3, 7, 9, 1, 1}), {1, 1, 2, 2}, tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17}, wei_dt, format::goiyx, tensor({3, 7, 9, 3, 3}), tensor({1}), {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17}, wei_dt, format::goiyx, tensor({3, 7, 9, 3, 3}), {1, 1, 2, 2}, {0, 0, -1, -1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
         }
         return *this;
     }
@@ -2768,19 +2771,19 @@ public:
         std::vector<int> batches = { 1, 2, 16 };
         for (auto b : batches) {
             // 1x1
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 1, 1, 1}, tensor(1), tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 1, 1, 1}, {1, 1, 2, 2, 2}, tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 1, 1, 1}, tensor({1}), tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 1, 1, 1}, {1, 1, 2, 2, 2}, tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
             // 3x3
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 3, 3, 3}, tensor(1), {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 3, 3, 3}, tensor({1}), {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
             push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 3, 3, 3}, {1, 1, 2, 2, 2}, {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
             // Asymmetric weights
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 3, 2, 4}, tensor(1), {0, 0, 0, -1, -2}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 3, 2, 4}, tensor({1}), {0, 0, 0, -1, -2}, true, out_dt, implementation_desc{out_fmt, ""} });
             push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 3, 2, 4}, {1, 1, 2, 2, 2}, {0, 0, 0, -1, -2}, true, out_dt, implementation_desc{out_fmt, ""} });
             // Uneven groups
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17, 11}, wei_dt, format::goizyx, tensor(group(3), batch(7), feature(9), spatial(1, 1, 1)), tensor(1), tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17, 11}, wei_dt, format::goizyx, tensor(group(3), batch(7), feature(9), spatial(1, 1, 1)), {1, 1, 2, 2, 2}, tensor(0), true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17, 11}, wei_dt, format::goizyx, tensor(group(3), batch(7), feature(9), spatial(3, 3, 3)), tensor(1), {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17, 11}, wei_dt, format::goizyx, tensor(group(3), batch(7), feature(9), spatial(3, 3, 3)), {1, 1, 2, 2, 2}, {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17, 11}, wei_dt, format::goizyx, tensor({3, 7, 9, 1, 1, 1}), tensor({1}), tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17, 11}, wei_dt, format::goizyx, tensor({3, 7, 9, 1, 1, 1}), {1, 1, 2, 2, 2}, tensor({0}), true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17, 11}, wei_dt, format::goizyx, tensor({3, 7, 9, 3, 3, 3}), tensor({1}), {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17, 11}, wei_dt, format::goizyx, tensor({3, 7, 9, 3, 3, 3}), {1, 1, 2, 2, 2}, {0, 0, -1, -1, -1}, true, out_dt, implementation_desc{out_fmt, ""} });
         }
         return *this;
     }

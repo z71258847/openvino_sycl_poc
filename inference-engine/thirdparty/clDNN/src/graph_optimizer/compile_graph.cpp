@@ -7,7 +7,7 @@
 #include "pass_manager.h"
 #include "data_inst.h"
 #include "mutable_data_inst.h"
-#include "program_node.h"
+#include "cldnn/graph/program_node.hpp"
 #include "cldnn/runtime/engine.hpp"
 #include "runtime/cldnn_itt.hpp"
 #include <iostream>
@@ -31,17 +31,20 @@ void compile_graph::run(program& p) {
         }
     }
 
+    auto should_choose_impl = [](program_node* node) -> bool {
+        return !node->is_type<data>() && !(node->is_type<mutable_data>() && node->get_dependencies().empty()) && !node->has_dynamic_shapes();
+    };
 #if (CLDNN_THREADING == CLDNN_THREADING_TBB)
     const auto n_threads = p.get_engine().configuration().n_threads;
     auto arena = std::unique_ptr<tbb::task_arena>(new tbb::task_arena());
     arena->initialize(n_threads);
-    arena->execute([this, &p] {
+    arena->execute([this, &p, &should_choose_impl] {
         auto& proc_order = p.get_processing_order();
-        tbb::parallel_for(tbb::blocked_range<size_t>(0, proc_order.size()), [&proc_order, &p](const tbb::blocked_range<size_t>& r) {
+        tbb::parallel_for(tbb::blocked_range<size_t>(0, proc_order.size()), [&proc_order, &p, &should_choose_impl](const tbb::blocked_range<size_t>& r) {
             for (auto i = r.begin(); i != r.end(); ++i) {
                 auto& node = *(std::next(proc_order.begin(), i));
                 node->set_unique_id(std::to_string(i));
-                if (!node->is_type<data>() && !(node->is_type<mutable_data>() && node->get_dependencies().empty())) {
+                if (should_choose_impl(node)) {
                     node->selected_impl = node->type()->choose_impl(*node);
                 }
             }
@@ -50,7 +53,7 @@ void compile_graph::run(program& p) {
     arena.reset();
 #else
     for (auto& node : p.get_processing_order()) {
-        if (!node->is_type<data>() && !(node->is_type<mutable_data>() && node->get_dependencies().empty())) {
+        if (should_choose_impl(node)) {
             node->selected_impl = node->type()->choose_impl(*node);
         }
     }

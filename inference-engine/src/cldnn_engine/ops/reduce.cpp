@@ -87,14 +87,14 @@ void CreateReduceOp(Program& p, const std::shared_ptr<ngraph::Node>& op, cldnn::
         cldnn::tensor outTensor;
         switch (rank) {
             case 6:
-                outTensor = cldnn::tensor(TensorValue(out_shape[0]), TensorValue(out_shape[1]),
-                                          1, TensorValue(out_shape[2]), 1, 1);
+                outTensor = cldnn::tensor({TensorValue(out_shape[0]), TensorValue(out_shape[1]),
+                                          1, TensorValue(out_shape[2]), 1, 1});
             case 5:
-                outTensor = cldnn::tensor(TensorValue(out_shape[0]), TensorValue(out_shape[1]),
-                                          1, TensorValue(out_shape[2]), 1);
+                outTensor = cldnn::tensor({TensorValue(out_shape[0]), TensorValue(out_shape[1]),
+                                          1, TensorValue(out_shape[2]), 1});
             case 4:
-                outTensor = cldnn::tensor(TensorValue(out_shape[0]), TensorValue(out_shape[1]),
-                                          1, TensorValue(out_shape[2]));
+                outTensor = cldnn::tensor({TensorValue(out_shape[0]), TensorValue(out_shape[1]),
+                                          1, TensorValue(out_shape[2])});
         }
         auto reshape_prim = cldnn::reshape(resultLayerName, layerName, outTensor);
         p.AddPrimitive(reshape_prim);

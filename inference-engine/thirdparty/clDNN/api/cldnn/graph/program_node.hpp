@@ -77,7 +77,7 @@ struct program_node {
     virtual ~program_node() = default;
 
 public:
-    virtual const primitive_id& id() const { return desc->id; }
+    virtual const primitive_id& id() const { return desc->output_ids.front(); }
     virtual primitive_type_id type() const { return desc->type; }
     virtual std::shared_ptr<kernel_selector::fuse_params> get_fuse_params() const { return nullptr; }
 
@@ -149,12 +149,14 @@ public:
 
     // only calculated output layout (for external usage), does not modify/use cached output layout nor invalidate users
     layout calc_output_layout() const;
+    std::vector<layout> infer_shapes() const;
 
     // uses cached output layout if valid, if not calls 'calc_output_layout' and stores its result + invalidate all
     // users if layout has changed and @p invalidate_users_if_changed is set to true
     layout get_output_layout(bool invalidate_users_if_changed = true);
     // returns cached output layout if valid, otherwise throws an exception
     layout get_output_layout() const;
+
     // returns result of get_output_layout without padding
     layout get_non_padded_output_layout(bool invalidate_users_if_changed = true);
 
@@ -178,6 +180,7 @@ public:
     bool is_output() const { return output; }
 
     bool is_valid_output_layout() const { return valid_output_layout; }
+    void invalidate_layout() { valid_output_layout = false; }
 
     uint8_t mark(uint8_t val = 1) {
         uint8_t ret = user_mark;
@@ -241,6 +244,8 @@ public:
     // returns true if this node is within main data flow of the network (i.e. it does not describe helper data like
     // convolution's weights etc.)
     bool is_in_data_flow() const { return data_flow; }
+
+    void invalidate_users() const;
 
     // conversion from generic to specific
     template <class To, class..., class = typename std::enable_if<!std::is_same<To, primitive>::value>::type>
@@ -308,6 +313,7 @@ public:
     }
 
     bool need_lockable_memory() const;
+    bool has_dynamic_shapes() const;
 
     std::string get_unique_id() const { return unique_id; }
     void set_unique_id(std::string id) { unique_id = id; }
@@ -322,6 +328,8 @@ protected:
 
     bool valid_output_layout = false;
     layout output_layout = layout(data_types::f32, format::bfyx, tensor());
+    std::vector<layout> output_layouts;
+    // std::vector<port> output_ports;
 
     std::vector<program_node*> dependencies;
     std::list<program_node*> users;
@@ -337,7 +345,7 @@ protected:
     uint8_t user_mark = 0;
     bool optimized = false;
     bool share_buffer = true;
-    std::array<bool, tensor_dim_max> _support_padding_in_axis;
+    std::array<bool, 8> _support_padding_in_axis;
 
     mutable bool has_reused_memory = false;
     mutable uint32_t reused_memory_color = 0;
@@ -357,7 +365,6 @@ protected:
 
     std::vector<fused_activation_params> fused_activations;
     std::vector<fused_primitive_desc> fused_prims;
-    void invalidate_users() const;
 };
 
 /*

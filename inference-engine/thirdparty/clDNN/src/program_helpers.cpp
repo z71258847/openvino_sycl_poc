@@ -101,10 +101,10 @@ layout program_helpers::get_weights_layout(typed_program_node<cldnn::data>& data
 
     return layout(mem_layout.data_type,
                   mem_layout.format,
-                  {split * mem_layout.size.batch[0],
-                   mem_layout.size.feature[0],
-                   mem_layout.size.spatial[0],
-                   mem_layout.size.spatial[1]});
+                  {split * mem_layout.size.batch(0),
+                   mem_layout.size.feature(0),
+                   mem_layout.size.spatial(0),
+                   mem_layout.size.spatial(1)});
 }
 
 // pair.first tells whether l1 and l2 are absolutely identical
@@ -153,12 +153,13 @@ std::pair<bool, bool> program_helpers::are_layouts_identical(layout const& l1, l
     auto l2_pitch = l2.get_pitches();
 
     // ignore pitches which will never be used (for dims with size == 1)
+    size_t tensor_dim_max = 8;
     for (size_t i = 0; i < tensor_dim_max; ++i)
-        if (l1.size.raw[i] == 1)
-            l1_pitch.raw[i] = 0;
+        if (l1.size[i] == 1)
+            l1_pitch[i] = 0;
     for (size_t i = 0; i < tensor_dim_max; ++i)
-        if (l2.size.raw[i] == 1)
-            l2_pitch.raw[i] = 0;
+        if (l2.size[i] == 1)
+            l2_pitch[i] = 0;
 
     auto l1_offset = l1.get_linear_offset();
     auto l2_offset = l2.get_linear_offset();

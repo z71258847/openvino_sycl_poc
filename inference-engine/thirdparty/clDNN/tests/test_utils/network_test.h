@@ -73,7 +73,7 @@ struct reference_tensor_typed<T, 1> : reference_tensor {
         cldnn::mem_lock<T> ptr(actual, get_test_stream());
 
         for (size_t bi = 0; bi < reference.size(); ++bi) {
-            auto coords = cldnn::tensor(cldnn::batch(bi), cldnn::feature(0), cldnn::spatial(0, 0, 0, 0));
+            auto coords = cldnn::tensor({TensorValue(bi), TensorValue(0), TensorValue(0),  TensorValue(0), TensorValue(0)});
             size_t offset = actual->get_layout().get_linear_offset(coords);
             auto& ref = reference[bi];
             auto& val = ptr[offset];
@@ -84,14 +84,14 @@ struct reference_tensor_typed<T, 1> : reference_tensor {
     void fill_memory(cldnn::memory::ptr mem) {
         cldnn::mem_lock<T> ptr(mem, get_test_stream());
         for (size_t bi = 0; bi < reference.size(); ++bi) {
-            auto coords = cldnn::tensor(cldnn::batch(bi), cldnn::feature(0), cldnn::spatial(0, 0, 0, 0));
+            auto coords = cldnn::tensor({TensorValue(bi), TensorValue(0), TensorValue(0),  TensorValue(0), TensorValue(0)});
             size_t offset = mem->get_layout().get_linear_offset(coords);
             ptr[offset] = reference[bi];
         }
     }
 
     cldnn::tensor get_shape() {
-        return cldnn::tensor(cldnn::batch(reference.size()));
+        return cldnn::tensor({TensorValue(reference.size())});
     }
 
     vector_type reference;
@@ -106,7 +106,7 @@ struct reference_tensor_typed<T, 2> : reference_tensor {
         cldnn::mem_lock<T> ptr(actual, get_test_stream());
         for (size_t bi = 0; bi < reference.size(); ++bi) {
             for (size_t fi = 0; fi < reference[0].size(); ++fi) {
-                auto coords = cldnn::tensor(cldnn::batch(bi), cldnn::feature(fi), cldnn::spatial(0, 0, 0, 0));
+                auto coords = cldnn::tensor({TensorValue(bi), TensorValue(fi), TensorValue(0), TensorValue(0), TensorValue(0), TensorValue(0)});
                 size_t offset = actual->get_layout().get_linear_offset(coords);
                 auto& ref = reference[bi][fi];
                 auto& val = ptr[offset];
@@ -119,7 +119,7 @@ struct reference_tensor_typed<T, 2> : reference_tensor {
         cldnn::mem_lock<T> ptr(mem, get_test_stream());
         for (size_t bi = 0; bi < reference.size(); ++bi) {
             for (size_t fi = 0; fi < reference[0].size(); ++fi) {
-                auto coords = cldnn::tensor(cldnn::batch(bi), cldnn::feature(fi), cldnn::spatial(0, 0, 0, 0));
+                auto coords = cldnn::tensor({TensorValue(bi), TensorValue(fi), TensorValue(0), TensorValue(0), TensorValue(0), TensorValue(0)});
                 size_t offset = mem->get_layout().get_linear_offset(coords);
                 ptr[offset] = reference[bi][fi];
             }
@@ -127,7 +127,7 @@ struct reference_tensor_typed<T, 2> : reference_tensor {
     }
 
     cldnn::tensor get_shape() {
-        return cldnn::tensor(cldnn::batch(reference.size()), cldnn::feature(reference[0].size()));
+        return cldnn::tensor({TensorValue(reference.size()), TensorValue(reference[0].size())});
     }
 
     vector_type reference;
@@ -143,7 +143,7 @@ struct reference_tensor_typed<T, 4> : reference_tensor {
             for (size_t fi = 0; fi < reference[0].size(); ++fi) {
                 for (size_t yi = 0; yi < reference[0][0].size(); ++yi) {
                     for (size_t xi = 0; xi < reference[0][0][0].size(); ++xi) {
-                        auto coords = cldnn::tensor(cldnn::batch(bi), cldnn::feature(fi), cldnn::spatial(xi, yi, 0, 0));
+                        auto coords = cldnn::tensor({TensorValue(bi), TensorValue(fi), TensorValue(yi), TensorValue(xi)});
                         size_t offset = actual->get_layout().get_linear_offset(coords);
                         auto& ref = reference[bi][fi][yi][xi];
                         auto& val = ptr[offset];
@@ -160,7 +160,7 @@ struct reference_tensor_typed<T, 4> : reference_tensor {
             for (size_t fi = 0; fi < reference[0].size(); ++fi) {
                 for (size_t yi = 0; yi < reference[0][0].size(); ++yi) {
                     for (size_t xi = 0; xi < reference[0][0][0].size(); ++xi) {
-                        auto coords = cldnn::tensor(cldnn::batch(bi), cldnn::feature(fi), cldnn::spatial(xi, yi, 0, 0));
+                        auto coords = cldnn::tensor({TensorValue(bi), TensorValue(fi), TensorValue(yi), TensorValue(xi)});
                         size_t offset = mem->get_layout().get_linear_offset(coords);
                         ptr[offset] = reference[bi][fi][yi][xi];
                     }
@@ -170,9 +170,7 @@ struct reference_tensor_typed<T, 4> : reference_tensor {
     }
 
     cldnn::tensor get_shape() {
-        return cldnn::tensor(cldnn::batch(reference.size()),
-                             cldnn::feature(reference[0].size()),
-                             cldnn::spatial(reference[0][0][0].size(), reference[0][0].size()));
+        return cldnn::tensor({TensorValue(reference.size()), TensorValue(reference[0].size()), TensorValue(reference[0][0].size()), TensorValue(reference[0][0][0].size())});
     }
 
     vector_type reference;

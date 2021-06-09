@@ -21,13 +21,13 @@ layout scale_inst::calc_output_layout(scale_node const& node) {
     auto scale_sizes = node.scale_in().get_non_padded_output_layout().size;
     auto input_sizes = result.size;
 
-    auto scale_x_size = scale_sizes.spatial[0];
-    auto scale_y_size = scale_sizes.spatial[1];
-    auto scale_z_size = scale_sizes.spatial[2];
+    auto scale_x_size = scale_sizes.spatial(0);
+    auto scale_y_size = scale_sizes.spatial(1);
+    auto scale_z_size = scale_sizes.spatial(2);
 
-    auto input_x_size = input_sizes.spatial[0];
-    auto input_y_size = input_sizes.spatial[1];
-    auto input_z_size = input_sizes.spatial[2];
+    auto input_x_size = input_sizes.spatial(0);
+    auto input_y_size = input_sizes.spatial(1);
+    auto input_z_size = input_sizes.spatial(2);
 
     if ((result.data_type == data_types::u8 || result.data_type == data_types::i8 || result.data_type == data_types::i32) &&
         (node.scale_in().get_non_padded_output_layout().data_type == data_types::f32 ||
@@ -76,11 +76,11 @@ scale_inst::typed_primitive_inst(network& network, scale_node const& node) : par
     auto scale_layout = node.scale_in().get_output_layout();
     auto scale_format = scale_layout.format;
 
-    auto scale_batch_size = scale_layout.size.batch[0];
-    auto scale_feature_size = scale_layout.size.feature[0];
+    auto scale_batch_size = scale_layout.size.batch(0);
+    auto scale_feature_size = scale_layout.size.feature(0);
 
-    auto input_batch_size = node.input().get_output_layout().size.batch[0];
-    auto input_feature_size = node.input().get_output_layout().size.feature[0];
+    auto input_batch_size = node.input().get_output_layout().size.batch(0);
+    auto input_feature_size = node.input().get_output_layout().size.feature(0);
 
     if (scale_batch_size != 1) {
         CLDNN_ERROR_NOT_EQUAL(node.id(),
@@ -103,12 +103,12 @@ scale_inst::typed_primitive_inst(network& network, scale_node const& node) : par
     if (!argument.bias.empty()) {
         auto bias_layout = node.bias().get_output_layout();
         auto bias_format = bias_layout.format;
-        auto bias_raw_sizes = bias_layout.size.raw;
+        auto bias_raw_sizes = bias_layout.size;
 
         CLDNN_ERROR_NOT_PROPER_FORMAT(node.id(), "Scale format", scale_format.value, "bias format", bias_format);
 
-        for (size_t i = 0; i < bias_layout.size.raw.size(); ++i) {
-            if (scale_layout.size.raw[i] != bias_raw_sizes[i])
+        for (size_t i = 0; i < bias_layout.size.rank().get_length(); ++i) {
+            if (scale_layout.size[i] != bias_raw_sizes[i])
                 CLDNN_ERROR_MESSAGE(node.id(),
                                     "Scale input size do not match bias size! Size index:" + std::to_string(i));
         }

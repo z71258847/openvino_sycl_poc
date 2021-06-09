@@ -86,7 +86,7 @@ void generic_eltwise_test(cldnn::format test_input_fmt, int input_b, int input_f
     VF<T> input2_rnd_vec = flatten_4d<T>(test_input_fmt, input2_rnd);
 
     auto& engine = get_test_engine();
-    tensor input_tensor( input_b, input_f, input_x, input_y );
+    tensor input_tensor({input_b, input_f, input_y, input_x});
     auto input1 = engine.allocate_memory({ type_to_data_type<T>::value, test_input_fmt, input_tensor });
     auto input2 = engine.allocate_memory({ type_to_data_type<T>::value, test_input_fmt, input_tensor });
     set_values(input1, input1_rnd_vec);
@@ -117,10 +117,10 @@ void generic_eltwise_test(cldnn::format test_input_fmt, int input_b, int input_f
     VVVVF<T> output_cpu = eltwise_reference<T>(input1_rnd, input2_rnd, mode, relu, slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
     EXPECT_EQ(output_layout.format.value, test_input_fmt.value);
     tensor output_tensor = output_layout.get_buffer_size();
-    int y_size = output_tensor.spatial[1];
-    int x_size = output_tensor.spatial[0];
-    int f_size = output_tensor.feature[0];
-    int b_size = output_tensor.batch[0];
+    int y_size = output_tensor.spatial(1);
+    int x_size = output_tensor.spatial(0);
+    int f_size = output_tensor.feature(0);
+    int b_size = output_tensor.batch(0);
     EXPECT_EQ(y_size, (int)output_cpu[0][0].size());
     EXPECT_EQ(x_size, (int)output_cpu[0][0][0].size());
     EXPECT_EQ(f_size, (int)output_cpu[0].size());
@@ -2440,7 +2440,7 @@ TEST(eltwise_gpu_f16, fs_b_yx_fsv32_basic)
     //F2
     //    1221 1222  2221 2222
 
-    tensor input_tensor(2, 2, 2, 2);
+    tensor input_tensor({2, 2, 2, 2});
     auto fp16_bfyx_2x2x2x2_input =
     {
         FLOAT16(1111),FLOAT16(1112),FLOAT16(1121),FLOAT16(1122),
@@ -2559,7 +2559,7 @@ TEST(eltwise_gpu_f16, bfyx_and_fs_b_yx_fsv32_basic)
 {
     // Inputs are 32x96x2x2
 
-    tensor input_tensor(32, 96, 20, 20);
+    tensor input_tensor({32, 96, 20, 20});
     VVVVF<FLOAT16> input_rnd = generate_random_4d<FLOAT16>(32, 96, 20, 20, 1, 3);
     VF<FLOAT16> fp16_bfyx_32x96x2x2_input = flatten_4d<FLOAT16>(format::bfyx, input_rnd);
 
@@ -2639,7 +2639,7 @@ TEST(eltwise_gpu_f16, bfyx_and_fs_b_yx_fsv32_basic)
 TEST(eltwise_gpu_f16, bfyx_and_fs_b_yx_fsv32_output_padding) {
     // Inputs are 32x96x2x2
 
-    tensor input_tensor(32, 96, 20, 20);
+    tensor input_tensor({32, 96, 20, 20});
     VVVVF<FLOAT16> input_rnd = generate_random_4d<FLOAT16>(32, 96, 20, 20, 1, 3);
     VF<FLOAT16> fp16_bfyx_32x96x2x2_input = flatten_4d<FLOAT16>(format::bfyx, input_rnd);
 
@@ -2722,7 +2722,7 @@ TEST(eltwise_gpu_f16, bfyx_and_fs_b_yx_fsv32_input_padding)
 {
     // Inputs are 32x96x20x20
 
-    tensor input_tensor(32, 96, 20, 20);
+    tensor input_tensor({32, 96, 20, 20});
     VVVVF<FLOAT16> input_rnd = generate_random_4d<FLOAT16>(32, 96, 20, 20, 1, 3);
     VF<FLOAT16> fp16_bfyx_32x96x2x2_input = flatten_4d<FLOAT16>(format::bfyx, input_rnd);
 
@@ -2866,7 +2866,7 @@ void generic_eltwise_bool_test(cldnn::format test_input_fmt, int input_b, int in
     VF<T> input2_rnd_vec = flatten_4d<T>(test_input_fmt, input2_rnd);
 
     auto& engine = get_test_engine();
-    tensor input_tensor( input_b, input_f, input_x, input_y );
+    tensor input_tensor({input_b, input_f, input_y, input_x});
     auto input1 = engine.allocate_memory({ type_to_data_type<T>::value, test_input_fmt, input_tensor });
     auto input2 = engine.allocate_memory({ type_to_data_type<T>::value, test_input_fmt, input_tensor });
     set_values(input1, input1_rnd_vec);
@@ -2892,10 +2892,10 @@ void generic_eltwise_bool_test(cldnn::format test_input_fmt, int input_b, int in
     VVVVF<int8_t> output_cpu = eltwise_bool_reference<T>(input1_rnd, input2_rnd, mode, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
     EXPECT_EQ(output_layout.format.value, test_input_fmt.value);
     tensor output_tensor = output_layout.get_buffer_size();
-    int y_size = output_tensor.spatial[1];
-    int x_size = output_tensor.spatial[0];
-    int f_size = output_tensor.feature[0];
-    int b_size = output_tensor.batch[0];
+    int y_size = output_tensor.spatial(1);
+    int x_size = output_tensor.spatial(0);
+    int f_size = output_tensor.feature(0);
+    int b_size = output_tensor.batch(0);
     EXPECT_EQ(y_size, (int)output_cpu[0][0].size());
     EXPECT_EQ(x_size, (int)output_cpu[0][0][0].size());
     EXPECT_EQ(f_size, (int)output_cpu[0].size());
@@ -3049,7 +3049,7 @@ TEST(eltwise_gpu, b_fs_yx_fsv4_wo_callib) {
             auto eltw = eltwise("eltw_GOLD_no_relu",
                                 { "input1", "input2", "input3" },
                                 mode[i]);
-            auto actv = activation("eltw_GOLD", eltw, activation_func::relu);
+            auto actv = activation("eltw_GOLD", "eltw_GOLD_no_relu", activation_func::relu);
 
             // Create a topology
             topology.add(input_layout("input1", input1->get_layout()),
@@ -3100,7 +3100,7 @@ TEST(eltwise_gpu, b_fs_yx_fsv4_wo_callib) {
                                   "reorder2_Swizzelled",
                                   "reorder3_Swizzelled" },
                                 mode[i]);
-            auto actv = activation("eltw_IMAD", eltw, activation_func::relu);
+            auto actv = activation("eltw_IMAD", "eltw_IMAD_no_relu", activation_func::relu);
             topology.add(input_layout("input1", input1->get_layout()),
                          input_layout("input2", input2->get_layout()),
                          input_layout("input3", input3->get_layout()),
@@ -3191,10 +3191,10 @@ struct eltwise_same_input_test : testing::TestWithParam<eltwise_same_input_test_
     template <typename T>
     void fill_random_typed(memory::ptr mem, int min, int max, int k) {
         auto size = mem->get_layout().size;
-        size_t b = size.batch[0];
-        size_t f = size.feature[0];
-        size_t x = size.spatial[0];
-        size_t y = size.spatial[1];
+        size_t b = size.batch(0);
+        size_t f = size.feature(0);
+        size_t x = size.spatial(0);
+        size_t y = size.spatial(1);
 
         auto data = generate_random_4d<T>(b, f, y, x, min, max, k);
         mem_lock<T> ptr{mem, get_test_stream()};
@@ -3202,7 +3202,7 @@ struct eltwise_same_input_test : testing::TestWithParam<eltwise_same_input_test_
             for (size_t fi = 0; fi < f; ++fi) {
                 for (size_t yi = 0; yi < y; ++yi) {
                     for (size_t xi = 0; xi < x; ++xi) {
-                        auto coords = tensor(batch(bi), feature(fi), spatial(xi, yi, 0, 0));
+                        auto coords = tensor({TensorValue(bi), TensorValue(fi), TensorValue(yi), TensorValue(xi)});
                         auto offset = mem->get_layout().get_linear_offset(coords);
                         ptr[offset] = data[bi][fi][yi][xi];
                     }
@@ -3236,17 +3236,17 @@ struct eltwise_same_input_test : testing::TestWithParam<eltwise_same_input_test_
         auto output_lay = out_ref->get_layout();
         auto opt_output_lay = input_ref->get_layout();
 
-        size_t b = output_lay.size.batch[0];
-        size_t f = output_lay.size.feature[0];
-        size_t x = output_lay.size.spatial[0];
-        size_t y = output_lay.size.spatial[1];
+        size_t b = output_lay.size.batch(0);
+        size_t f = output_lay.size.feature(0);
+        size_t x = output_lay.size.spatial(0);
+        size_t y = output_lay.size.spatial(1);
         mem_lock<T> ref_ptr{out_ref, get_test_stream()};
         mem_lock<T> input_ptr{input_ref, get_test_stream()};
         for (size_t bi = 0; bi < b; ++bi) {
             for (size_t fi = 0; fi < f; ++fi) {
                 for (size_t yi = 0; yi < y; ++yi) {
                     for (size_t xi = 0; xi < x; ++xi) {
-                        auto ref_out_coords = tensor(batch(bi), feature(fi), spatial(xi, yi, 0, 0));
+                        auto ref_out_coords = tensor({TensorValue(bi), TensorValue(fi), TensorValue(yi), TensorValue(xi)});
                         auto ref_out_offset = output_lay.get_linear_offset(ref_out_coords);
                         auto ref_out_val = ref_ptr[ref_out_offset];
 
@@ -3332,7 +3332,7 @@ INSTANTIATE_TEST_SUITE_P(eltwise_same_input,
                         ));
 
 // mode, input type, input sizes
-using eltwise_test_params = std::tuple<eltwise_mode, data_types, std::vector<std::vector<int32_t>>>;
+using eltwise_test_params = std::tuple<eltwise_mode, data_types, std::vector<std::vector<tensor::value_type>>>;
 
 template<typename T>
 class BaseEltwiseTest : public ::testing::TestWithParam<T> {
@@ -3341,12 +3341,12 @@ public:
     VF<float> eltwise_ref(VVVVVVF<T1> input0, VVVVVVF<T2> input1, tensor input0_size, tensor input1_size, eltwise_mode mode) {
         auto out_size = tensor::max(input0_size, input1_size);
 
-        int output_b = out_size.batch[0];
-        int output_f = out_size.feature[0];
-        int output_w = out_size.spatial[3];
-        int output_z = out_size.spatial[2];
-        int output_y = out_size.spatial[1];
-        int output_x = out_size.spatial[0];
+        int output_b = out_size.batch(0);
+        int output_f = out_size.feature(0);
+        int output_w = out_size.spatial(3);
+        int output_z = out_size.spatial(2);
+        int output_y = out_size.spatial(1);
+        int output_x = out_size.spatial(0);
 
         VVVVVVF<float> output(output_b, VVVVVF<float>(output_f,
                                          VVVVF<float>(output_w,
@@ -3360,19 +3360,19 @@ public:
                     for (int z = 0; z <output_z; ++z) {
                         for (int y = 0; y <output_y; ++y) {
                             for (int x = 0; x < output_x; ++x) {
-                                int in0_b = b % input0_size.batch[0];
-                                int in0_f = f % input0_size.feature[0];
-                                int in0_w = w % input0_size.spatial[3];
-                                int in0_z = z % input0_size.spatial[2];
-                                int in0_y = y % input0_size.spatial[1];
-                                int in0_x = x % input0_size.spatial[0];
+                                int in0_b = b % input0_size.batch(0);
+                                int in0_f = f % input0_size.feature(0);
+                                int in0_w = w % input0_size.spatial(3);
+                                int in0_z = z % input0_size.spatial(2);
+                                int in0_y = y % input0_size.spatial(1);
+                                int in0_x = x % input0_size.spatial(0);
 
-                                int in1_b = b % input1_size.batch[0];
-                                int in1_f = f % input1_size.feature[0];
-                                int in1_w = w % input1_size.spatial[3];
-                                int in1_z = z % input1_size.spatial[2];
-                                int in1_y = y % input1_size.spatial[1];
-                                int in1_x = x % input1_size.spatial[0];
+                                int in1_b = b % input1_size.batch(0);
+                                int in1_f = f % input1_size.feature(0);
+                                int in1_w = w % input1_size.spatial(3);
+                                int in1_z = z % input1_size.spatial(2);
+                                int in1_y = y % input1_size.spatial(1);
+                                int in1_x = x % input1_size.spatial(0);
 
                                 auto in0 = static_cast<float>(input0[in0_b][in0_f][in0_w][in0_z][in0_y][in0_x]);
                                 auto in1 = static_cast<float>(input1[in1_b][in1_f][in1_w][in1_z][in1_y][in1_x]);
@@ -3423,8 +3423,8 @@ TEST_P(eltwise_test, fsv16) {
     auto fmt_pln = input0_size.size() == 4 ? format::bfyx : format::bfzyx;
     auto fmt_fsv16 = input0_size.size() == 4 ? format::b_fs_yx_fsv16 : format::b_fs_zyx_fsv16;
 
-    auto in0_size = tensor(fmt_pln, input0_size);
-    auto in1_size = tensor(fmt_pln, input1_size);
+    auto in0_size = tensor(input0_size);
+    auto in1_size = tensor(input1_size);
 
     auto input1 = engine.allocate_memory({ data_types::f32, fmt_pln, in0_size });
     auto input2 = engine.allocate_memory({ data_types::f32, fmt_pln, in1_size });
@@ -3463,7 +3463,7 @@ TEST_P(eltwise_test, fsv16) {
 
 static std::vector<eltwise_mode> modes = {eltwise_mode::sum, eltwise_mode::prod};
 static std::vector<data_types> types = {data_types::f32, data_types::f16};
-static std::vector<std::vector<std::vector<int32_t>>> inputs = {
+static std::vector<std::vector<std::vector<tensor::value_type>>> inputs = {
         {{1, 2, 3, 4}, {1, 2, 3, 4}},
         {{1, 16, 8, 2}, {1, 16, 8, 2}},
         {{1, 128, 16, 8}, {1, 1, 16, 8}},
@@ -3528,8 +3528,8 @@ TEST_P(eltwise_test_6d, bfwzyx) {
     VF<float> input1_rnd_vec = flatten_6d<float>(format::bfwzyx, input1_rnd);
     VF<float> input2_rnd_vec = flatten_6d<float>(format::bfwzyx, input2_rnd);
 
-    auto in0_size = tensor(format::bfwzyx, input0_size);
-    auto in1_size = tensor(format::bfwzyx, input1_size);
+    auto in0_size = tensor(input0_size);
+    auto in1_size = tensor(input1_size);
 
     auto& engine = get_test_engine();
     auto input1 = engine.allocate_memory({ data_types::f32, format::bfwzyx, in0_size });
@@ -3566,7 +3566,7 @@ TEST_P(eltwise_test_6d, bfwzyx) {
     }
 }
 
-static std::vector<std::vector<std::vector<int32_t>>> inputs_6d = {
+static std::vector<std::vector<std::vector<tensor::value_type>>> inputs_6d = {
         {{1, 2, 3, 4, 5, 6},  {1, 2, 3, 4, 5, 6}},
         {{1, 32, 1, 1, 1, 1}, {8, 32, 4, 5, 6, 7}},
         {{1, 32, 1, 1, 1, 7}, {8, 32, 4, 5, 6, 7}},
@@ -3614,8 +3614,8 @@ TEST_P(eltwise_test_mixed_precision, fsv16) {
     auto fmt_pln = input0_size.size() == 4 ? format::bfyx : format::bfzyx;
     auto fmt_fsv16 = input0_size.size() == 4 ? format::b_fs_yx_fsv16 : format::b_fs_zyx_fsv16;
 
-    auto in0_size = tensor(fmt_pln, input0_size);
-    auto in1_size = tensor(fmt_pln, input1_size);
+    auto in0_size = tensor(input0_size);
+    auto in1_size = tensor(input1_size);
 
     auto input1 = engine.allocate_memory({ data_types::f32, fmt_pln, in0_size });
     auto input2 = engine.allocate_memory({ data_types::i32, fmt_pln, in1_size });
@@ -3663,8 +3663,8 @@ INSTANTIATE_TEST_SUITE_P(eltwise, eltwise_test_mixed_precision,
 
 struct eltwise_layout_test_params {
     eltwise_mode mode;
-    std::vector<int32_t> input0_size;
-    std::vector<int32_t> input1_size;
+    std::vector<tensor::value_type> input0_size;
+    std::vector<tensor::value_type> input1_size;
     format input0_format;
     format input1_format;
     std::string selected_kernel_name;
@@ -3711,8 +3711,8 @@ TEST_P(eltwise_test_mixed_layout, mixed_layout) {
     VF<float> input2_rnd_vec = flatten_6d<float>(format::bfwzyx, input2_rnd);
 
     auto& engine = get_test_engine();
-    auto in0_size = tensor(format::bfyx, input0_size);
-    auto in1_size = tensor(format::bfyx, input1_size);
+    auto in0_size = tensor(input0_size);
+    auto in1_size = tensor(input1_size);
 
     auto input1 = engine.allocate_memory({ data_types::f32, format::bfyx, in0_size });
     auto input2 = engine.allocate_memory({ data_types::f32, format::bfyx, in1_size });
@@ -3778,10 +3778,10 @@ struct eltwise_random_test : testing::TestWithParam<eltwise_random_test_params>
     template <typename T>
     void fill_random_typed(memory::ptr mem, int min, int max, int k) {
         auto size = mem->get_layout().size;
-        size_t b = size.batch[0];
-        size_t f = size.feature[0];
-        size_t x = size.spatial[0];
-        size_t y = size.spatial[1];
+        size_t b = size.batch(0);
+        size_t f = size.feature(0);
+        size_t x = size.spatial(0);
+        size_t y = size.spatial(1);
 
         auto data = generate_random_4d<T>(b, f, y, x, min, max, k);
         mem_lock<T> ptr{mem, get_test_stream()};
@@ -3789,7 +3789,7 @@ struct eltwise_random_test : testing::TestWithParam<eltwise_random_test_params>
             for (size_t fi = 0; fi < f; ++fi) {
                 for (size_t yi = 0; yi < y; ++yi) {
                     for (size_t xi = 0; xi < x; ++xi) {
-                        auto coords = tensor(batch(bi), feature(fi), spatial(xi, yi, 0, 0));
+                        auto coords = tensor({TensorValue(bi), TensorValue(fi), TensorValue(yi), TensorValue(xi)});
                         auto offset = mem->get_layout().get_linear_offset(coords);
                         ptr[offset] = data[bi][fi][yi][xi];
                     }
@@ -3823,17 +3823,17 @@ struct eltwise_random_test : testing::TestWithParam<eltwise_random_test_params>
         auto output_lay = out_ref->get_layout();
         auto opt_output_lay = out_opt->get_layout();
 
-        size_t b = output_lay.size.batch[0];
-        size_t f = output_lay.size.feature[0];
-        size_t x = output_lay.size.spatial[0];
-        size_t y = output_lay.size.spatial[1];
+        size_t b = output_lay.size.batch(0);
+        size_t f = output_lay.size.feature(0);
+        size_t x = output_lay.size.spatial(0);
+        size_t y = output_lay.size.spatial(1);
         mem_lock<T> ref_ptr{out_ref, get_test_stream()};
         mem_lock<T> opt_ptr{out_opt, get_test_stream()};
         for (size_t bi = 0; bi < b; ++bi) {
             for (size_t fi = 0; fi < f; ++fi) {
                 for (size_t yi = 0; yi < y; ++yi) {
                     for (size_t xi = 0; xi < x; ++xi) {
-                        auto ref_out_coords = tensor(batch(bi), feature(fi), spatial(xi, yi, 0, 0));
+                        auto ref_out_coords = tensor({TensorValue(bi), TensorValue(fi), TensorValue(yi), TensorValue(xi)});
                         auto ref_out_offset = output_lay.get_linear_offset(ref_out_coords);
                         auto ref_out_val = ref_ptr[ref_out_offset];
 

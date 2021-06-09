@@ -30,7 +30,7 @@ TEST(resample_gpu, basic_in2x3x2x2_nearest) {
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, { 2, 2, 3, 2 } });
 
-    auto output_size = tensor(batch(2), feature(2), spatial(6, 4));
+    auto output_size = tensor({2, 2, 4, 6});
     uint32_t num_filter = 0u;
 
     topology topology;
@@ -102,7 +102,7 @@ TEST(resample_gpu, basic_in2x3x2x2_bilinear) {
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, { 1, 1, 2, 2 } });
 
-    auto output_size = tensor(batch(1), feature(1), spatial(4, 4));
+    auto output_size = tensor({1, 1, 4, 4});
     uint32_t num_filter = 1u;
 
     topology topology;
@@ -153,7 +153,7 @@ TEST(resample_gpu, basic_in1x1x2x2_interp) {
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, { 1, 1, 2, 2 } });
 
-    auto output_size = tensor(batch(1), feature(1), spatial(4, 4));
+    auto output_size = tensor({1, 1, 4, 4});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -203,7 +203,7 @@ TEST(resample_gpu, basic_in1x1x2x2_interp_f16) {
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, { 1, 1, 2, 2 } });
 
-    auto output_size = tensor(batch(1), feature(1), spatial(4, 4));
+    auto output_size = tensor({1, 1, 4, 4});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -261,7 +261,7 @@ TEST(resample_gpu, basic_in1x1x2x2_interp_fsv32) {
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, { 1, 1, 2, 2 } });
 
-    auto output_size = tensor(batch(1), feature(1), spatial(4, 4));
+    auto output_size = tensor({1, 1, 4, 4});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -320,7 +320,7 @@ TEST(resample_gpu, basic_in1x1x2x2_interp_align_1) {
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, { 1, 1, 2, 2 } });
 
-    auto output_size = tensor(batch(1), feature(1), spatial(4, 4));
+    auto output_size = tensor({1, 1, 4, 4});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -370,7 +370,7 @@ TEST(resample_gpu, nearest_asymmetric) {
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, { 1, 1, 2, 2 } });
 
-    auto output_size = tensor(batch(1), feature(1), spatial(5, 4));
+    auto output_size = tensor({1, 1, 4, 5});
 
     topology topology;
     uint32_t num_filter = 1u;
@@ -421,7 +421,7 @@ TEST(resample_gpu, nearest_asymmetric_i8) {
 
     auto input = engine.allocate_memory({ data_types::i8, format::bfyx, { 1, 1, 2, 2 } });
 
-    auto output_size = tensor(batch(1), feature(1), spatial(5, 4));
+    auto output_size = tensor({1, 1, 4, 5});
 
     topology topology;
     uint32_t num_filter = 1u;
@@ -472,7 +472,7 @@ TEST(resample_gpu, bilinear_asymmetric) {
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, { 1, 1, 2, 2 } });
 
-    auto output_size = tensor(batch(1), feature(1), spatial(6, 4));
+    auto output_size = tensor({1, 1, 4, 6});
 
     topology topology;
     uint32_t num_filter = 1u;
@@ -524,10 +524,10 @@ struct resample_random_test : testing::TestWithParam<resample_random_test_params
     template <typename T>
     void fill_random_typed(memory::ptr mem, int min, int max, int k) {
         auto size = mem->get_layout().size;
-        size_t b = size.batch[0];
-        size_t f = size.feature[0];
-        size_t x = size.spatial[0];
-        size_t y = size.spatial[1];
+        size_t b = size.batch(0);
+        size_t f = size.feature(0);
+        size_t x = size.spatial(0);
+        size_t y = size.spatial(1);
 
         auto data = generate_random_4d<T>(b, f, y, x, min, max, k);
         cldnn::mem_lock<T> ptr(mem, get_test_stream());
@@ -535,7 +535,7 @@ struct resample_random_test : testing::TestWithParam<resample_random_test_params
             for (size_t fi = 0; fi < f; ++fi) {
                 for (size_t yi = 0; yi < y; ++yi) {
                     for (size_t xi = 0; xi < x; ++xi) {
-                        auto coords = tensor(batch(bi), feature(fi), spatial(xi, yi, 0, 0));
+                        auto coords = tensor({bi, fi, yi, xi});
                         auto offset = mem->get_layout().get_linear_offset(coords);
                         ptr[offset] = data[bi][fi][yi][xi];
                     }
@@ -567,12 +567,12 @@ struct resample_random_test : testing::TestWithParam<resample_random_test_params
     template <typename T>
     void compare_nearest_typed(const memory::ptr input, const memory::ptr output, uint32_t align_corners) {
         auto output_lay = output->get_layout();
-        size_t b = output_lay.size.batch[0];
-        size_t f = output_lay.size.feature[0];
-        size_t x = output_lay.size.spatial[0];
-        size_t y = output_lay.size.spatial[1];
-        size_t in_x = input->get_layout().size.spatial[0];
-        size_t in_y = input->get_layout().size.spatial[1];
+        size_t b = output_lay.size.batch(0);
+        size_t f = output_lay.size.feature(0);
+        size_t x = output_lay.size.spatial(0);
+        size_t y = output_lay.size.spatial(1);
+        size_t in_x = input->get_layout().size.spatial(0);
+        size_t in_y = input->get_layout().size.spatial(1);
         float x_ratio = x > align_corners ? static_cast<float>(in_x - align_corners) / static_cast<float>(x - align_corners) : 0.f;
         float y_ratio = y > align_corners ? static_cast<float>(in_y - align_corners) / static_cast<float>(y - align_corners) : 0.f;
 
@@ -584,10 +584,10 @@ struct resample_random_test : testing::TestWithParam<resample_random_test_params
                     for (size_t xi = 0; xi < x; ++xi) {
                         auto in_xi = static_cast<size_t>(floor(x_ratio * xi));
                         auto in_yi = static_cast<size_t>(floor(y_ratio * yi));
-                        auto in_coords = tensor(batch(bi), feature(fi), spatial(in_xi, in_yi, 0, 0));
+                        auto in_coords = tensor({bi, fi, in_yi, in_xi});
                         auto in_offset = input->get_layout().get_linear_offset(in_coords);
                         auto in_val = in_ptr[in_offset];
-                        auto out_coords = tensor(batch(bi), feature(fi), spatial(xi, yi, 0, 0));
+                        auto out_coords = tensor({bi, fi, yi, xi});
                         auto out_offset = output->get_layout().get_linear_offset(out_coords);
                         auto out_val = out_ptr[out_offset];
                         EXPECT_EQ(in_val, out_val) << " at bi=" << bi << ", fi=" << fi << ", xi=" << xi << ", yi=" << yi;
@@ -600,13 +600,13 @@ struct resample_random_test : testing::TestWithParam<resample_random_test_params
     template <typename InT, typename OutT>
     void compare_bilinear_typed(const memory::ptr input, const memory::ptr output, uint32_t align_corners) {
         auto output_lay = output->get_layout();
-        size_t b = output_lay.size.batch[0];
-        size_t f = output_lay.size.feature[0];
-        size_t x = output_lay.size.spatial[0];
-        size_t y = output_lay.size.spatial[1];
+        size_t b = output_lay.size.batch(0);
+        size_t f = output_lay.size.feature(0);
+        size_t x = output_lay.size.spatial(0);
+        size_t y = output_lay.size.spatial(1);
         auto input_lay = input->get_layout();
-        size_t in_x = input_lay.size.spatial[0];
-        size_t in_y = input_lay.size.spatial[1];
+        size_t in_x = input_lay.size.spatial(0);
+        size_t in_y = input_lay.size.spatial(1);
         float x_ratio = x > align_corners ? static_cast<float>(in_x - align_corners) / static_cast<float>(x - align_corners) : 0.f;
         float y_ratio = y > align_corners ? static_cast<float>(in_y - align_corners) / static_cast<float>(y - align_corners) : 0.f;
 
@@ -627,10 +627,10 @@ struct resample_random_test : testing::TestWithParam<resample_random_test_params
                         auto dx = x_ratio * xi - static_cast<float>(low_in_xi);
                         auto dy = y_ratio * yi - static_cast<float>(low_in_yi);
 
-                        auto top_left_coords = tensor(batch(bi), feature(fi), spatial(low_in_xi, low_in_yi, 0, 0));
-                        auto top_right_coords = tensor(batch(bi), feature(fi), spatial(high_in_xi, low_in_yi, 0, 0));
-                        auto bottom_left_coords = tensor(batch(bi), feature(fi), spatial(low_in_xi, high_in_yi, 0, 0));
-                        auto bottom_right_coords = tensor(batch(bi), feature(fi), spatial(high_in_xi, high_in_yi, 0, 0));
+                        auto top_left_coords = tensor({TensorValue(bi), TensorValue(fi), TensorValue(low_in_yi), TensorValue(low_in_xi)});
+                        auto top_right_coords = tensor({TensorValue(bi), TensorValue(fi), TensorValue(low_in_yi), TensorValue(high_in_xi)});
+                        auto bottom_left_coords = tensor({TensorValue(bi), TensorValue(fi), TensorValue(high_in_yi), TensorValue(low_in_xi)});
+                        auto bottom_right_coords = tensor({TensorValue(bi), TensorValue(fi), TensorValue(high_in_yi), TensorValue(high_in_xi)});
 
                         auto top_left_val = in_ptr[input_lay.get_linear_offset(top_left_coords)];
                         auto top_right_val = in_ptr[input_lay.get_linear_offset(top_right_coords)];
@@ -644,7 +644,7 @@ struct resample_random_test : testing::TestWithParam<resample_random_test_params
 
                         auto final_val = top_val + (bottom_val - top_val) * dy;
 
-                        auto output_coords = tensor(batch(bi), feature(fi), spatial(xi, yi, 0, 0));
+                        auto output_coords = tensor({bi, fi, yi, xi});
                         auto output_val = out_ptr[output_lay.get_linear_offset(output_coords)];
 
                         EXPECT_NEAR(static_cast<float>(output_val), final_val, 1.e-1f)
@@ -782,10 +782,10 @@ struct caffe_resample_random_test : testing::TestWithParam<caffe_resample_random
     template <typename T>
     void fill_random_typed(memory::ptr mem, int min, int max, int k) {
         auto size = mem->get_layout().size;
-        size_t b = size.batch[0];
-        size_t f = size.feature[0];
-        size_t x = size.spatial[0];
-        size_t y = size.spatial[1];
+        size_t b = size.batch(0);
+        size_t f = size.feature(0);
+        size_t x = size.spatial(0);
+        size_t y = size.spatial(1);
 
         auto data = generate_random_4d<T>(b, f, y, x, min, max, k);
         cldnn::mem_lock<T> ptr(mem, get_test_stream());
@@ -793,7 +793,7 @@ struct caffe_resample_random_test : testing::TestWithParam<caffe_resample_random
             for (size_t fi = 0; fi < f; ++fi) {
                 for (size_t yi = 0; yi < y; ++yi) {
                     for (size_t xi = 0; xi < x; ++xi) {
-                        auto coords = tensor(batch(bi), feature(fi), spatial(xi, yi, 0, 0));
+                        auto coords = tensor({bi, fi, yi, xi});
                         auto offset = mem->get_layout().get_linear_offset(coords);
                         ptr[offset] = data[bi][fi][yi][xi];
                     }
@@ -827,17 +827,17 @@ struct caffe_resample_random_test : testing::TestWithParam<caffe_resample_random
         auto output_lay = out_ref->get_layout();
         auto opt_output_lay = out_opt->get_layout();
 
-        size_t b = output_lay.size.batch[0];
-        size_t f = output_lay.size.feature[0];
-        size_t x = output_lay.size.spatial[0];
-        size_t y = output_lay.size.spatial[1];
+        size_t b = output_lay.size.batch(0);
+        size_t f = output_lay.size.feature(0);
+        size_t x = output_lay.size.spatial(0);
+        size_t y = output_lay.size.spatial(1);
         cldnn::mem_lock<T> ref_ptr(out_ref, get_test_stream());
         cldnn::mem_lock<T> opt_ptr(out_opt, get_test_stream());
         for (size_t bi = 0; bi < b; ++bi) {
             for (size_t fi = 0; fi < f; ++fi) {
                 for (size_t yi = 0; yi < y; ++yi) {
                     for (size_t xi = 0; xi < x; ++xi) {
-                        auto ref_out_coords = tensor(batch(bi), feature(fi), spatial(xi, yi, 0, 0));
+                        auto ref_out_coords = tensor({bi, fi, yi, xi});
                         auto ref_out_offset = output_lay.get_linear_offset(ref_out_coords);
                         auto ref_out_val = ref_ptr[ref_out_offset];
 
@@ -970,10 +970,10 @@ TEST(resample_gpu, interpolate_in2x2x3x2_nearest1) {
     int f = 2;
     int y = 3;
     int x = 2;
-    tensor shape = tensor{batch(b), feature(f), spatial(x, y)};
+    tensor shape = tensor{{b, f, y, x}};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, shape });
 
-    auto output_size = tensor(batch(b), feature(f), spatial(x*2, y*2));
+    auto output_size = tensor({b, f, y*2, x*2});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -1059,10 +1059,10 @@ TEST(resample_gpu, interpolate_in2x2x3x2_nearest2) {
     int f = 2;
     int y = 3;
     int x = 2;
-    tensor shape = tensor{batch(b), feature(f), spatial(x, y)};
+    tensor shape = tensor{{b, f, y, x}};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, shape });
 
-    auto output_size = tensor(batch(b), feature(f), spatial(x*2, y*2));
+    auto output_size = tensor({b, f, y*2, x*2});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -1148,10 +1148,10 @@ TEST(resample_gpu, interpolate_in2x2x3x2_nearest3) {
     int f = 2;
     int y = 3;
     int x = 2;
-    tensor shape = tensor{batch(b), feature(f), spatial(x, y)};
+    tensor shape = tensor{{b, f, y, x}};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, shape });
 
-    auto output_size = tensor(batch(b), feature(f), spatial(x*2, y*2));
+    auto output_size = tensor({b, f, y*2, x*2});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -1237,10 +1237,10 @@ TEST(resample_gpu, interpolate_in2x2x3x2_nearest4) {
     int f = 2;
     int y = 3;
     int x = 2;
-    tensor shape = tensor{batch(b), feature(f), spatial(x, y)};
+    tensor shape = tensor{{b, f, y, x}};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, shape });
 
-    auto output_size = tensor(batch(b), feature(f), spatial(x*2, y*2));
+    auto output_size = tensor({b, f, y*2, x*2});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -1326,10 +1326,10 @@ TEST(resample_gpu, interpolate_in2x2x3x2_nearest5) {
     int f = 2;
     int y = 3;
     int x = 2;
-    tensor shape = tensor{batch(b), feature(f), spatial(x, y)};
+    tensor shape = tensor{{b, f, y, x}};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, shape });
 
-    auto output_size = tensor(batch(b), feature(f), spatial(x*2, y*2));
+    auto output_size = tensor({b, f, y*2, x*2});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -1415,12 +1415,12 @@ TEST(resample_gpu, interpolate_in2x2x3x2_coord_transform_mode1) {
     int f = 2;
     int y = 3;
     int x = 2;
-    tensor shape = tensor{batch(b), feature(f), spatial(x, y)};
+    tensor shape = tensor{{b, f, y, x}};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, shape });
 
     y = 2;
     x = 3;
-    auto output_size = tensor(batch(b), feature(f), spatial(x, y));
+    auto output_size = tensor({b, f, y, x});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -1484,12 +1484,12 @@ TEST(resample_gpu, interpolate_in2x2x3x2_coord_transform_mode2) {
     int f = 2;
     int y = 3;
     int x = 2;
-    tensor shape = tensor{batch(b), feature(f), spatial(x, y)};
+    tensor shape = tensor{{b, f, y, x}};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, shape });
 
     y = 1;
     x = 3;
-    auto output_size = tensor(batch(b), feature(f), spatial(x, y));
+    auto output_size = tensor({b, f, y, x});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -1547,12 +1547,12 @@ TEST(resample_gpu, interpolate_in2x2x3x2_coord_transform_mode3) {
     int f = 2;
     int y = 3;
     int x = 2;
-    tensor shape = tensor{batch(b), feature(f), spatial(x, y)};
+    tensor shape = tensor{{b, f, y, x}};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, shape });
 
     y = 2;
     x = 3;
-    auto output_size = tensor(batch(b), feature(f), spatial(x, y));
+    auto output_size = tensor({b, f, y, x});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -1616,12 +1616,12 @@ TEST(resample_gpu, interpolate_in2x2x3x2_coord_transform_mode4) {
     int f = 2;
     int y = 3;
     int x = 2;
-    tensor shape = tensor{batch(b), feature(f), spatial(x, y)};
+    tensor shape = tensor{{b, f, y, x}};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, shape });
 
     y = 2;
     x = 3;
-    auto output_size = tensor(batch(b), feature(f), spatial(x, y));
+    auto output_size = tensor({b, f, y, x});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -1685,12 +1685,12 @@ TEST(resample_gpu, interpolate_in2x2x3x2_coord_transform_mode5) {
     int f = 2;
     int y = 3;
     int x = 2;
-    tensor shape = tensor{batch(b), feature(f), spatial(x, y)};
+    tensor shape = tensor{{b, f, y, x}};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, shape });
 
     y = 2;
     x = 3;
-    auto output_size = tensor(batch(b), feature(f), spatial(x, y));
+    auto output_size = tensor({b, f, y, x});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -1754,12 +1754,12 @@ TEST(resample_gpu, interpolate_in2x2x3x2_cubic) {
     int f = 2;
     int y = 3;
     int x = 2;
-    tensor shape = tensor{batch(b), feature(f), spatial(x, y)};
+    tensor shape = tensor{{b, f, y, x}};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, shape });
 
     y = 2;
     x = 3;
-    auto output_size = tensor(batch(b), feature(f), spatial(x, y));
+    auto output_size = tensor({b, f, y, x});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -1821,11 +1821,11 @@ TEST(resample_gpu, interpolate_in2x2x3x2_cubic2) {
     int f = 1;
     int y = 3;
     int x = 2;
-    tensor shape = tensor{batch(b), feature(f), spatial(x, y)};
+    tensor shape = tensor{{b, f, y, x}};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, shape });
 
     x = 3;
-    auto output_size = tensor(batch(b), feature(f), spatial(x, y));
+    auto output_size = tensor({b, f, y, x});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -1873,12 +1873,12 @@ TEST(resample_gpu, interpolate_in2x2x3x2_linear) {
     int f = 2;
     int y = 3;
     int x = 2;
-    tensor shape = tensor{batch(b), feature(f), spatial(x, y)};
+    tensor shape = tensor{{b, f, y, x}};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, shape });
 
     y = 2;
     x = 3;
-    auto output_size = tensor(batch(b), feature(f), spatial(x, y));
+    auto output_size = tensor({b, f, y, x});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -1940,12 +1940,12 @@ TEST(resample_gpu, interpolate_in2x2x3x2_linear_onnx) {
     int f = 1;
     int y = 2;
     int x = 2;
-    tensor shape = tensor{batch(b), feature(f), spatial(x, y)};
+    tensor shape = tensor{{b, f, y, x}};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, shape });
 
     y = 4;
     x = 4;
-    auto output_size = tensor(batch(b), feature(f), spatial(x, y));
+    auto output_size = tensor({b, f, y, x});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));
@@ -1995,12 +1995,12 @@ TEST(resample_gpu, interpolate_in1x1x2x4_linear_scale) {
     int f = 1;
     int y = 2;
     int x = 4;
-    tensor shape = tensor{batch(b), feature(f), spatial(x, y)};
+    tensor shape = tensor{{b, f, y, x}};
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, shape });
 
     y = 1;
     x = 2;
-    auto output_size = tensor(batch(b), feature(f), spatial(x, y));
+    auto output_size = tensor({b, f, y, x});
 
     topology topology;
     topology.add(input_layout("input", input->get_layout()));

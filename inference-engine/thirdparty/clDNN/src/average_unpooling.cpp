@@ -28,33 +28,33 @@ layout average_unpooling_inst::calc_output_layout(average_unpooling_node const& 
 
     CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(),
                                    "stride spatial X",
-                                   stride.spatial[0],
+                                   stride.spatial(0),
                                    "",
                                    0,
                                    "Stride spatial X must be positive (>= 1)");
     CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(),
                                    "stride spatial Y",
-                                   stride.spatial[1],
+                                   stride.spatial(1),
                                    "",
                                    0,
                                    "Stride spatial Y must be positive (>= 1)");
     CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(),
                                    "window size spatial X",
-                                   window_size.spatial[0],
+                                   window_size.spatial(0),
                                    "",
                                    0,
                                    "Size X (of pooling window) must be positive (>= 1)");
     CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(),
                                    "window size spatial Y",
-                                   window_size.spatial[1],
+                                   window_size.spatial(1),
                                    "",
                                    0,
                                    "Size Y (of pooling window) must be positive (>= 1)");
 
-    tensor output_size(input_layout.size.batch[0],
-                       input_layout.size.feature[0],
-                       desc->output_size.spatial[0],
-                       desc->output_size.spatial[1]);
+    tensor output_size({input_layout.size.batch(0),
+                        input_layout.size.feature(0),
+                        desc->output_size.spatial(0),
+                        desc->output_size.spatial(1)});
     return {input_layout.data_type, input_layout.format, output_size};
 }
 

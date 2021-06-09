@@ -34,36 +34,36 @@ layout batch_to_space_inst::calc_output_layout(batch_to_space_node const& node) 
     const auto& crops_begin = desc->crops_begin;
     const auto& crops_end = desc->crops_end;
 
-    if (block_shape.batch[0] != 1)
+    if (block_shape.batch(0) != 1)
         CLDNN_ERROR_MESSAGE(node.id(),
             "block_shape[0] is expected to be 1. Actual block_shape[0] is " +
-            std::to_string(block_shape.batch[0]));
+            std::to_string(block_shape.batch(0)));
 
-    if (crops_begin.batch[0] != 0)
+    if (crops_begin.batch(0) != 0)
         CLDNN_ERROR_MESSAGE(node.id(),
             "crops_begin[0] is expected to be 0. Actual crops_begin[0] is " +
-            std::to_string(crops_begin.batch[0]));
+            std::to_string(crops_begin.batch(0)));
 
-    if (crops_end.batch[0] != 0)
+    if (crops_end.batch(0) != 0)
         CLDNN_ERROR_MESSAGE(node.id(),
             "crops_end[0] is expected to be 0. Actual crops_end[0] is " +
-            std::to_string(crops_end.batch[0]));
+            std::to_string(crops_end.batch(0)));
 
-    size_t block_sizes_multiplied = block_shape.feature[0];
+    size_t block_sizes_multiplied = block_shape.feature(0);
     for (size_t i = 0; i < spatial_num; ++i)
-        block_sizes_multiplied *= block_shape.spatial[i];
+        block_sizes_multiplied *= block_shape.spatial(i);
 
-    if (input_layout.size.batch[0] % block_sizes_multiplied != 0)
+    if (input_layout.size.batch(0) % block_sizes_multiplied != 0)
         CLDNN_ERROR_MESSAGE(node.id(),
             "The batch of the input tensor must be divisible by multiplied block sizes = " +
             std::to_string(block_sizes_multiplied));
 
-    if (crops_begin.feature[0] + crops_end.feature[0] >= block_shape.feature[0] * input_layout.size.feature[0])
+    if (crops_begin.feature(0) + crops_end.feature(0) >= block_shape.feature(0) * input_layout.size.feature(0))
             CLDNN_ERROR_MESSAGE(node.id(),
                 "Output dimensions must be positive");
 
     for (size_t i = 0; i < spatial_num; ++i)
-        if (crops_begin.spatial[i] + crops_end.spatial[i] >= block_shape.spatial[i] * input_layout.size.spatial[i])
+        if (crops_begin.spatial(i) + crops_end.spatial(i) >= block_shape.spatial(i) * input_layout.size.spatial(i))
             CLDNN_ERROR_MESSAGE(node.id(),
                 "Output dimensions must be positive");
 

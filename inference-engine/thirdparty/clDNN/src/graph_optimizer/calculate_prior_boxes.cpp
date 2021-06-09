@@ -6,7 +6,7 @@
 
 #include "pass_manager.h"
 #include "prior_box_inst.h"
-#include "program_node.h"
+#include "cldnn/graph/program_node.hpp"
 #include "cldnn/graph/program.hpp"
 #include <memory>
 

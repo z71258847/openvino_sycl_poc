@@ -4,6 +4,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "cldnn/runtime/error_handler.hpp"
+#include "cldnn/runtime/check.hpp"
 #include <string>
 #include <vector>
 
@@ -25,6 +26,30 @@ void err_details::cldnn_print_error_message(
         source_of_error << file << " at line: " << line << std::endl;
 #endif
         source_of_error << "Error has occured for: " << instance_id << std::endl;
+
+        std::stringstream addidtional_message;
+        if (!add_msg.empty()) {
+            addidtional_message << add_msg << std::endl;
+        }
+
+        throw std::invalid_argument(source_of_error.str() + msg.str() + addidtional_message.str());
+    }
+}
+
+void err_details::cldnn_print_error_message(
+#ifndef NDEBUG
+                                            const std::string& file, int line,
+#else
+                                            const std::string&, int,
+#endif
+                                            std::stringstream& msg,
+                                            const std::string& add_msg) {
+    {
+        std::stringstream source_of_error;
+
+#ifndef NDEBUG
+        source_of_error << file << " at line: " << line << std::endl;
+#endif
 
         std::stringstream addidtional_message;
         if (!add_msg.empty()) {
@@ -69,6 +94,20 @@ void error_on_bool(const std::string& file,
     }
 }
 
+void cldnn_check(const std::string& file,
+                   int line,
+                   std::string condition_id,
+                   bool condition,
+                   const std::string& additional_message) {
+    if (!condition) {
+        std::stringstream error_msg;
+        auto condition_to_string = [](const bool& condi) -> std::string { return condi ? "true" : "false"; };
+        error_msg << condition_id << "(" << condition_to_string(condition) << ") should be "
+                  << condition_to_string(!condition) << std::endl;
+        err_details::cldnn_print_error_message(file, line, error_msg, additional_message);
+    }
+}
+
 void error_on_mismatching_data_types(const std::string& file,
                                      int line,
                                      const std::string& instance_id,
@@ -99,16 +138,16 @@ void error_on_tensor_dims_less_than_other_tensor_dims(const std::string& file,
                                                       const tensor& tens_to_compre,
                                                       const std::string& additional_message) {
     std::vector<std::string> errors;
-    if (tens.batch[0] < tens_to_compre.batch[0]) {
+    if (tens.batch(0) < tens_to_compre.batch(0)) {
         errors.push_back("Batch");
     }
-    if (tens.feature[0] < tens_to_compre.feature[0]) {
+    if (tens.feature(0) < tens_to_compre.feature(0)) {
         errors.push_back("Feature");
     }
-    if (tens.spatial[0] < tens_to_compre.spatial[0]) {
+    if (tens.spatial(0) < tens_to_compre.spatial(0)) {
         errors.push_back("Spatial x");
     }
-    if (tens.spatial[1] < tens_to_compre.spatial[1]) {
+    if (tens.spatial(1) < tens_to_compre.spatial(1)) {
         errors.push_back("Spatial y");
     }
 
@@ -135,16 +174,16 @@ void error_on_tensor_dims_greater_than_other_tensor_dims(const std::string& file
                                                          const tensor& tens_to_compre,
                                                          const std::string& additional_message) {
     std::vector<std::string> errors;
-    if (tens.batch[0] > tens_to_compre.batch[0]) {
+    if (tens.batch(0) > tens_to_compre.batch(0)) {
         errors.push_back("Batch");
     }
-    if (tens.feature[0] > tens_to_compre.feature[0]) {
+    if (tens.feature(0) > tens_to_compre.feature(0)) {
         errors.push_back("Feature");
     }
-    if (tens.spatial[0] > tens_to_compre.spatial[0]) {
+    if (tens.spatial(0) > tens_to_compre.spatial(0)) {
         errors.push_back("Spatial x");
     }
-    if (tens.spatial[1] > tens_to_compre.spatial[1]) {
+    if (tens.spatial(1) > tens_to_compre.spatial(1)) {
         errors.push_back("Spatial y");
     }
 
@@ -171,16 +210,16 @@ void error_on_tensor_dims_not_dividable_by_other_tensor_dims(const std::string& 
                                                              const tensor& tens_to_compre,
                                                              const std::string& additional_message) {
     std::vector<std::string> errors;
-    if (tens.batch[0] % tens_to_compre.batch[0] != 0) {
+    if (tens.batch(0) % tens_to_compre.batch(0) != 0) {
         errors.push_back("Batch");
     }
-    if (tens.feature[0] % tens_to_compre.feature[0] != 0) {
+    if (tens.feature(0) % tens_to_compre.feature(0) != 0) {
         errors.push_back("Feature");
     }
-    if (tens.spatial[0] % tens_to_compre.spatial[0] != 0) {
+    if (tens.spatial(0) % tens_to_compre.spatial(0) != 0) {
         errors.push_back("Spatial x");
     }
-    if (tens.spatial[1] % tens_to_compre.spatial[1] != 0) {
+    if (tens.spatial(1) % tens_to_compre.spatial(1) != 0) {
         errors.push_back("Spatial y");
     }
 

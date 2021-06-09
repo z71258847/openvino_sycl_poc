@@ -19,7 +19,7 @@ static size_t GetNonEmptyDimsNumber(const layout& layout) {
     if (layout.size.count() != 1) {
         // Count the number of "one size" dimensions starting with X to Batch
         size_t one_size_dims = 0;
-        std::vector<int32_t> dims;
+        std::vector<tensor::value_type> dims;
         if (layout.format == cldnn::format::bfwzyx)
             dims = layout.size.sizes(format::bfwzyx);
         else if (layout.format == cldnn::format::bfzyx)

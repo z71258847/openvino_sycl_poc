@@ -12,7 +12,7 @@
 #include "cldnn/graph/network.hpp"
 #include "kernel_selector_helper.h"
 #include "meta_utils.h"
-#include "program_node.h"
+#include "cldnn/graph/program_node.hpp"
 #include "primitive_type.h"
 
 #include <memory>
@@ -111,12 +111,19 @@ public:
     void init_kernels();
     void set_arguments();
     bool validate() const {
-        if (_impl == nullptr)
-            throw std::invalid_argument("[Internal cldnn error].  Validation method for nullptr impl is not allowed.");
-        return _impl->validate(*this);
+        if (_impl)
+            return _impl->validate(*this);
+        if (_node.has_dynamic_shapes())
+            return true;
+
+        throw std::invalid_argument("[Internal cldnn error].  Validation method for nullptr impl is not allowed.");
     }
     bool output_changed() const { return _output_changed; }
     void reset_output_change() { _output_changed = false; }
+    bool shape_changed() const { return _shape_changed; }
+    void reset_shape_change() { _shape_changed = false; }
+    bool has_dynamic_shapes() const { return _node.has_dynamic_shapes(); }
+    void choose_impl();
 
     void build_deps();
 
@@ -167,6 +174,7 @@ protected:
     memory::ptr _output;
 
     bool _output_changed;  // todo: implement output reuse if neither of inputs has changed
+    bool _shape_changed;
     bool _has_valid_input =
         true;  // by default all primitives has valid inputs, exception is input_layout (see input_layout_inst)
     bool _has_mutable_input = false;
@@ -244,6 +252,8 @@ public:
 
     typed_primitive_inst_base(network& network, typed_node const& node)
         : typed_primitive_inst_base(network, node, do_allocate_memory(node)) {}
+
+    static std::vector<layout> infer_shapes(const cldnn::program_node& node) { return {}; }
 
 protected:
     typed_primitive_inst_base(network& network, typed_node const& node, bool allocate_memory)

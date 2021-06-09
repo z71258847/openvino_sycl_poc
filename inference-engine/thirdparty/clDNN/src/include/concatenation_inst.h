@@ -24,7 +24,7 @@ public:
 
     program_node& input(size_t idx = 0) const { return get_dependency(idx); }
 
-    size_t inputs_count() const { return desc->input.size(); }
+    size_t inputs_count() const { return desc->input_ids.size(); }
 };
 
 using concatenation_node = typed_program_node<concatenation>;

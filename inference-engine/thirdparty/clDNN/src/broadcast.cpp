@@ -64,14 +64,14 @@ broadcast_inst::typed_primitive_inst(network& network, broadcast_node const& nod
 
     if (format == format::bfzyx) {
         max_axes_num = 5;
-        input_dims = {input_sizes.batch[0],
-                      input_sizes.feature[0],
-                      input_sizes.spatial[2],
-                      input_sizes.spatial[1],
-                      input_sizes.spatial[0]};
+        input_dims = {input_sizes.batch(0),
+                      input_sizes.feature(0),
+                      input_sizes.spatial(2),
+                      input_sizes.spatial(1),
+                      input_sizes.spatial(0)};
     } else {
         max_axes_num = 4;
-        input_dims = {input_sizes.batch[0], input_sizes.feature[0], input_sizes.spatial[1], input_sizes.spatial[0]};
+        input_dims = {input_sizes.batch(0), input_sizes.feature(0), input_sizes.spatial(1), input_sizes.spatial(0)};
     }
 
     std::vector<tensor::value_type> reordered_input_dims(5, 0);

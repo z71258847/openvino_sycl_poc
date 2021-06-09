@@ -155,7 +155,7 @@ TEST_P(cum_sum_gpu, basic_test) {
     auto z = std::get<3>(p);
     auto y = std::get<4>(p);
     auto x = std::get<5>(p);
-    tensor shape = tensor{batch(b), feature(f), spatial(x, y, z, w)};
+    tensor shape = tensor{{b, f, w, z, y, x}};
     auto in_out_format = std::get<6>(p);
     auto axis = std::get<7>(p);
     auto exclusive = std::get<8>(p);

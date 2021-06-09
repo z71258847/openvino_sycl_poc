@@ -96,10 +96,9 @@ void split_test(int batch_num, int feature_num, int x_size, int y_size, std::vec
         }
 
         // For all the other dimensions, copy from the split_input
-        for (int dimension = 0; dimension < cldnn::tensor_dim_max; dimension++)
+        for (int dimension = 0; dimension < reference_input_size.rank().get_length(); dimension++)
         {
-            size.raw[dimension]
-                = (size.raw[dimension] == 0) ? reference_input_size.raw[dimension] : size.raw[dimension];
+            size[dimension] = (size[dimension] == 0) ? reference_input_size[dimension] : size[dimension];
         }
 
         expected_sizes.push_back(size);
@@ -116,16 +115,16 @@ void split_test(int batch_num, int feature_num, int x_size, int y_size, std::vec
         cldnn::mem_lock<T> output_ptr(output, get_test_stream());
 
         // Output tensor size
-        auto output_batch = prim.size.batch[0];
-        auto output_feature = prim.size.feature[0];
-        auto output_x = prim.size.spatial[0];
-        auto output_y = prim.size.spatial[1];
+        auto output_batch = prim.size.batch(0);
+        auto output_feature = prim.size.feature(0);
+        auto output_x = prim.size.spatial(0);
+        auto output_y = prim.size.spatial(1);
 
         // Input offsets, starting from which we will compare the output
-        auto input_batch_offset = split_offsets[splitNum].batch[0];
-        auto input_feature_offset = split_offsets[splitNum].feature[0];
-        auto input_y_offset = split_offsets[splitNum].spatial[1];
-        auto input_x_offset = split_offsets[splitNum].spatial[0];
+        auto input_batch_offset = split_offsets[splitNum].batch(0);
+        auto input_feature_offset = split_offsets[splitNum].feature(0);
+        auto input_y_offset = split_offsets[splitNum].spatial(1);
+        auto input_x_offset = split_offsets[splitNum].spatial(0);
 
         // iterator to iterate through input buffer
         auto input_batch_itr = input_batch_offset;

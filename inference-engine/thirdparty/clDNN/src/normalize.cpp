@@ -55,9 +55,9 @@ normalize_inst::typed_primitive_inst(network& network, normalize_node const& nod
     /// Scale f dimension should be 1 (if all channels have the same scale) or equal to input feature size (one scale per channel).
     auto scale_layout = node.scale().get_output_layout();
     auto scale_size = scale_layout.size;
-    auto scale_feature_size = scale_size.feature[0];
+    auto scale_feature_size = scale_size.feature(0);
     auto input_layout = node.input().get_output_layout();
-    auto input_feature_size = input_layout.size.feature[0];
+    auto input_feature_size = input_layout.size.feature(0);
 
     if (scale_feature_size != 1) {
         CLDNN_ERROR_NOT_EQUAL(node.id(),

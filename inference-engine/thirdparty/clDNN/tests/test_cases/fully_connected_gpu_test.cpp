@@ -70,8 +70,8 @@ void generic_fully_connected_test(cldnn::format test_input_fmt, cldnn::format te
     VF<T> weights_rnd_vec = flatten_4d<T>(test_weights_fmt, weights_rnd);
 
     auto& engine = get_test_engine();
-    tensor input_tensor(input_b, f, x, y);
-    tensor weights_tensor(output_f, f, x, y);
+    tensor input_tensor({input_b, f, y, x});
+    tensor weights_tensor({output_f, f, y, x});
     auto input = engine.allocate_memory({ type_to_data_type<T>::value, test_input_fmt, input_tensor });
     auto weights = engine.allocate_memory({ type_to_data_type<T>::value, test_weights_fmt, weights_tensor });
     auto bias = engine.allocate_memory({ type_to_data_type<T>::value, format::bfyx, { 1,1,output_f,1 } });
@@ -104,8 +104,8 @@ void generic_fully_connected_test(cldnn::format test_input_fmt, cldnn::format te
 
     //EXPECT_EQ(output_layout.format.value, test_input_fmt);
     tensor output_tensor = output_layout.size;
-    int b_size = output_tensor.batch[0];
-    int x_size = output_tensor.feature[0];
+    int b_size = output_tensor.batch(0);
+    int x_size = output_tensor.feature(0);
     EXPECT_EQ(b_size, input_b);
     EXPECT_EQ(x_size, output_f);
     unsigned num_of_operations = f * x * y * 2;
@@ -1307,23 +1307,25 @@ public:
     void run_test(VVF<OutputT> expected) {
         auto& engine = get_test_engine();
 
-        auto input_size = tensor(TensorValue(batch_num()), TensorValue(input_f()), TensorValue(input_x()), TensorValue(input_y()));
-        auto weights_size = tensor(TensorValue(output_f()), TensorValue(input_f()), TensorValue(input_x()), TensorValue(input_y()));
+        auto input_size = tensor({TensorValue(batch_num()), TensorValue(input_f()), TensorValue(input_x()), TensorValue(input_y())});
+        auto weights_size = tensor({TensorValue(output_f()), TensorValue(input_f()), TensorValue(input_x()), TensorValue(input_y())});
 
         auto input_prim = engine.allocate_memory({ input_data_type(), _fmt, input_size });
         auto weights_prim = engine.allocate_memory({ data_types::i8, format::bfyx, weights_size });
-        auto quantization_input_low = engine.allocate_memory({ data_types::f32, format::bfyx, tensor(feature(output_f())) });
-        auto quantization_input_high = engine.allocate_memory({ data_types::f32, format::bfyx, tensor(feature(output_f())) });
-        auto quantization_output_low = engine.allocate_memory({ data_types::f32, format::bfyx, tensor(feature(1)) });
-        auto quantization_output_high = engine.allocate_memory({ data_types::f32, format::bfyx, tensor(feature(1)) });
+        auto quantization_input_low = engine.allocate_memory({ data_types::f32, format::bfyx, tensor({TensorValue(output_f())}) });
+        auto quantization_input_high = engine.allocate_memory({ data_types::f32, format::bfyx, tensor({TensorValue(output_f())}) });
+        auto quantization_output_low = engine.allocate_memory({ data_types::f32, format::bfyx, tensor({1}) });
+        auto quantization_output_high = engine.allocate_memory({ data_types::f32, format::bfyx, tensor({1}) });
 
         VF<InputT> input_flattened(input_prim->get_layout().get_linear_size());
         for (size_t bi = 0; bi < batch_num(); ++bi)
             for (size_t fi = 0; fi < input_f(); ++fi)
                 for (size_t yi = 0; yi < input_y(); ++yi)
                     for (size_t xi = 0; xi < input_x(); ++xi) {
-                        auto idx = tensor((int32_t)bi, (int32_t)fi, (int32_t)xi, (int32_t)yi);
-                        auto offset = input_size.get_linear_offset(idx, _fmt);
+                        auto idx = tensor({TensorValue(bi), TensorValue(fi), TensorValue(yi), TensorValue(xi)});
+                        // TODO(GPU_DYN)
+                        auto offset = 0;
+                        // auto offset = input_size.get_linear_offset(idx);
                         input_flattened[offset] = _input[bi][fi][yi][xi];
                     }
 
@@ -1334,7 +1336,7 @@ public:
         set_values(quantization_output_low, { _quantization.output_low });
         set_values(quantization_output_high, { _quantization.output_high });
 
-        auto bias_prim = engine.allocate_memory({ data_types::i32, format::bfyx, tensor(feature(output_f())) });
+        auto bias_prim = engine.allocate_memory({ data_types::i32, format::bfyx, tensor({TensorValue(output_f())}) });
         set_values(bias_prim, _bias);
 
         topology topo;

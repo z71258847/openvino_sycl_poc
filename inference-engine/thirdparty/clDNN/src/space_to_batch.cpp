@@ -34,27 +34,27 @@ layout space_to_batch_inst::calc_output_layout(space_to_batch_node const& node) 
     const auto& pads_begin = desc->pads_begin;
     const auto& pads_end = desc->pads_end;
 
-    if (block_shape.batch[0] != 1)
+    if (block_shape.batch(0) != 1)
         CLDNN_ERROR_MESSAGE(node.id(),
             "block_shape[0] is expected to be 1. Actual block_shape[0] is " +
-            std::to_string(block_shape.batch[0]));
+            std::to_string(block_shape.batch(0)));
 
-    if (pads_begin.batch[0] != 0)
+    if (pads_begin.batch(0) != 0)
         CLDNN_ERROR_MESSAGE(node.id(),
             "pads_begin[0] is expected to be 0. Actual pads_begin[0] is " +
-            std::to_string(pads_begin.batch[0]));
+            std::to_string(pads_begin.batch(0)));
 
-    if (pads_end.batch[0] != 0)
+    if (pads_end.batch(0) != 0)
         CLDNN_ERROR_MESSAGE(node.id(),
             "pads_end[0] is expected to be 0. Actual pads_end[0] is " +
-            std::to_string(pads_end.batch[0]));
+            std::to_string(pads_end.batch(0)));
 
-    if ((input_layout.size.feature[0] + pads_begin.feature[0] + pads_end.feature[0]) % block_shape.feature[0] != 0)
+    if ((input_layout.size.feature(0) + pads_begin.feature(0) + pads_end.feature(0)) % block_shape.feature(0) != 0)
             CLDNN_ERROR_MESSAGE(node.id(),
                 "Input feature shape after padding must be divisible by block_shape");
 
     for (size_t i = 0; i < spatial_num; ++i)
-        if ((input_layout.size.spatial[i] + pads_begin.spatial[i] + pads_end.spatial[i]) % block_shape.spatial[i] != 0)
+        if ((input_layout.size.spatial(i) + pads_begin.spatial(i) + pads_end.spatial(i)) % block_shape.spatial(i) != 0)
             CLDNN_ERROR_MESSAGE(node.id(),
                 "Input spatial shapes after padding must be divisible by block_shape");
 

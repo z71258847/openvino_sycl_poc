@@ -21,11 +21,11 @@ template <typename T>
 void mvn_compute_mean_across_channels(cldnn::memory::ptr output, bool normalize_variance) {
     auto output_size = output->get_layout().size;
 
-    uint32_t batch_size = output_size.batch[0];
-    uint32_t feature_size = output_size.feature[0];
-    uint32_t z_size = output_size.spatial[2];
-    uint32_t y_size = output_size.spatial[1];
-    uint32_t x_size = output_size.spatial[0];
+    uint32_t batch_size = output_size.batch(0);
+    uint32_t feature_size = output_size.feature(0);
+    uint32_t z_size = output_size.spatial(2);
+    uint32_t y_size = output_size.spatial(1);
+    uint32_t x_size = output_size.spatial(0);
 
     cldnn::mem_lock<T> buff(output, get_test_stream());
 
@@ -38,7 +38,7 @@ void mvn_compute_mean_across_channels(cldnn::memory::ptr output, bool normalize_
             for (uint32_t z = 0; z < z_size; z++) {
                 for (uint32_t y = 0; y < y_size; ++y) {
                     for (uint32_t x = 0; x < x_size; ++x) {
-                        auto index_tensor = tensor(batch(b), feature(f), spatial(x, y, z, 0));
+                        auto index_tensor = tensor({b, f, z, y, x});
                         size_t data_index = output->get_layout().get_linear_offset(index_tensor);
                         float data = static_cast<float>(buff[data_index]);
                         sum += data;
@@ -64,11 +64,11 @@ template <typename T>
 void mvn_compute_mean_within_channels(cldnn::memory::ptr output, bool normalize_variance) {
     auto output_size = output->get_layout().size;
 
-    uint32_t batch_size = output_size.batch[0];
-    uint32_t feature_size = output_size.feature[0];
-    uint32_t z_size = output_size.spatial[2];
-    uint32_t y_size = output_size.spatial[1];
-    uint32_t x_size = output_size.spatial[0];
+    uint32_t batch_size = output_size.batch(0);
+    uint32_t feature_size = output_size.feature(0);
+    uint32_t z_size = output_size.spatial(2);
+    uint32_t y_size = output_size.spatial(1);
+    uint32_t x_size = output_size.spatial(0);
 
     cldnn::mem_lock<T> buff(output, get_test_stream());
 
@@ -81,7 +81,7 @@ void mvn_compute_mean_within_channels(cldnn::memory::ptr output, bool normalize_
             for (uint32_t z = 0; z < z_size; ++z) {
                 for (uint32_t y = 0; y < y_size; ++y) {
                     for (uint32_t x = 0; x < x_size; ++x) {
-                        auto index_tensor = tensor(batch(b), feature(f), spatial(x, y, z, 0));
+                        auto index_tensor = tensor({b, f, z, y, x});
                         size_t data_index = output->get_layout().get_linear_offset(index_tensor);
                         float data = static_cast<float>(buff[data_index]);
                         sum += data;
@@ -550,12 +550,12 @@ struct mvn_random_test : ::testing::TestWithParam<mvn_basic_test_params> {
     void fill_data(memory::ptr mem, const tests::VVVVVF<T>& data) {
         auto size = mem->get_layout().size;
         cldnn::mem_lock<T> ptr(mem, get_test_stream());
-        for (size_t bi = 0; bi < static_cast<size_t>(size.batch[0]); ++bi) {
-            for (size_t fi = 0; fi < static_cast<size_t>(size.feature[0]); ++fi) {
-                for (size_t zi = 0; zi < static_cast<size_t>(size.spatial[2]); ++zi) {
-                    for (size_t yi = 0; yi < static_cast<size_t>(size.spatial[1]); ++yi) {
-                        for (size_t xi = 0; xi < static_cast<size_t>(size.spatial[0]); ++xi) {
-                            auto tensor_addr = tensor(batch(bi), feature(fi), spatial(xi, yi, zi, 0));
+        for (size_t bi = 0; bi < static_cast<size_t>(size.batch(0)); ++bi) {
+            for (size_t fi = 0; fi < static_cast<size_t>(size.feature(0)); ++fi) {
+                for (size_t zi = 0; zi < static_cast<size_t>(size.spatial(2)); ++zi) {
+                    for (size_t yi = 0; yi < static_cast<size_t>(size.spatial(1)); ++yi) {
+                        for (size_t xi = 0; xi < static_cast<size_t>(size.spatial(0)); ++xi) {
+                            auto tensor_addr = tensor({bi, fi, zi, yi, xi});
                             auto offset = mem->get_layout().get_linear_offset(tensor_addr);
                             ptr[offset] = data[bi][fi][xi][yi][zi];
                         }
@@ -568,11 +568,11 @@ struct mvn_random_test : ::testing::TestWithParam<mvn_basic_test_params> {
     template <typename T>
     void fill_random_data(memory::ptr mem, int min, int max, int k = 8) {
         auto size = mem->get_layout().size;
-        auto input_data = tests::generate_random_5d<T>(size.batch[0],
-                                                       size.feature[0],
-                                                       size.spatial[0],
-                                                       size.spatial[1],
-                                                       size.spatial[2],
+        auto input_data = tests::generate_random_5d<T>(size.batch(0),
+                                                       size.feature(0),
+                                                       size.spatial(0),
+                                                       size.spatial(1),
+                                                       size.spatial(2),
                                                        min,
                                                        max,
                                                        k);

@@ -24,16 +24,16 @@ layout region_yolo_inst::calc_output_layout(region_yolo_node const& node) {
         return cldnn::layout(
             input_layout.data_type,
             input_layout.format,
-            tensor(input_layout.size.batch[0],
-                   input_layout.size.feature[0] * input_layout.size.spatial[0] * input_layout.size.spatial[1],
+            tensor({input_layout.size.batch(0),
+                   input_layout.size.feature(0) * input_layout.size.spatial(0) * input_layout.size.spatial(1),
                    1,
-                   1));
+                   1}));
     } else {
         tensor::value_type features = (desc->classes + desc->coords + 1) * desc->mask_size;
         return cldnn::layout(
             input_layout.data_type,
             input_layout.format,
-            tensor(input_layout.size.batch[0], features, input_layout.size.spatial[0], input_layout.size.spatial[1]));
+            tensor({input_layout.size.batch(0), features, input_layout.size.spatial(0), input_layout.size.spatial(1)}));
     }
 }
 

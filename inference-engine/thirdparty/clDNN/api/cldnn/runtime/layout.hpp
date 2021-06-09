@@ -6,6 +6,7 @@
 
 #include "tensor.hpp"
 #include "half.hpp"
+#include "check.hpp"
 
 #include <cmath>
 #include <cstdlib>
@@ -257,7 +258,7 @@ struct padding {
     /// @param upper_sizes Bottom-right padding sizes. See @ref tensor::tensor(const std::vector<value_type>&, value_type) for details.
     /// @param filling_value Filling value for padding area.
     padding(const std::vector<tensor::value_type>& lower_sizes, const std::vector<tensor::value_type>& upper_sizes, float filling_value = 0.0f)
-        : _lower_size(to_abs(lower_sizes), 0), _upper_size(to_abs(upper_sizes), 0), _filling_value(filling_value) {}
+        : _lower_size(to_abs(lower_sizes)), _upper_size(to_abs(upper_sizes)), _filling_value(filling_value) {}
 
     /// @brief Constrcuts symmetric padding.
     /// @param sizes Top-left and bottom-right padding sizes. See @ref tensor::tensor(const std::vector<value_type>&, value_type) for details.
@@ -270,8 +271,8 @@ struct padding {
 
     /// @brief Returns true if padding size is not zero.
     explicit operator bool() const {
-        return std::any_of(_lower_size.raw.begin(), _lower_size.raw.end(), [](const tensor::value_type& el) { return el != 0; }) ||
-               std::any_of(_upper_size.raw.begin(), _upper_size.raw.end(), [](const tensor::value_type& el) { return el != 0; });
+        return std::any_of(_lower_size.begin(), _lower_size.end(), [](const dimension& el) { return el != 0; }) ||
+               std::any_of(_upper_size.begin(), _upper_size.end(), [](const dimension& el) { return el != 0; });
     }
 
     friend bool operator==(const padding& lhs, const padding& rhs) {
@@ -283,11 +284,13 @@ struct padding {
     }
 
     friend bool operator<(const padding& lhs, const padding& rhs) {
-        if (lhs._filling_value != rhs._filling_value)
-            return (lhs._filling_value < rhs._filling_value);
-        if (lhs._lower_size != rhs._lower_size)
-            return (lhs._lower_size < rhs._lower_size);
-        return (lhs._upper_size < rhs._upper_size);
+        // FIXME[DYN_GPU]
+        return false;
+        // if (lhs._filling_value != rhs._filling_value)
+        //     return (lhs._filling_value < rhs._filling_value);
+        // if (lhs._lower_size != rhs._lower_size)
+        //     return (lhs._lower_size < rhs._lower_size);
+        // return (lhs._upper_size < rhs._upper_size);
     }
 
     static padding max(padding const& lhs, padding const& rhs, float filling_value = 0.0f) {
@@ -340,55 +343,68 @@ struct layout {
     }
 
     friend bool operator<(const layout& lhs, const layout& rhs) {
+        // TODO(DYN_GPU) Remove this method
         if (lhs.data_type != rhs.data_type)
             return (lhs.data_type < rhs.data_type);
         if (lhs.format != rhs.format)
             return (lhs.format < rhs.format);
-        if (lhs.size < rhs.size)
-            return (lhs.size < rhs.size);
+        // if (lhs.size < rhs.size)
+        //     return (lhs.size < rhs.size);
         return (lhs.data_padding < rhs.data_padding);
     }
 
     /// Number of elements to be stored in this memory layout
     size_t count() const { return size.count(); }
 
+    /// Number of bytes needed to store this layout
+    size_t element_size() const { return data_type_traits::size_of(data_type); }
+    size_t bytes_count() const { return element_size() * count(); }
+
     /// Layout size with padding included
     tensor get_buffer_size() const {
-        return size.add(data_padding.lower_size()).add(data_padding.upper_size());
+        // return size.add(data_padding.lower_size()).add(data_padding.upper_size());
+        // FIXME[GPU_DYN]
+        return size;
     }
 
     tensor get_pitches() const {
-        auto sizes = get_buffer_size().sizes(format);
+        // auto sizes = get_buffer_size().sizes(format);
 
-        std::vector<tensor::value_type> pitches(sizes.size(), tensor::value_type(1));
-        std::partial_sum(sizes.rbegin(), sizes.rend() - 1, pitches.rbegin() + 1, std::multiplies<tensor::value_type>());
-        return {format, pitches};
+        // std::vector<tensor::value_type> pitches(sizes.size(), tensor::value_type(1));
+        // std::partial_sum(sizes.rbegin(), sizes.rend() - 1, pitches.rbegin() + 1, std::multiplies<tensor::value_type>());
+        // return {format, pitches};
+
+        // FIXME[GPU_DYN]
+        return {};
     }
 
     // @brief Calculates position within buffer of the data element pointed by the provided tensor.
     // element == { 0,0,0,0 } means first no-padding (i.e. data) element
     size_t get_linear_offset(tensor element = tensor(0)) const {
-        auto l_padd = data_padding.lower_size();
-        auto u_padd = data_padding.upper_size();
+        // auto l_padd = data_padding.lower_size();
+        // auto u_padd = data_padding.upper_size();
 
-        if ((element.batch[0] < 0 && -element.batch[0] > l_padd.batch[0]) ||
-            (element.feature[0] < 0 && -element.feature[0] > l_padd.feature[0]) ||
-            (element.spatial[0] < 0 && -element.spatial[0] > l_padd.spatial[0]) ||
-            (element.spatial[1] < 0 && -element.spatial[1] > l_padd.spatial[1]) ||
-            (element.spatial[2] < 0 && -element.spatial[2] > l_padd.spatial[2]) ||
-            (element.spatial[3] < 0 && -element.spatial[3] > l_padd.spatial[3]) ||
-            (element.batch[0] >= size.batch[0] + u_padd.batch[0]) ||
-            (element.feature[0] >= size.feature[0] + u_padd.feature[0]) ||
-            (element.spatial[0] >= size.spatial[0] + u_padd.spatial[0]) ||
-            (element.spatial[1] >= size.spatial[1] + u_padd.spatial[1]) ||
-            (element.spatial[2] >= size.spatial[2] + u_padd.spatial[2]) ||
-            (element.spatial[3] >= size.spatial[3] + u_padd.spatial[3]))
-            throw std::invalid_argument("Requested to calculate linear offset for an element which lies outside of the buffer range.");
+        // if ((element.batch(0) < 0 && -element.batch(0) > l_padd.batch(0)) ||
+        //     (element.feature(0) < 0 && -element.feature(0) > l_padd.feature(0)) ||
+        //     (element.spatial(0) < 0 && -element.spatial(0) > l_padd.spatial(0)) ||
+        //     (element.spatial(1) < 0 && -element.spatial(1) > l_padd.spatial(1)) ||
+        //     (element.spatial(2) < 0 && -element.spatial(2) > l_padd.spatial(2)) ||
+        //     (element.spatial(3) < 0 && -element.spatial(3) > l_padd.spatial(3)) ||
+        //     (element.batch(0) >= size.batch(0) + u_padd.batch(0)) ||
+        //     (element.feature(0) >= size.feature(0) + u_padd.feature(0)) ||
+        //     (element.spatial(0) >= size.spatial(0) + u_padd.spatial(0)) ||
+        //     (element.spatial(1) >= size.spatial(1) + u_padd.spatial(1)) ||
+        //     (element.spatial(2) >= size.spatial(2) + u_padd.spatial(2)) ||
+        //     (element.spatial(3) >= size.spatial(3) + u_padd.spatial(3)))
+        //     throw std::invalid_argument("Requested to calculate linear offset for an element which lies outside of the buffer range.");
 
-        auto padded_size = size + l_padd + u_padd;
-        auto padded_element = element + l_padd;
+        // auto padded_size = size + l_padd + u_padd;
+        // auto padded_element = element + l_padd;
 
-        return padded_size.get_linear_offset(padded_element, format);
+        // return padded_size.get_linear_offset(padded_element, format);
+
+        // FIXME[GPU_DYN]
+        return 0;
     }
 
     /// @brief Get aligned linear size calculated as multiplication of all elements.
@@ -455,6 +471,14 @@ struct layout {
         return (this->data_type == data_types::bin) ? ceil_div(total, 32) : total;
     }
 
+    bool is_dynamic() const { return size.is_dynamic(); }
+
+    layout upper_bound() const {
+        auto max_shape = size.get_max_shape();
+        cldnn::tensor ub_shape(std::vector<tensor::value_type>(max_shape.begin(), max_shape.end()));
+        return {data_type, format, ub_shape, data_padding};
+    }
+
     /// Modify padding in layout
     layout with_padding(padding const& padd) const {
         layout ret = *this;
@@ -473,9 +497,6 @@ struct layout {
 
     /// Explicit padding of the @ref memory
     padding data_padding;
-
-    /// Number of bytes needed to store this layout
-    size_t bytes_count() const { return data_type_traits::size_of(data_type) * get_linear_size(); }
 
     bool has_fused_format(data_types const& dt, cldnn::format const& fmt) const {
         return (data_type == dt && format == fmt);

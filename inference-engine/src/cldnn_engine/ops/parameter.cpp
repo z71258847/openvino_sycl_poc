@@ -41,49 +41,43 @@ void CreateParameterOp(Program& p, const std::shared_ptr<ngraph::op::v0::Paramet
                                                            : TensorValue(p.m_curBatch);
     switch (inputDims.size()) {
     case 6:
-        dataTensor = cldnn::tensor(cldnn::batch(batch),
-                                   cldnn::feature(inputDims[1]),
-                                   cldnn::spatial(inputDims[5], inputDims[4], inputDims[3], inputDims[2]));
+        dataTensor = cldnn::tensor({batch, inputDims[1], inputDims[2], inputDims[3], inputDims[4], inputDims[5]});
         break;
     case 5:
         if (Layout::NCDHW == l) {
-            dataTensor = cldnn::tensor(cldnn::batch(batch),
-                                       cldnn::feature(inputDims[1]),
-                                       cldnn::spatial(inputDims[4], inputDims[3], inputDims[2]));
+            dataTensor = cldnn::tensor({batch, inputDims[1], inputDims[2], inputDims[3], inputDims[4]});
         } else {
             IE_THROW()  << "Unsupported layout (" << l << ") in 5D input " << inputInfo->name();
         }
         break;
     case 4:
         if (Layout::NCHW == l || Layout::CHW == l) {
-            dataTensor = cldnn::tensor(batch,
-                                       TensorValue(inputDims[1]), TensorValue(inputDims[3]), TensorValue(inputDims[2]));
+            dataTensor = cldnn::tensor({batch, TensorValue(inputDims[1]), TensorValue(inputDims[2]), TensorValue(inputDims[3])});
         } else if (Layout::NHWC == l) {
-            dataTensor = cldnn::tensor(batch,
-                                       TensorValue(inputDims[1]), TensorValue(inputDims[3]), TensorValue(inputDims[2]));
+            dataTensor = cldnn::tensor({batch, TensorValue(inputDims[1]), TensorValue(inputDims[3]), TensorValue(inputDims[2])});
         } else {
             IE_THROW() << "Unsupported layout (" << l << ") in 4D input " + inputInfo->name();
         }
         break;
     case 3:
         if (Layout::CHW == l) {
-            dataTensor = cldnn::tensor(TensorValue(inputDims[0]), TensorValue(inputDims[1]), 1, TensorValue(inputDims[2]));
+            dataTensor = cldnn::tensor({TensorValue(inputDims[0]), TensorValue(inputDims[1]), TensorValue(inputDims[2])});
         } else {
             IE_THROW() << "Unsupported layout (" << l << ") in 3D input " + inputInfo->name();
         }
         break;
     case 2:
         if (Layout::NCHW == l || NC == l) {
-            dataTensor = cldnn::tensor(batch, TensorValue(inputDims[1]), 1, 1);
+            dataTensor = cldnn::tensor({batch, TensorValue(inputDims[1]), 1, 1});
         } else {
             IE_THROW() << "Unsupported layout (" << l << ") in 2D input " << inputInfo->name();
         }
         break;
     case 1:
-        dataTensor = cldnn::tensor(TensorValue(inputDims[0]), 1, 1, 1);
+        dataTensor = cldnn::tensor({TensorValue(inputDims[0]), 1, 1, 1});
         break;
     case 0:
-        dataTensor = cldnn::tensor(1, 1, 1, 1);
+        dataTensor = cldnn::tensor({1, 1, 1, 1});
         break;
     default: IE_THROW() << "Invalid data dimensions";
     }
@@ -96,13 +90,13 @@ void CreateParameterOp(Program& p, const std::shared_ptr<ngraph::op::v0::Paramet
     auto preProcess = inputInfo->getPreProcess();
     size_t meanChannels = preProcess.getNumberOfChannels();
     networkInputLayout.format = inputFormat;
-    networkInputLayout.size = networkInputLayout.size.transform(inputFormat, 1);
+    networkInputLayout.size = networkInputLayout.size;
     networkInputLayout.data_type = DataTypeFromPrecision(op->get_output_element_type(0));
     cldnn::primitive_id meanBlobID = inputName + Program::m_meanValuesTag;
     std::vector<float> meanValues;
 
     if ((meanChannels > 0) &&
-        (meanChannels != networkInputLayout.size.feature[0])) {
+        (meanChannels != networkInputLayout.size.feature(0))) {
         IE_THROW() << "Mismatched mean values channels in input " << inputName;
     }
 
@@ -149,7 +143,7 @@ void CreateParameterOp(Program& p, const std::shared_ptr<ngraph::op::v0::Paramet
 
         // mean values will use external format (sub in the input format before convert to new format)
         cldnn::tensor meanBlobTensor(networkInputLayout.size);
-        meanBlobTensor.batch[0] = 1;  // mean values have no batches
+        meanBlobTensor.set_batch(0, 1);  // mean values have no batches
         cldnn::layout meanBlobLayout(cldnn::data_types::f32, cldnn::format::bfyx, meanBlobTensor);
 
         auto data = static_cast<const char *>(meanBlobPtr->buffer());

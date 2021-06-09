@@ -5,7 +5,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "pass_manager.h"
-#include "program_node.h"
+#include "cldnn/graph/program_node.hpp"
 #include "layout_optimizer.h"
 #include "cldnn/graph/program.hpp"
 #include "program_helpers.h"

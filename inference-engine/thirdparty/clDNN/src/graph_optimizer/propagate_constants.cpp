@@ -5,7 +5,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "pass_manager.h"
-#include "program_node.h"
+#include "cldnn/graph/program_node.hpp"
 #include "cldnn/runtime/engine.hpp"
 #include "cldnn/graph/program.hpp"
 #include "cldnn/graph/network.hpp"
@@ -138,7 +138,7 @@ void propagate_constants::handle_constant(program& prog, program_node& node) {
 void propagate_constants::add_constant(program& prog, program_node& node) {
     if (node.is_type<data>())
         return;
-    nodes.insert(prog.get_node_ptr(node.get_primitive()->id));
+    nodes.insert(prog.get_node_ptr(node.get_primitive()->output_ids[0]));
     has_non_trivial_constants = true;
 
     // if a node is either an endpoint or an output, always add it as an output
@@ -160,9 +160,9 @@ void propagate_constants::add_deps_to_tpl(program& prog, const std::vector<progr
     */
     for (auto& dep : deps) {
         if (dep->is_type<data>()) {
-            auto dep_ptr = prog.get_node_ptr(dep->get_primitive()->id);
+            auto dep_ptr = prog.get_node_ptr(dep->get_primitive()->output_ids[0]);
             if (nodes.find(dep_ptr) == nodes.end()) {
-                nodes.insert(prog.get_node_ptr(dep->get_primitive()->id));
+                nodes.insert(prog.get_node_ptr(dep->get_primitive()->output_ids[0]));
                 const_inputs.push_back(&dep->as<data>());
             }
         }

@@ -168,11 +168,11 @@ void CreateMatMulOp(Program& p, const std::shared_ptr<ngraph::op::v0::MatMul>& o
 
         auto gemmSpecificTensor = [](const InferenceEngine::SizeVector& dims) {
             switch (dims.size()) {
-            case 2: return cldnn::tensor(cldnn::spatial(dims[1], dims[0]));
-            case 3: return cldnn::tensor(cldnn::batch(dims[0]), cldnn::spatial(dims[2], dims[1]));
-            case 4: return cldnn::tensor(cldnn::batch(dims[0]), cldnn::feature(dims[1]), cldnn::spatial(dims[3], dims[2]));
-            case 5: return cldnn::tensor(cldnn::batch(dims[0]), cldnn::feature(dims[1]), cldnn::spatial(dims[4], dims[3], dims[2]));
-            case 6: return cldnn::tensor(cldnn::batch(dims[0]), cldnn::feature(dims[1]), cldnn::spatial(dims[5], dims[4], dims[3], dims[2]));
+            case 2: return cldnn::tensor({dims[0], dims[1]});
+            case 3: return cldnn::tensor({dims[0], dims[1], dims[2]});
+            case 4: return cldnn::tensor({dims[0], dims[1], dims[2], dims[3]});
+            case 5: return cldnn::tensor({dims[0], dims[1], dims[2], dims[3], dims[4]});
+            case 6: return cldnn::tensor({dims[0], dims[1], dims[2], dims[3], dims[4], dims[5]});
             default: IE_THROW() << "Invalid dimensions size(" << dims.size() << ") for Gemm layer";
             }
         };

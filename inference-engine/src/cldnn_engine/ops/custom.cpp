@@ -176,7 +176,7 @@ void CreateCustomOp(Program& p, const std::shared_ptr<ngraph::Node>& op, CLDNNCu
     size_t C = (dims.size() > 1) ? dims[1] : 1;
     size_t H = (dims.size() > 2) ? dims[2] : 1;
     size_t W = (dims.size() > 3) ? dims[3] : 1;
-    cldnn::tensor outputTensor = cldnn::tensor(cldnn::batch(N), cldnn::feature(C), cldnn::spatial(W, H));
+    cldnn::tensor outputTensor = cldnn::tensor({N, C, H, W});
 
     cldnn::layout outputLayout = cldnn::layout(DataTypeFromPrecision(op->get_output_element_type(0)), outputFormat, outputTensor);
 
@@ -184,10 +184,10 @@ void CreateCustomOp(Program& p, const std::shared_ptr<ngraph::Node>& op, CLDNNCu
     std::vector<size_t> gws, lws;
 
     // assume output tensor is dimension source by default
-    int batchDim = outputTensor.batch[0];
-    int featureDim = outputTensor.feature[0];
-    int yDim = outputTensor.spatial[1];
-    int xDim = outputTensor.spatial[0];
+    int batchDim = outputTensor.batch(0);
+    int featureDim = outputTensor.feature(0);
+    int yDim = outputTensor.spatial(1);
+    int xDim = outputTensor.spatial(0);
     int iidx = customLayer->InputDimSourceIndex();
 
     std::string genericLayerName = layer_type_name_ID(op);

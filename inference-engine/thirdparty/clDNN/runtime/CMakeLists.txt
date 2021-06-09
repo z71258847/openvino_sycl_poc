@@ -59,6 +59,7 @@ endif()
 target_link_libraries("${CLDNN_BUILD__PROJ}" PRIVATE
     OpenCL
     openvino::itt
+    ngraph
   )
 
 if(WIN32)

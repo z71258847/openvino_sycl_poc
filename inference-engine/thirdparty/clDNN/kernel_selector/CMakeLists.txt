@@ -131,6 +131,7 @@ endif()
 
 target_link_libraries("${CLDNN_BUILD__PROJ}"
     OpenCL
+    ngraph
   )
 
 if(WIN32)

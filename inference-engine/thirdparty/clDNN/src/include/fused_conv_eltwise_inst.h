@@ -42,7 +42,7 @@ public:
     bool get_transposed() const { return transposed; }
 
     program_node& input(size_t idx = 0) const {
-        if (static_cast<int32_t>(idx) >= static_cast<int32_t>(desc->input.size()))
+        if (static_cast<int32_t>(idx) >= static_cast<int32_t>(desc->input_ids.size()))
             throw std::range_error("input index too big");
 
         return get_dependency(idx);
@@ -52,14 +52,14 @@ public:
         if (static_cast<int32_t>(idx) >= this->get_split())
             throw std::range_error("weights offset too big");
 
-        return get_dependency(desc->input.size() + idx);
+        return get_dependency(desc->input_ids.size() + idx);
     }
 
     program_node& bias(size_t idx = 0) const {
         if (static_cast<int32_t>(idx) >= this->get_split())
             throw std::range_error("bias offset too big");
 
-        return get_dependency(desc->input.size() + this->get_split() + idx);
+        return get_dependency(desc->input_ids.size() + this->get_split() + idx);
     }
 
     bool bias_term() const { return get_primitive()->conv.bias.size() > 0; }

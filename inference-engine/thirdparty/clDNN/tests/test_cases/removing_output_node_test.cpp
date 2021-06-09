@@ -30,9 +30,9 @@ TEST(removing_output_node, multiple_outputs) {
     int32_t axis = 0;
     int32_t group = 2;
 
-    tensor initial_shape = tensor(spatial(x_size, y_size), feature(feature_num), batch(batch_num));
-    tensor after_strided_slice = tensor(spatial(y_size, feature_num), feature(batch_num), batch(1));
-    tensor after_reshape = tensor(feature(batch_num * feature_num * y_size * x_size));
+    tensor initial_shape = tensor({batch_num, feature_num, y_size, x_size});
+    tensor after_strided_slice = tensor({1, batch_num, feature_num, y_size});
+    tensor after_reshape = tensor({batch_num * feature_num * y_size * x_size});
 
     auto input = engine.allocate_memory({ data_types::f32, format::bfyx, initial_shape });
     auto begin = engine.allocate_memory({ data_types::i32, format::bfyx, { 4, 1, 1, 1 } });
@@ -137,10 +137,10 @@ TEST(removing_output_node, output_node_optimization) {
     auto output_layout = output_memory->get_layout();
     cldnn::mem_lock<float> output_ptr(output_memory, get_test_stream());
 
-    int y_size = output_layout.size.spatial[1];
-    int x_size = output_layout.size.spatial[0];
-    int f_size = output_layout.size.feature[0];
-    int b_size = output_layout.size.batch[0];
+    int y_size = output_layout.size.spatial(1);
+    int x_size = output_layout.size.spatial(0);
+    int f_size = output_layout.size.feature(0);
+    int b_size = output_layout.size.batch(0);
     EXPECT_EQ(output_layout.format, format::yxfb);
     EXPECT_EQ(y_size, 2);
     EXPECT_EQ(x_size, 3);

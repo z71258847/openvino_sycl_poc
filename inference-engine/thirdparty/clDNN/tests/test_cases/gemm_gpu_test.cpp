@@ -3452,19 +3452,19 @@ public:
             x1_pitch = 1;
         }
 
-        auto input0_size = tensor((int)p.b0_num, (int)p.f0_num, (int)x0_size, (int)y0_size);
+        auto input0_size = tensor({TensorValue(p.b0_num), TensorValue(p.f0_num), TensorValue(x0_size), TensorValue(y0_size)});
         VVVVF<input0_type> input0_data = generate_random_4d<input0_type>(p.b0_num, p.f0_num, x0_size, y0_size, p.range0[0], p.range0[1], p.range0[2]);
         auto input0_data_bfyx = flatten_4d(format::bfyx, input0_data);
         auto input0_mem = engine.allocate_memory({ p.allocate0_type, format::bfyx, input0_size });
         set_values(input0_mem, input0_data_bfyx);
 
-        auto input1_size = tensor((int)p.b1_num, (int)p.f1_num, (int)x1_size, (int)y1_size);
+        auto input1_size = tensor({TensorValue(p.b1_num), TensorValue(p.f1_num), TensorValue(x1_size), TensorValue(y1_size)});
         VVVVF<input1_type> input1_data = generate_random_4d<input1_type>(p.b1_num, p.f1_num, x1_size, y1_size, p.range1[0], p.range1[1], p.range1[2]);
         auto input1_data_bfyx = flatten_4d(format::bfyx, input1_data);
         auto input1_mem = engine.allocate_memory({ p.allocate1_type, format::bfyx, input1_size });
         set_values(input1_mem, input1_data_bfyx);
 
-        auto input2_size = tensor((int)p.b2_num, (int)p.f2_num, (int)x2_size, (int)y2_size);
+        auto input2_size = tensor({TensorValue(p.b2_num), TensorValue(p.f2_num), TensorValue(x2_size), TensorValue(y2_size)});
         VVVVF<input2_type> input2_data = generate_random_4d<input2_type>(p.b2_num, p.f2_num, x2_size, y2_size, p.range2[0], p.range2[1], p.range2[2]);
         auto input2_data_bfyx = flatten_4d(format::bfyx, input2_data);
         auto input2_mem = engine.allocate_memory({ p.allocate2_type, format::bfyx, input2_size });

@@ -59,9 +59,9 @@ public:
         conv_params.split = split;
         conv_params.groups = groups;
         conv_params.filterSize = {
-            (uint32_t)weights_size.spatial[0],
-            (uint32_t)weights_size.spatial[1],
-            (uint32_t)weights_size.spatial[2],
+            (uint32_t)weights_size.spatial(0),
+            (uint32_t)weights_size.spatial(1),
+            (uint32_t)weights_size.spatial(2),
         };
 
         auto& kernel_selector = kernel_selector::deformable_conv_kernel_selector::Instance();
@@ -118,19 +118,19 @@ public:
         conv_params.inputs.push_back(convert_data_tensor(arg.trans().get_output_layout()));
         conv_params.deformable_groups = deformable_groups;
 
-        conv_params.padding = {(uint32_t)std::max(-input_offset.spatial[0], 0),
-                               (uint32_t)std::max(-input_offset.spatial[1], 0),
-                               (uint32_t)std::max(-input_offset.spatial[2], 0)};
+        conv_params.padding = {(uint32_t)std::max<tensor::value_type>(-input_offset.spatial(0), 0),
+                               (uint32_t)std::max<tensor::value_type>(-input_offset.spatial(1), 0),
+                               (uint32_t)std::max<tensor::value_type>(-input_offset.spatial(2), 0)};
 
-        conv_params.stride = {(uint32_t)stride.spatial[0], (uint32_t)stride.spatial[1], (uint32_t)stride.spatial[2]};
+        conv_params.stride = {(uint32_t)stride.spatial(0), (uint32_t)stride.spatial(1), (uint32_t)stride.spatial(2)};
 
-        conv_params.kernelSize = { (uint32_t)kernel_size.spatial[0],
-                                   (uint32_t)kernel_size.spatial[1],
-                                   (uint32_t)kernel_size.spatial[2] };
+        conv_params.kernelSize = { (uint32_t)kernel_size.spatial(0),
+                                   (uint32_t)kernel_size.spatial(1),
+                                   (uint32_t)kernel_size.spatial(2) };
 
-        conv_params.dilation = {(uint32_t)dilation.spatial[0],
-                                (uint32_t)dilation.spatial[1],
-                                (uint32_t)dilation.spatial[2]};
+        conv_params.dilation = {(uint32_t)dilation.spatial(0),
+                                (uint32_t)dilation.spatial(1),
+                                (uint32_t)dilation.spatial(2)};
 
         auto& kernel_selector = kernel_selector::deformable_interp_kernel_selector::Instance();
         kernel_selector::KernelsData best_kernels = kernel_selector.GetBestKernels(conv_params, conv_optional_params);

@@ -45,8 +45,8 @@ void pre_replace_deconv::run(program& p) {
             // limit optimization to stride = 1
             // iterators shouldn't be used here because of incorrect iterator functionality in mutable_array_ref<>
             bool unit_stride = true;
-            for (size_t i = 0; i < deconv_prim->stride.spatial.size(); ++i) {
-                unit_stride &= (deconv_prim->stride.spatial[i] == 1);
+            for (size_t i = 0; i < deconv_prim->stride.rank().get_length() - 2; ++i) {
+                unit_stride &= (deconv_prim->stride.spatial(i) == 1);
             }
             if (unit_stride) {
                 auto groups = deconv_node.get_groups();
@@ -84,9 +84,9 @@ void pre_replace_deconv::run(program& p) {
                     p.remove_connection(*weights_node_ptr, deconv_node);
                 }
 
-                input_offset.spatial[0] = std::abs(input_offset.spatial[0]) - (filter_size.spatial[0] - 1);
-                input_offset.spatial[1] = std::abs(input_offset.spatial[1]) - (filter_size.spatial[1] - 1);
-                input_offset.spatial[2] = std::abs(input_offset.spatial[2]) - (filter_size.spatial[2] - 1);
+                input_offset.set_spatial(0, std::abs(input_offset.spatial(0)) - (filter_size.spatial(0) - 1));
+                input_offset.set_spatial(1, std::abs(input_offset.spatial(1)) - (filter_size.spatial(1) - 1));
+                input_offset.set_spatial(2, std::abs(input_offset.spatial(2)) - (filter_size.spatial(2) - 1));
 
                 std::vector<std::shared_ptr<program_node>> bias_connections;
                 for (auto& bias_id : biases_nodes_id) {
@@ -166,13 +166,13 @@ void pre_replace_deconv::run(program& p) {
                 update_processing_order = true;
             // current optimization only available for specific deconvolution parameters
             } else if (deconv_node.is_output() == false &&
-               deconv_node.get_output_layout().size.feature[0] == 1 &&
-               deconv_prim->stride.spatial[0] == 2 && deconv_prim->stride.spatial[1] == 2 &&
-               filter_size.spatial[0] == 9 && filter_size.spatial[1] == 9 &&
-               deconv_prim->input_offset.spatial[0] == -4 && deconv_prim->input_offset.spatial[1] == -4 &&
+               deconv_node.get_output_layout().size.feature(0) == 1 &&
+               deconv_prim->stride.spatial(0) == 2 && deconv_prim->stride.spatial(1) == 2 &&
+               filter_size.spatial(0) == 9 && filter_size.spatial(1) == 9 &&
+               deconv_prim->input_offset.spatial(0) == -4 && deconv_prim->input_offset.spatial(1) == -4 &&
                weights_nodes_id.size() == 1 && biases_nodes_id.size() == 1 &&
                input_node.get_output_layout().format == format::bfyx) {
-                const auto scale_factor = deconv_prim->stride.spatial[0];
+                const auto scale_factor = deconv_prim->stride.spatial(0);
 
                 const auto& weight_node_id = weights_nodes_id.front();
                 auto weights_node_ptr = p.nodes_map.find(weight_node_id)->second;
@@ -209,7 +209,7 @@ void pre_replace_deconv::run(program& p) {
                 // reshape weights
                 int pixel_shuffle_size = scale_factor * scale_factor;
                 int kernel_size = 5;
-                tensor target_weights_size = { pixel_shuffle_size, filter_size.feature[0], kernel_size, kernel_size };
+                tensor target_weights_size = { pixel_shuffle_size, filter_size.feature(0), kernel_size, kernel_size };
                 auto target_weights_layout = layout{ weights_layout.data_type, weights_layout.format, target_weights_size };
 
                 const primitive_id weight_replace_node_id = weight_node_id + "_conv_rpl";
@@ -231,9 +231,9 @@ void pre_replace_deconv::run(program& p) {
                      std::vector<std::vector<std::vector<float> > > subpixel_weights(pixel_shuffle_size);
 
                      program_helpers::reshape_deconvolution_weights(weights_vec_float,
-                         static_cast<int>(filter_size.feature[0]),
-                         static_cast<int>(filter_size.spatial[0]),
-                         static_cast<int>(filter_size.spatial[1]),
+                         static_cast<int>(filter_size.feature(0)),
+                         static_cast<int>(filter_size.spatial(0)),
+                         static_cast<int>(filter_size.spatial(1)),
                          scale_factor,
                          subpixel_weights);
 

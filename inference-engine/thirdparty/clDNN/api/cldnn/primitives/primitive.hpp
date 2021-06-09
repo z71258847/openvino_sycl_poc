@@ -36,15 +36,15 @@ struct primitive {
 public:
     /// @brief Initialize fields common for all primitives.
     primitive(const primitive_type_id& type,
-              const primitive_id& id,
-              const std::vector<primitive_id>& input,
+              const std::vector<primitive_id>& output_ids,
+              const std::vector<primitive_id>& input_ids,
               const padding& output_padding = padding(),
               const optional_data_type output_data_type = optional_data_type())
         : type(type),
-          id(id),
+          output_ids(output_ids),
           output_padding(output_padding),
           output_data_type(output_data_type),
-          input(input) {}
+          input_ids(input_ids) {}
 
     virtual ~primitive() = default;
 
@@ -53,8 +53,8 @@ public:
         std::vector<std::reference_wrapper<primitive_id>> result;
         auto&& deps = get_dependencies();
 
-        result.reserve(input.size() + deps.size());
-        for (auto& pid : input) result.push_back(std::ref(pid));
+        result.reserve(input_ids.size() + deps.size());
+        for (auto& pid : input_ids) result.push_back(std::ref(pid));
         for (auto& pid : deps) result.push_back(std::ref(const_cast<primitive_id&>(pid.get())));
 
         return result;
@@ -62,7 +62,7 @@ public:
 
     /// @brief Returns copy of all primitive ids on which this primitive depends - inputs, weights, biases, etc.
     std::vector<primitive_id> dependencies() const {
-        auto result = input;
+        auto result = input_ids;
         auto deps = get_dependencies();
         result.insert(result.end(), deps.begin(), deps.end());
         return result;
@@ -71,13 +71,15 @@ public:
     virtual primitive_id type_string() const = 0;
 
     /// @brief Implicit conversion to primiitive id.
-    operator primitive_id() const { return id; }
+    // operator primitive_id() const { return id; }
 
     /// @brief Primitive's type id.
     const primitive_type_id type;
 
+    using primitive_id_arr = std::vector<primitive_id>;
+
     /// @brief Primitive's id.
-    const primitive_id id;
+    const primitive_id_arr output_ids;
 
     /// @brief Requested output padding.
     padding output_padding;
@@ -85,12 +87,10 @@ public:
     /// @brief Requested output precision, if any.
     optional_data_type output_data_type;
 
-    size_t input_size() const { return input.size(); }
-
-    using primitive_id_arr = std::vector<primitive_id>;
+    size_t input_size() const { return input_ids.size(); }
 
     /// @brief List of ids of input primitives.
-    primitive_id_arr input;
+    primitive_id_arr input_ids;
 
 protected:
     virtual std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const { return {}; }
@@ -102,11 +102,17 @@ protected:
 template <class PType>
 class primitive_base : public primitive {
 protected:
-    explicit primitive_base(const primitive_id& id,
-                            const std::vector<primitive_id>& input,
+    explicit primitive_base(const std::vector<primitive_id>& output_ids,
+                            const std::vector<primitive_id>& input_ids,
                             const padding& output_padding = padding(),
                             optional_data_type output_data_type = optional_data_type())
-        : primitive(PType::type_id(), id, input, output_padding, output_data_type) {}
+        : primitive(PType::type_id(), output_ids, input_ids, output_padding, output_data_type) {}
+
+    explicit primitive_base(const primitive_id& output_id,
+                            const std::vector<primitive_id>& input_ids,
+                            const padding& output_padding = padding(),
+                            optional_data_type output_data_type = optional_data_type())
+        : primitive(PType::type_id(), {output_id}, input_ids, output_padding, output_data_type) {}
 };
 
 struct primitive_info {

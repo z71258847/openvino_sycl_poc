@@ -185,7 +185,7 @@ template <typename T>
 static void runRegionTest(internal::region_yolo_test_params& params)
 {
     auto& engine = get_test_engine();
-    const tensor kInputTensor(params.tensor[0], params.tensor[1], params.tensor[2], params.tensor[3]);
+    const tensor kInputTensor({params.tensor[0], params.tensor[1], params.tensor[2], params.tensor[3]});
     auto inputData = generate_random_1d<T>(params.tensor[0] * params.tensor[1] * params.tensor[2] * params.tensor[3], -1, 1);
 
     auto inputPrim = engine.allocate_memory({ params.dataType, format::bfyx, kInputTensor });

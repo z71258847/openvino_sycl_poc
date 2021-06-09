@@ -81,20 +81,20 @@ public:
         deconv_params.groups = groups;
 
         auto spatial_size = arg.get_output_layout().format.dimension() - 2;
-        uint32_t kx = weights_size.spatial[0];
-        uint32_t ky = weights_size.spatial[1];
-        uint32_t kz = spatial_size == 2 ? 1 : weights_size.spatial[2];
+        uint32_t kx = weights_size.spatial(0);
+        uint32_t ky = weights_size.spatial(1);
+        uint32_t kz = spatial_size == 2 ? 1 : weights_size.spatial(2);
         deconv_params.filterSize = { kx, ky, kz };
 
-        deconv_params.padding = {(uint32_t)std::max(-input_offset.spatial[0], 0),
-                                 (uint32_t)std::max(-input_offset.spatial[1], 0),
-                                 (uint32_t)std::max(-input_offset.spatial[2], 0)};
+        deconv_params.padding = {(uint32_t)std::max<tensor::value_type>(-input_offset.spatial(0), 0),
+                                 (uint32_t)std::max<tensor::value_type>(-input_offset.spatial(1), 0),
+                                 (uint32_t)std::max<tensor::value_type>(-input_offset.spatial(2), 0)};
 
-        deconv_params.stride = {(uint32_t)stride.spatial[0], (uint32_t)stride.spatial[1], (uint32_t)stride.spatial[2]};
+        deconv_params.stride = {(uint32_t)stride.spatial(0), (uint32_t)stride.spatial(1), (uint32_t)stride.spatial(2)};
 
-        deconv_params.dilation = {(uint32_t)dilation.spatial[0],
-                                  (uint32_t)dilation.spatial[1],
-                                  (uint32_t)dilation.spatial[2]};
+        deconv_params.dilation = {(uint32_t)dilation.spatial(0),
+                                  (uint32_t)dilation.spatial(1),
+                                  (uint32_t)dilation.spatial(2)};
 
         auto& kernel_selector = kernel_selector::deconvolution_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(deconv_params, deconv_optional_params);

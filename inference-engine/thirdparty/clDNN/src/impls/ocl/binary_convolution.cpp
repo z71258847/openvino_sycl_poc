@@ -75,7 +75,7 @@ public:
         const auto depthwise_separable_opt = arg.get_depthwise_sep_opt();
         const auto actual_split = depthwise_separable_opt ? (decltype(split))1 : split;
 
-        assert(arg.get_output_layout().size.feature[0] / primitive->split() == weights_layout.size.batch[0]);
+        assert(arg.get_output_layout().size.feature(0) / primitive->split() == weights_layout.size.batch(0));
 
         auto conv_params =
             get_weights_bias_default_params<kernel_selector::binary_convolution_params>(arg, actual_split);
@@ -94,19 +94,19 @@ public:
         conv_params.split = static_cast<uint32_t>(split);
         conv_params.groups = static_cast<uint32_t>(groups);
         conv_params.filterSize = {
-            (uint32_t)weights_size.spatial[0],
-            (uint32_t)weights_size.spatial[1],
-            (uint32_t)weights_size.spatial[2],
+            (uint32_t)weights_size.spatial(0),
+            (uint32_t)weights_size.spatial(1),
+            (uint32_t)weights_size.spatial(2),
         };
 
-        conv_params.padding = {(uint32_t)std::max(-input_offset.spatial[0], 0),
-                               (uint32_t)std::max(-input_offset.spatial[1], 0),
-                               (uint32_t)std::max(-input_offset.spatial[2], 0)};
+        // conv_params.padding = {(uint32_t)std::max<tensor::value_type>(-input_offset[0], 0),
+        //                        (uint32_t)std::max<tensor::value_type>(-input_offset[1], 0),
+        //                        (uint32_t)std::max<tensor::value_type>(-input_offset[2], 0)};
 
-        conv_params.stride = {(uint32_t)stride.spatial[0], (uint32_t)stride.spatial[1], (uint32_t)stride.spatial[2]};
-        conv_params.dilation = {(uint32_t)dilation.spatial[0],
-                                (uint32_t)dilation.spatial[1],
-                                (uint32_t)dilation.spatial[2]};
+        conv_params.stride = {(uint32_t)stride.spatial(0), (uint32_t)stride.spatial(1), (uint32_t)stride.spatial(2)};
+        conv_params.dilation = {(uint32_t)dilation.spatial(0),
+                                (uint32_t)dilation.spatial(1),
+                                (uint32_t)dilation.spatial(2)};
 
         auto& kernel_selector = kernel_selector::binary_convolution_kernel_selector::Instance();
 

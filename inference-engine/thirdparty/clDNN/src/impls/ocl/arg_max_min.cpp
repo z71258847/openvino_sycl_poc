@@ -43,7 +43,7 @@ public:
         const auto& sort_type = primitive->sort;
         const auto& with_axis = primitive->with_axis;
         const auto& values_first = primitive->values_first;
-        const auto& outputs_num = primitive->input.size() == 3 ? 2 : 1;  // second output passed as input for TOP_K layer
+        const auto& outputs_num = primitive->input_ids.size() == 3 ? 2 : 1;  // second output passed as input for TOP_K layer
 
         auto argm_params = get_default_params<kernel_selector::arg_max_min_params>(arg);
         auto argm_optional_params =

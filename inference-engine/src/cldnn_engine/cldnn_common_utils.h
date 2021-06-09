@@ -11,17 +11,15 @@
 
 namespace CLDNNPlugin {
 
-#define TensorValue(val) static_cast<cldnn::tensor::value_type>(val)
-
 const auto CldnnTensorFromIEDims = [](const InferenceEngine::SizeVector& dims, int def = 1) {
     switch (dims.size()) {
-    case 0: return cldnn::tensor(cldnn::batch(def), cldnn::feature(def), cldnn::spatial(def, def));
-    case 1: return cldnn::tensor(cldnn::batch(dims[0]), cldnn::feature(def), cldnn::spatial(def, def));
-    case 2: return cldnn::tensor(cldnn::batch(dims[0]), cldnn::feature(dims[1]), cldnn::spatial(def, def));
-    case 3: return cldnn::tensor(cldnn::batch(dims[0]), cldnn::feature(dims[1]), cldnn::spatial(def, dims[2]));
-    case 4: return cldnn::tensor(cldnn::batch(dims[0]), cldnn::feature(dims[1]), cldnn::spatial(dims[3], dims[2]));
-    case 5: return cldnn::tensor(cldnn::batch(dims[0]), cldnn::feature(dims[1]), cldnn::spatial(dims[4], dims[3], dims[2]));
-    case 6: return cldnn::tensor(cldnn::batch(dims[0]), cldnn::feature(dims[1]), cldnn::spatial(dims[5], dims[4], dims[3], dims[2]));
+    case 0: return cldnn::tensor({ def, def, def, def});
+    case 1: return cldnn::tensor({ dims[0], def, def, def});
+    case 2: return cldnn::tensor({ dims[0], dims[1], def, def});
+    case 3: return cldnn::tensor({ dims[0], dims[1], dims[2], def});
+    case 4: return cldnn::tensor({ dims[0], dims[1], dims[2], dims[3]});
+    case 5: return cldnn::tensor({ dims[0], dims[1], dims[2], dims[3], dims[4]});
+    case 6: return cldnn::tensor({ dims[0], dims[1], dims[2], dims[3], dims[4], dims[5]});
     default: IE_THROW() << "Invalid dimensions size(" << dims.size() << ") for clDNN tensor";
     }
 };

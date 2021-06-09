@@ -89,7 +89,7 @@ void CreateNonMaxSuppressionIEInternalOp(Program& p, const std::shared_ptr<ngrap
             cldnn::layout mutableLayoutFirst = cldnn::layout(
                 DataTypeFromPrecision(mutable_precision_first),
                 cldnn::format::bfyx,
-                cldnn::tensor(outputIndices, 3, 1, 1));
+                cldnn::tensor({outputIndices, 3, 1, 1}));
 
             shared_memory.emplace_back(p.GetEngine().allocate_memory(mutableLayoutFirst));
 

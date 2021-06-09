@@ -73,11 +73,11 @@ TYPED_TEST(pyramid_roi_align_typed_test, smoke_4levels) {
         Type(15.f)
     };
 
-    auto rois_lay = layout(this->data_type, format::bfyx, tensor(batch(rois_num), feature(4)));
-    auto P2_lay = layout(this->data_type, format::bfyx, tensor(1, 1, P2_size, P2_size));
-    auto P3_lay = layout(this->data_type, format::bfyx, tensor(1, 1, P3_size, P3_size));
-    auto P4_lay = layout(this->data_type, format::bfyx, tensor(1, 1, P4_size, P4_size));
-    auto P5_lay = layout(this->data_type, format::bfyx, tensor(1, 1, P5_size, P5_size));
+    auto rois_lay = layout(this->data_type, format::bfyx, tensor({rois_num, 4}));
+    auto P2_lay = layout(this->data_type, format::bfyx, tensor({1, 1, P2_size, P2_size}));
+    auto P3_lay = layout(this->data_type, format::bfyx, tensor({1, 1, P3_size, P3_size}));
+    auto P4_lay = layout(this->data_type, format::bfyx, tensor({1, 1, P4_size, P4_size}));
+    auto P5_lay = layout(this->data_type, format::bfyx, tensor({1, 1, P5_size, P5_size}));
 
     auto rois_mem = engine.allocate_memory(rois_lay);
     auto P2_mem = engine.allocate_memory(P2_lay);

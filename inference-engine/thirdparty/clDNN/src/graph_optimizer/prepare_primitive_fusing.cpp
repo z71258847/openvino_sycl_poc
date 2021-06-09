@@ -254,7 +254,7 @@ void prepare_primitive_fusing::fuse_bias(program &p) {
         if (!is_bias)
             continue;
 
-        size_t out_features = static_cast<size_t>(node->get_output_layout().size.feature[0]);
+        size_t out_features = static_cast<size_t>(node->get_output_layout().size.feature(0));
 
         int bias_idx = -1;
         for (size_t i = 0; i < eltw_node.get_dependencies().size(); i++) {
@@ -300,8 +300,8 @@ void prepare_primitive_fusing::fuse_bias(program &p) {
             auto desc = conv.get_primitive();
             std::vector<primitive_id> biases = {bias_name};
 
-            auto conv_with_bias_prim = std::make_shared<convolution>(desc->id + "_tmp",
-                                                                     desc->input[0],
+            auto conv_with_bias_prim = std::make_shared<convolution>(desc->output_ids[0] + "_tmp",
+                                                                     desc->input_ids[0],
                                                                      desc->weights,
                                                                      biases,
                                                                      desc->groups,
@@ -325,8 +325,8 @@ void prepare_primitive_fusing::fuse_bias(program &p) {
             auto desc = deconv.get_primitive();
             std::vector<primitive_id> biases = {bias_name};
 
-            auto deconv_with_bias_prim = std::make_shared<deconvolution>(desc->id + "_tmp",
-                                                                         desc->input[0],
+            auto deconv_with_bias_prim = std::make_shared<deconvolution>(desc->output_ids[0] + "_tmp",
+                                                                         desc->input_ids[0],
                                                                          desc->weights,
                                                                          biases,
                                                                          desc->groups,
@@ -340,8 +340,8 @@ void prepare_primitive_fusing::fuse_bias(program &p) {
         } else if (replace_candidate.is_type<fully_connected>()) {
             auto& fc = replace_candidate.as<fully_connected>();
             auto desc = fc.get_primitive();
-            auto fc_with_bias_prim = std::make_shared<fully_connected>(desc->id + "_tmp",
-                                                                       desc->input[0],
+            auto fc_with_bias_prim = std::make_shared<fully_connected>(desc->output_ids[0] + "_tmp",
+                                                                       desc->input_ids[0],
                                                                        desc->weights,
                                                                        bias_name,
                                                                        fc.get_output_layout().data_type);
@@ -367,8 +367,8 @@ void prepare_primitive_fusing::fuse_simple_primitives(program &p) {
 
         auto is_grouped_conv = [](convolution_node& node) -> bool {
             auto in_size = node.get_dependency(0).get_output_layout().size;
-            return (node.get_split() > 1 && node.get_split() != in_size.feature[0]) ||
-                   (node.get_groups() > 1 && node.get_groups() != static_cast<uint32_t>(in_size.feature[0]));
+            return (node.get_split() > 1 && node.get_split() != in_size.feature(0)) ||
+                   (node.get_groups() > 1 && node.get_groups() != static_cast<uint32_t>(in_size.feature(0)));
         };
 
         auto conv_supports_fusings = [&](convolution_node& node) -> bool {
@@ -388,7 +388,7 @@ void prepare_primitive_fusing::fuse_simple_primitives(program &p) {
                  _lo.is_format_optimized(node, format::fs_b_yx_fsv32) && node.get_primitive()->groups == 1)))
                     return true;
 
-            const size_t in_feature = node.get_dependency(0).get_output_layout().size.feature[0];
+            const size_t in_feature = node.get_dependency(0).get_output_layout().size.feature(0);
             if ((node.get_output_layout().format == format::b_fs_zyx_fsv16 ||
                  (_lo.is_format_optimized(node, format::b_fs_zyx_fsv16) &&
                   _lo.get_optimization_attributes().b_fs_zyx_fsv16_network)) && in_feature != 3)
@@ -417,7 +417,7 @@ void prepare_primitive_fusing::fuse_simple_primitives(program &p) {
 
             auto const_layout = eltw_node.get_dependency(1).get_output_layout();
             auto conv_layout = conv_node.get_output_layout();
-            auto per_channel_eltwise = const_layout.size.feature[0] == conv_layout.size.feature[0];
+            auto per_channel_eltwise = const_layout.size.feature(0) == conv_layout.size.feature(0);
 
             if (eltw_node.get_dependency(1).is_constant() && per_channel_eltwise &&
                 (eltw_prim.mode == eltwise_mode::sum || eltw_prim.mode == eltwise_mode::prod) &&
@@ -492,8 +492,8 @@ void prepare_primitive_fusing::fuse_simple_primitives(program &p) {
                 auto& eltw = static_cast<const eltwise&>(*node.get_users().front()->get_primitive());
                 auto& conv = node.get_dependency(0).as<convolution>();
                 auto eltw_mode = eltw.mode == eltwise_mode::sum;
-                auto conv_size = conv.get_dependency(0).get_output_layout().size.spatial[0] % 128 == 0 &&
-                                 conv.get_dependency(0).get_output_layout().size.spatial[1] % 2 == 0;
+                auto conv_size = conv.get_dependency(0).get_output_layout().size.spatial(0) % 128 == 0 &&
+                                 conv.get_dependency(0).get_output_layout().size.spatial(1) % 2 == 0;
                 auto format = conv.get_output_layout().format == format::bfyx;
                 auto dt = conv.get_output_layout().data_type == data_types::f16;
                 if (eltw_mode && conv_size && format && dt)
@@ -514,7 +514,7 @@ void prepare_primitive_fusing::fuse_simple_primitives(program &p) {
 
         auto eltwise_supports_fusings = [&](eltwise_node& node) -> bool {
             auto out_layout = node.get_output_layout();
-            if (out_layout.data_type == data_types::f16 && out_layout.size.batch[0] > 1 &&
+            if (out_layout.data_type == data_types::f16 && out_layout.size.batch(0) > 1 &&
                 (_lo.get_optimization_attributes().fs_b_yx_fsv32_network || out_layout.format == format::fs_b_yx_fsv32)) {
                 return false;
             }
@@ -723,12 +723,12 @@ void prepare_primitive_fusing::fuse_simple_primitives(program &p) {
             bool should_fuse = input_data.is_type<binary_convolution>() &&
                                ((out_layout.data_type == data_types::bin &&
                                quantize_node.get_dependencies().size() == 5 &&
-                               ((in_layout.size.feature[0] == input_lo.get_output_layout().size.feature[0] &&
-                                 in_layout.size.feature[0] == input_hi.get_output_layout().size.feature[0]) ||
-                                (input_lo.get_output_layout().size.feature[0] == 1 &&
-                                 input_hi.get_output_layout().size.feature[0] == 1)))) &&
-                                 input_data.as<binary_convolution>().get_primitive()->dilation.spatial[0] == 1 &&
-                                 input_data.as<binary_convolution>().get_primitive()->dilation.spatial[1] == 1;
+                               ((in_layout.size.feature(0) == input_lo.get_output_layout().size.feature(0) &&
+                                 in_layout.size.feature(0) == input_hi.get_output_layout().size.feature(0)) ||
+                                (input_lo.get_output_layout().size.feature(0) == 1 &&
+                                 input_hi.get_output_layout().size.feature(0) == 1)))) &&
+                                 input_data.as<binary_convolution>().get_primitive()->dilation.spatial(0) == 1 &&
+                                 input_data.as<binary_convolution>().get_primitive()->dilation.spatial(1) == 1;
 
             should_fuse |= input_data.is_type<convolution>() && conv_supports_fusings(input_data.as<convolution>()) &&
                            quantize_node.get_scale_shift_opt() &&
@@ -950,10 +950,10 @@ void prepare_primitive_fusing::fuse_simple_primitives(program &p) {
                     auto curr_users = current_node.first->get_users();
                     auto invalid_user_iter = std::find_if(curr_users.begin(), curr_users.end(), [&](cldnn::program_node* user) {
                         return (user->is_output() ||
-                                    (!(user->is_type<eltwise>() && user->get_primitive()->input.size() == 2 &&
+                                    (!(user->is_type<eltwise>() && user->get_primitive()->input_ids.size() == 2 &&
                                         (std::find(supported_modes.begin(), supported_modes.end(),
                                         (user->as<eltwise>()).get_primitive()->mode) != supported_modes.end())) &&
-                                    !(user->is_type<activation>() && user->get_primitive()->input.size() == 1)));
+                                    !(user->is_type<activation>() && user->get_primitive()->input_ids.size() == 1)));
                     });
 
                     if (invalid_user_iter != curr_users.end()) {
@@ -1087,8 +1087,8 @@ void prepare_conv_eltw_fusing::fuse_conv_depth_to_space(program& p, program_node
         return;
     if (!d_t_s_node->get_fused_primitives().empty())
         return;
-    if (conv_node->get_dependency(0).get_output_layout().size.spatial[0] % 128 != 0 ||
-        conv_node->get_dependency(0).get_output_layout().size.spatial[1] % 2 != 0)
+    if (conv_node->get_dependency(0).get_output_layout().size.spatial(0) % 128 != 0 ||
+        conv_node->get_dependency(0).get_output_layout().size.spatial(1) % 2 != 0)
         return;
     if (!d_t_s_node->get_users().front()->is_type<eltwise>())
         return;
@@ -1145,8 +1145,8 @@ void prepare_conv_eltw_fusing::fuse_conv_eltwise(program& p, program_node* node)
     // make sure that this is conv 1x1 with stride 1x1
     // disabled for i8 and u8 as those data_types currently must be fused
     if (data_type != data_types::u8 && data_type != data_types::i8) {
-        if (filter_size.spatial[0] == 1 && filter_size.spatial[1] == 1) {
-            if (conv.stride.spatial[0] != 1 || conv.stride.spatial[1] != 1)
+        if (filter_size.spatial(0) == 1 && filter_size.spatial(1) == 1) {
+            if (conv.stride.spatial(0) != 1 || conv.stride.spatial(1) != 1)
                 return;
         } else if (!if_already_depth_to_space_fused) {
             return;
@@ -1186,14 +1186,14 @@ void prepare_conv_eltw_fusing::fuse_conv_eltwise(program& p, program_node* node)
     }
 
     // we check if input to fuse is convolution that we're right now processing
-    if (eltw_node->input(eltw_fused_input_idx).id() != conv.id)
+    if (eltw_node->input(eltw_fused_input_idx).id() != conv.output_ids[0])
         return;
 
     auto fused_output_layout_size = eltw_node->input(eltw_second_input_idx).get_output_layout().size;
     auto conv_output_layout_size = conv_node->get_output_layout().size;
 
-    if (fused_output_layout_size.spatial[0] * fused_output_layout_size.spatial[1] * fused_output_layout_size.feature[0] * fused_output_layout_size.batch[0]
-        != conv_output_layout_size.spatial[0] * conv_output_layout_size.spatial[1] * conv_output_layout_size.feature[0] * conv_output_layout_size.batch[0])
+    if (fused_output_layout_size.spatial(0) * fused_output_layout_size.spatial(1) * fused_output_layout_size.feature(0) * fused_output_layout_size.batch(0)
+        != conv_output_layout_size.spatial(0) * conv_output_layout_size.spatial(1) * conv_output_layout_size.feature(0) * conv_output_layout_size.batch(0))
         return;
 
     // get strides for other than our conv input
@@ -1203,8 +1203,8 @@ void prepare_conv_eltw_fusing::fuse_conv_eltwise(program& p, program_node* node)
 
     if (eltw.stride.size() == eltw_node->inputs_count()) {
         // for cases when stride from eltwise must be applied into fused convolution
-        new_conv_stride.spatial[0] *= eltw.stride[eltw_fused_input_idx].spatial[0];
-        new_conv_stride.spatial[1] *= eltw.stride[eltw_fused_input_idx].spatial[1];
+        new_conv_stride.set_spatial(0, new_conv_stride.spatial(0) * eltw.stride[eltw_fused_input_idx].spatial(0));
+        new_conv_stride.set_spatial(1, new_conv_stride.spatial(1) * eltw.stride[eltw_fused_input_idx].spatial(1));
         // stride from non-fused eltwise input
         new_eltw_strides.push_back(eltw.stride[eltw_second_input_idx]);
     }

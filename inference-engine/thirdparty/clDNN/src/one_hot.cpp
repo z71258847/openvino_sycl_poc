@@ -71,17 +71,17 @@ one_hot_inst::typed_primitive_inst(network& network, one_hot_node const& node) :
     const auto& input_sizes = input_layout.size;
     const auto& output_sizes = argument.shape;
 
-    std::vector<tensor::value_type> input_dims = {input_sizes.batch[0],
-                                                  input_sizes.feature[0],
-                                                  input_sizes.spatial[1],
-                                                  input_sizes.spatial[0]};
-    std::vector<tensor::value_type> output_dims = {output_sizes.batch[0],
-                                                   output_sizes.feature[0],
-                                                   output_sizes.spatial[1],
-                                                   output_sizes.spatial[0]};
+    std::vector<tensor::value_type> input_dims = {input_sizes.batch(0),
+                                                  input_sizes.feature(0),
+                                                  input_sizes.spatial(1),
+                                                  input_sizes.spatial(0)};
+    std::vector<tensor::value_type> output_dims = {output_sizes.batch(0),
+                                                   output_sizes.feature(0),
+                                                   output_sizes.spatial(1),
+                                                   output_sizes.spatial(0)};
 
     if (is_output_bfzyx(input_layout, node.get_primitive()->one_hot_axis)) {
-        output_dims.insert(output_dims.begin() + 2, output_sizes.spatial[2]);
+        output_dims.insert(output_dims.begin() + 2, output_sizes.spatial(2));
     }
 
     const auto& one_hot_axis = node.get_primitive()->one_hot_axis;

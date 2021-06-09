@@ -30,7 +30,7 @@ layout concatenation_inst::calc_output_layout(concatenation_node const& node) {
 
     // calculate sum of features from all inputs
     result_sizes[axis_index] = 0;
-    for (size_t i = 0; i < desc->input.size(); ++i) {
+    for (size_t i = 0; i < desc->input_ids.size(); ++i) {
         auto input_sizes = node.input(i).get_output_layout().size.sizes();
         if (node.input(i).get_output_layout().format == format::b_fs_yx_fsv16)
             output_format = format::b_fs_yx_fsv16;
@@ -79,13 +79,13 @@ concatenation_inst::typed_primitive_inst(network& network, concatenation_node co
         auto input_mem_size = input_i_layout.size;
         for (int dim = concatenation::along_b; dim <= concatenation::along_w; ++dim) {
             if (dim == node.get_primitive()->axis) {
-                concat_count += input_mem_size.raw[dim];
+                concat_count += input_mem_size[dim].get_length();
             } else {
                 CLDNN_ERROR_NOT_EQUAL(node.id(),
                                       "Input size dim: " + std::to_string(dim),
-                                      input_size.raw[dim],
+                                      input_size[dim],
                                       "input memory dim: " + std::to_string(dim),
-                                      input_mem_size.raw[dim],
+                                      input_mem_size[dim],
                                       "Every input must have the same size");
             }
         }
@@ -97,14 +97,14 @@ concatenation_inst::typed_primitive_inst(network& network, concatenation_node co
                                   "Concat count",
                                   concat_count,
                                   "output size dim:" + std::to_string(dim),
-                                  output_size.raw[dim],
+                                  output_size[dim].get_length(),
                                   "Output size in concatenated dimension mismatch sum of inputs!");
         } else {
             CLDNN_ERROR_NOT_EQUAL(node.id(),
                                   "Input size dim: " + std::to_string(dim),
-                                  input_size.raw[dim],
+                                  input_size[dim],
                                   "output size dim:" + std::to_string(dim),
-                                  output_size.raw[dim],
+                                  output_size[dim],
                                   "Output size in non-concatenated dimension mistmatch input");
         }
     }
