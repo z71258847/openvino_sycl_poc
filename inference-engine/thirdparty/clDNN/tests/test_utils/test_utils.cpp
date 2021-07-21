@@ -297,7 +297,7 @@ cldnn::engine_configuration get_test_engine_config() {
 }
 
 std::shared_ptr<cldnn::engine> create_test_engine() {
-    return cldnn::engine::create(engine_types::ocl, runtime_types::ocl, get_test_engine_config());
+    return cldnn::engine::create(engine_types::ze, runtime_types::ze, get_test_engine_config());
 }
 
 cldnn::engine& get_test_engine() {
