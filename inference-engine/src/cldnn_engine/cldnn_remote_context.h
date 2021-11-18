@@ -50,7 +50,7 @@ public:
                                  uint32_t plane = 0,
                                  BlobType mem_type = BT_BUF_INTERNAL);
 
-    void allocate() noexcept;
+    void allocate();
     bool deallocate() noexcept;
     InferenceEngine::ParamMap getParams() const;
     std::string getDeviceName() const noexcept;
@@ -106,7 +106,11 @@ public:
         : _impl(context, stream, layout, mem, surf, plane, mem_type)
         , TpublicAPI(desc) {}
 
-    void allocate() noexcept override { _impl.allocate(); }
+    void allocate() noexcept override {
+        try {
+            _impl.allocate();
+        } catch (...) {}
+    }
     bool deallocate() noexcept override { return _impl.deallocate(); }
     InferenceEngine::ParamMap getParams() const override { return _impl.getParams(); }
     std::string getDeviceName() const noexcept override { return _impl.getDeviceName(); }
@@ -382,7 +386,7 @@ public:
                                         const Config& config = {})
         : _impl(plugin, params, config) {}
 
-    InferenceEngine::ParamMap getParams() const noexcept override { return _impl.getParams(); }
+    InferenceEngine::ParamMap getParams() const override { return _impl.getParams(); }
     std::string getDeviceName() const noexcept override { return _impl.getDeviceName(); }
 
     InferenceEngine::RemoteBlob::Ptr CreateBlob(const InferenceEngine::TensorDesc& tensorDesc, const InferenceEngine::ParamMap& params = {}) override {
