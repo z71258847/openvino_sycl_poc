@@ -22,25 +22,25 @@
 
 namespace {
 bool does_device_match_config(bool out_of_order, const cl::Device& device) {
-// Is it intel gpu
-if (device.getInfo<CL_DEVICE_TYPE>() != CL_DEVICE_TYPE_GPU ||
-    device.getInfo<CL_DEVICE_VENDOR_ID>() != 0x8086) {
-    return false;
-}
-
-// Does device support OOOQ?
-if (out_of_order) {
-    auto queue_properties = device.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
-    using cmp_t = std::common_type<decltype(queue_properties),
-        typename std::underlying_type<cl::QueueProperties>::type>::type;
-    if (!(static_cast<cmp_t>(queue_properties) & static_cast<cmp_t>(cl::QueueProperties::OutOfOrder))) {
+    // Is it intel gpu
+    if (device.getInfo<CL_DEVICE_TYPE>() != CL_DEVICE_TYPE_GPU) {
         return false;
     }
-}
 
-return true;
+    // Does device support OOOQ?
+    if (out_of_order) {
+        auto queue_properties = device.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
+        using cmp_t = std::common_type<decltype(queue_properties),
+            typename std::underlying_type<cl::QueueProperties>::type>::type;
+        if (!(static_cast<cmp_t>(queue_properties) & static_cast<cmp_t>(cl::QueueProperties::OutOfOrder))) {
+            return false;
+        }
+    }
+
+    return true;
 }
 }  // namespace
+
 namespace cldnn {
 namespace ocl {
 static constexpr auto INTEL_PLATFORM_VENDOR = "Intel(R) Corporation";
@@ -157,7 +157,7 @@ std::vector<device::ptr> ocl_device_detector::create_device_list(bool out_out_or
     for (auto& id : platform_ids) {
         cl::Platform platform = cl::Platform(id);
 
-        if (platform.getInfo<CL_PLATFORM_VENDOR>() != INTEL_PLATFORM_VENDOR)
+        if (platform.getInfo<CL_PLATFORM_VENDOR>() == INTEL_PLATFORM_VENDOR)
             continue;
 
         std::vector<cl::Device> devices;
@@ -192,7 +192,7 @@ std::vector<device::ptr>  ocl_device_detector::create_device_list_from_user_cont
     return ret;
 }
 
-std::vector<device::ptr>  ocl_device_detector::create_device_list_from_user_device(bool out_out_order, void* user_device) const {
+std::vector<device::ptr> ocl_device_detector::create_device_list_from_user_device(bool out_out_order, void* user_device) const {
     cl_uint n = 0;
     // Get number of platforms availible
     cl_int err = clGetPlatformIDs(0, NULL, &n);
