@@ -64,14 +64,14 @@ void prepare_padding::run(program& p) {
 
                 auto filter_size = prim_node.weights(0).get_output_layout().size;
 
-                auto needed_padding = calc_sliding_window_needed_input_padding(prim_node.input().get_output_layout(),
-                                                                               prim->output_size,
-                                                                               filter_size,
-                                                                               prim->pad,
-                                                                               prim->stride,
-                                                                               prim->dilation,
-                                                                               false,
-                                                                               1);
+                auto needed_padding = intel_gpu::calc_sliding_window_needed_input_padding(prim_node.input().get_output_layout(),
+                                                                                          prim->output_size,
+                                                                                          filter_size,
+                                                                                          prim->pad,
+                                                                                          prim->stride,
+                                                                                          prim->dilation,
+                                                                                          false,
+                                                                                          1);
 
                 add_required_padding(prim_node, needed_padding);
             } else if (node->is_type<deconvolution>()) {
