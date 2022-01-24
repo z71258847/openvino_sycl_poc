@@ -219,10 +219,14 @@ public:
         cl_int * err = NULL)
         : m_queue(queue), m_surfaces(surfaces), m_errPtr(err) {
         if (pfn_acquire != NULL && m_surfaces.size()) {
+            cl_event ev;
             cl_int error = pfn_acquire(m_queue,
                 static_cast<cl_uint>(m_surfaces.size()),
                 m_surfaces.data(),
-                0, NULL, NULL);
+                0, NULL, &ev);
+
+            std::vector<cl_event> events = {ev};
+            clWaitForEvents(events.size(), events.data());
 
             if (error != CL_SUCCESS && m_errPtr != NULL) {
                 *m_errPtr = error;
@@ -232,10 +236,15 @@ public:
 
     ~SharedSurfLock() {
         if (pfn_release != NULL && m_surfaces.size()) {
+            cl_event ev;
             cl_int error = pfn_release(m_queue,
                 static_cast<cl_uint>(m_surfaces.size()),
                 m_surfaces.data(),
-                0, NULL, NULL);
+                0, NULL, &ev);
+
+            std::vector<cl_event> events = {ev};
+            clWaitForEvents(events.size(), events.data());
+
             if (error != CL_SUCCESS && m_errPtr != NULL) {
                 *m_errPtr = error;
             }
