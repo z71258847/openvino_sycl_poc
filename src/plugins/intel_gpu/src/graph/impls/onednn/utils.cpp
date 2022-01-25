@@ -82,6 +82,10 @@ dnnl::memory::dims flatten_tensor(cldnn::tensor t) {
     return {static_cast<int64_t>(t.count())};
 }
 
+dnnl::memory::dims flatten_tensor(ov::PartialShape t) {
+    return {static_cast<int64_t>(ov::shape_size(t.to_shape()))};
+}
+
 void pad_dims(dnnl::memory::dims& padded_dims, cldnn::format format) {
     auto block_sizes = format.block_sizes();
     for (auto& block : block_sizes) {
@@ -126,9 +130,13 @@ void combine_bf_with_first_spatial_dim(cldnn::layout& l) {
     auto rank = cldnn::format::dimension(l.format);
     auto last_spatial_dim_idx = rank - 2 - 1;
 
-    l.size.batch[0] *= l.feature();
-    l.size.feature[0] = l.size.spatial[last_spatial_dim_idx];
-    l.size.spatial[last_spatial_dim_idx] = 1;
+    auto t = l.get_tensor();
+
+    t.batch[0] *= l.feature();
+    t.feature[0] = t.spatial[last_spatial_dim_idx];
+    t.spatial[last_spatial_dim_idx] = 1;
+
+    l = layout{l.data_type, l.format, t};
 }
 
 int64_t get_f_offset(cldnn::layout l, dnnl::memory::desc desc) {
@@ -165,7 +173,7 @@ dnnl::memory::desc layout_to_memory_desc(cldnn::layout l, dnnl::memory::format_t
         padded_dims = dims;
     } else if (target_fmt == dnnl::memory::format_tag::ab) {
         dims.push_back(l.batch());
-        dims.push_back(l.size.count() / l.batch());
+        dims.push_back(l.count() / l.batch());
         padded_dims = dims;
     } else if (flatten) {
         dims = flatten_tensor(l.size);
