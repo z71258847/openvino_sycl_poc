@@ -308,6 +308,13 @@ ExecutionContextImpl::ExecutionContextImpl(const std::shared_ptr<IInferencePlugi
     cldnn::device_query device_query(engine_type, runtime_type, _context_id, _va_device, ctx_device_id, target_tile_id);
     auto device_map = device_query.get_available_devices();
 
+    bool is_dummy = false;
+    if (device_map.empty()) {
+        auto dummy_device = std::make_shared<cldnn::dummy_device>();
+        device_map = {{"0", dummy_device}};
+        is_dummy = true;
+    }
+
     auto iter = device_map.find(m_config.device_id);
     auto& dev = iter != device_map.end() ? iter->second : device_map.begin()->second;
 
@@ -315,19 +322,21 @@ ExecutionContextImpl::ExecutionContextImpl(const std::shared_ptr<IInferencePlugi
                             (m_config.tuningConfig.mode == cldnn::tuning_mode::tuning_tune_and_cache) ||
                             (m_config.tuningConfig.mode == cldnn::tuning_mode::tuning_retune_and_cache));
 
-    auto engine_params = Plugin::GetParams(m_config, dev, m_external_queue);
-    m_engine = cldnn::engine::create(engine_params.engine_type,
-                                     engine_params.runtime_type, dev,
-                                     cldnn::engine_configuration(enable_profiling,
-                                         engine_params.queue_type,
-                                         m_config.sources_dumps_dir,
-                                         m_config.queuePriority,
-                                         m_config.queueThrottle,
-                                         m_config.memory_pool_on,
-                                         engine_params.use_unified_shared_memory,
-                                         m_config.kernels_cache_dir,
-                                         m_config.throughput_streams),
-                                     engine_params.task_executor);
+    if (!is_dummy) {
+        auto engine_params = Plugin::GetParams(m_config, dev, m_external_queue);
+        m_engine = cldnn::engine::create(engine_params.engine_type,
+                                        engine_params.runtime_type, dev,
+                                        cldnn::engine_configuration(enable_profiling,
+                                            engine_params.queue_type,
+                                            m_config.sources_dumps_dir,
+                                            m_config.queuePriority,
+                                            m_config.queueThrottle,
+                                            m_config.memory_pool_on,
+                                            engine_params.use_unified_shared_memory,
+                                            m_config.kernels_cache_dir,
+                                            m_config.throughput_streams),
+                                        engine_params.task_executor);
+    }
 }
 
 AnyMap ExecutionContextImpl::getParams() const {

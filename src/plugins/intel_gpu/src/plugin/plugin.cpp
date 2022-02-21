@@ -122,6 +122,11 @@ Plugin::Plugin() : m_defaultContext(nullptr) {
         cldnn::device_query device_query(cldnn::engine_types::ocl, cldnn::runtime_types::ocl);
         device_map = device_query.get_available_devices();
 
+        if (device_map.empty()) {
+            auto dummy_device = std::make_shared<cldnn::dummy_device>();
+            device_map = {{"0", dummy_device}};
+        }
+
         // Set default configs for each device
         for (auto& device : device_map) {
             _impl->m_configs.CreateConfig(device.first);

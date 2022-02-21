@@ -48,6 +48,8 @@ Graph::Graph(InferenceEngine::CNNNetwork& network, gpu::ClContext::Ptr context, 
     , m_config(config)
     , m_stream_id(stream_id)
     , m_state(0) {
+    if (!GetEngine())
+        IE_THROW() << "Engine hasn't been created. Can't proceed with program build";
     m_program = std::make_shared<Program>(network, GetEngine(), m_config);
     if (m_program->m_max_batch > 1)
         m_config.max_dynamic_batch = m_program->m_max_batch;

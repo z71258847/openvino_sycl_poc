@@ -168,9 +168,6 @@ std::vector<device::ptr> ocl_device_detector::create_device_list(bool out_out_or
             ret.emplace_back(std::make_shared<ocl_device>(device, cl::Context(device), id));
         }
     }
-    if (ret.empty()) {
-        throw std::runtime_error("[CLDNN ERROR]. No GPU device was found.");
-    }
     return ret;
 }
 
