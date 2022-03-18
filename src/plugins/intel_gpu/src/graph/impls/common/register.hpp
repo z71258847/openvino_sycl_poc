@@ -23,6 +23,7 @@ namespace detail {
     }
 
 REGISTER_COMMON(condition);
+REGISTER_COMMON(custom_dpcpp_primitive);
 REGISTER_COMMON(data);
 REGISTER_COMMON(input_layout);
 REGISTER_COMMON(loop);

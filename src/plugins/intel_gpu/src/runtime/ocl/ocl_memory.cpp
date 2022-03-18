@@ -301,7 +301,8 @@ gpu_usm::gpu_usm(ocl_engine* engine, const layout& layout, allocation_type type)
         _buffer.allocateShared(_bytes_count);
         break;
     case allocation_type::usm_device:
-        _buffer.allocateDevice(_bytes_count);
+        _buffer.allocateHost(_bytes_count);
+        // _buffer.allocateDevice(_bytes_count);
         break;
     default:
         CLDNN_ERROR_MESSAGE("gpu_usm allocation type",

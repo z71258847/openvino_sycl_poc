@@ -297,6 +297,12 @@ ExecutionContextImpl::ExecutionContextImpl(const std::shared_ptr<IInferencePlugi
 
             if (params.find(GPU_PARAM_KEY(OCL_CONTEXT_DEVICE_ID)) != params.end())
                 ctx_device_id = _ObjFromParamSimple<int>(params, GPU_PARAM_KEY(OCL_CONTEXT_DEVICE_ID));
+        } else if ("DPCPP" == contextTypeStr) {
+            _context_id = _ObjFromParamSimple<gpu_handle_param>(params, GPU_PARAM_KEY(OCL_CONTEXT));
+            m_type = ContextType::DPCPP;
+
+            if (params.find(GPU_PARAM_KEY(OCL_QUEUE)) != params.end())
+                m_external_queue = _ObjFromParamSimple<gpu_handle_param>(params, GPU_PARAM_KEY(OCL_QUEUE));
         } else if (GPU_PARAM_VALUE(VA_SHARED) == contextTypeStr) {
             m_va_display = _va_device = _ObjFromParamSimple<gpu_handle_param>(params, GPU_PARAM_KEY(VA_DEVICE));
             m_type = ContextType::DEV_SHARED;
@@ -342,6 +348,11 @@ AnyMap ExecutionContextImpl::getParams() const {
     AnyMap ret = { { GPU_PARAM_KEY(OCL_CONTEXT), m_engine->get_user_context() } };
 
     switch (m_type) {
+    case DPCPP:
+        ret[GPU_PARAM_KEY(CONTEXT_TYPE)] = "DPCPP";
+        ret[GPU_PARAM_KEY(OCL_QUEUE)] = static_cast<gpu_handle_param>(m_external_queue);
+        ret["CONTEXT_HANDLE"] = nullptr;
+        break;
     case OCL:
         ret[GPU_PARAM_KEY(CONTEXT_TYPE)] = GPU_PARAM_VALUE(OCL);
         ret[GPU_PARAM_KEY(OCL_QUEUE)] = static_cast<gpu_handle_param>(m_external_queue);

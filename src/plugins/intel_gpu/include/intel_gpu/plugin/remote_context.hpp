@@ -286,6 +286,7 @@ class ExecutionContextImpl : public InferenceEngine::gpu::details::param_map_obj
 public:
     enum ContextType {
         OCL,
+        DPCPP,
         DEV_SHARED
     };
 

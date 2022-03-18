@@ -5,6 +5,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "pooling_inst.h"
+#include "custom_dpcpp_primitive_inst.h"
 #include "program_node.h"
 #include "pass_manager.h"
 #include "convolution_inst.h"
@@ -35,7 +36,7 @@ void prepare_padding::run(program& p) {
                     if (input_usr->get_preferred_impl_type() == impl_types::onednn)
                         is_usr_onednn = true;
 
-                if ((input.get_preferred_impl_type() == impl_types::onednn || is_usr_onednn) &&
+                if ((input.get_preferred_impl_type() == impl_types::onednn || is_usr_onednn || input.is_type<custom_dpcpp_primitive>()) &&
                     node.get_preferred_impl_type() == impl_types::ocl &&
                     static_cast<bool>(needed_padding)) {
                     auto new_reorder = std::make_shared<reorder>(node.id() + "_padding_reorder_for_" + input.id(), input.id(), input.get_output_layout());
@@ -158,7 +159,7 @@ void prepare_padding::run(program& p) {
             continue;
 
         // We shoudn't apply any padding to nodes which are marked as outputs or have type as data
-        if (conv_input_node.is_output() || conv_input_node.is_type<data>())
+        if (conv_input_node.is_output() || conv_input_node.is_type<data>() || conv_input_node.is_type<custom_dpcpp_primitive>())
             continue;
 
         // Padded offsets aren't supported by onednn kernels

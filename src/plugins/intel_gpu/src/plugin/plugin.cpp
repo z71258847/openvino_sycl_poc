@@ -325,7 +325,7 @@ InferenceEngine::RemoteContext::Ptr Plugin::CreateContext(const AnyMap& params) 
     // parameter map is non-empty
     std::string contextTypeStr = _StrFromParams(params, GPU_PARAM_KEY(CONTEXT_TYPE));
 
-    if (GPU_PARAM_VALUE(OCL) == contextTypeStr) {
+    if (GPU_PARAM_VALUE(OCL) == contextTypeStr || "DPCPP" == contextTypeStr) {
         return std::make_shared<RemoteCLContext>(shared_from_this(), params, _impl->m_configs.GetDefaultDeviceConfig());
     } else if (GPU_PARAM_VALUE(VA_SHARED) == contextTypeStr) {
 #ifdef _WIN32

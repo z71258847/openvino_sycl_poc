@@ -31,6 +31,7 @@ public:
 struct permute;
 struct reorder;
 struct custom_gpu_primitive;
+struct custom_dpcpp_primitive;
 struct generic_layer;
 struct reshape;
 struct data;
@@ -76,6 +77,13 @@ struct implementation_key<generic_layer> {
     type operator()(const typed_program_node<generic_layer>&) { return -1; }
     type operator()(const layout&) { return -1; }
 };
+
+// template <>
+// struct implementation_key<custom_dpcpp_primitive> {
+//     typedef int32_t type;
+//     type operator()(const typed_program_node<custom_dpcpp_primitive>&) { return -1; }
+//     type operator()(const layout&) { return -1; }
+// };
 
 template <>
 struct implementation_key<custom_gpu_primitive> {

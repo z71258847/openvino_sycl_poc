@@ -54,12 +54,12 @@
 
 void prepare_primitive_fusing::run(program& p) {
     fuse_reorders(p);
-    remove_redundant_reshape(p);
-    fuse_sigmoid_mul_to_swish(p);
-    fuse_bias(p);
-    fuse_simple_primitives(p);
-    fuse_activations(p);
-    optimize_fused_ops(p);
+    // remove_redundant_reshape(p);
+    // fuse_sigmoid_mul_to_swish(p);
+    // fuse_bias(p);
+    // fuse_simple_primitives(p);
+    // fuse_activations(p);
+    // optimize_fused_ops(p);
 }
 
 void prepare_primitive_fusing::remove_redundant_reshape(program &p) {

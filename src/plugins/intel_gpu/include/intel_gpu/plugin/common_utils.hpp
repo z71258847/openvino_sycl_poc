@@ -58,6 +58,21 @@ inline cldnn::data_types DataTypeFromPrecision(InferenceEngine::Precision p) {
     }
 }
 
+inline ngraph::element::Type element_type_from_data_type(cldnn::data_types t) {
+    switch (t) {
+    case cldnn::data_types::f32:
+        return ngraph::element::Type_t::f32;
+    case cldnn::data_types::f16:
+        return ngraph::element::Type_t::f16;
+    case cldnn::data_types::u8:
+        return ngraph::element::Type_t::u8;
+    case cldnn::data_types::i8:
+        return ngraph::element::Type_t::i8;
+    default:
+        IE_THROW(ParameterMismatch)<< "Unsupported data_type";
+    }
+}
+
 inline cldnn::data_types DataTypeFromPrecision(ngraph::element::Type t) {
     switch (t) {
     case ngraph::element::Type_t::i16:

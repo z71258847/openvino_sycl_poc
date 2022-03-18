@@ -145,6 +145,7 @@ function(ie_headers_compilation_with_custom_flags)
 
     if(NOT IE_TEST_PLUGIN_API)
         list(APPEND IE_TEST_HEADERS_TO_SKIP "_tbl.hpp")
+        list(APPEND IE_TEST_HEADERS_TO_SKIP "openvino/runtime/dpcpp/dpcpp.hpp")
         if(NOT OPENCL_HEADERS_DIR)
             list(APPEND IE_TEST_HEADERS_TO_SKIP "gpu/gpu_ocl_wrapper.hpp"
                                                 "gpu/gpu_context_api_ocl.hpp"

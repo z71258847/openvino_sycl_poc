@@ -45,6 +45,24 @@ protected:
     bool is_host_tensors(const ov::TensorVector& tensors) const;
 };
 
+/**
+ * @brief The base interface for OpenVINO operation extensions
+ */
+class OPENVINO_API DPCPPEvaluateExtension : public EvaluateExtension {
+public:
+    using Ptr = std::shared_ptr<DPCPPEvaluateExtension>;
+    virtual bool evaluate(const std::shared_ptr<const ov::Node>& node,
+                          ov::TensorVector& output_values,
+                          const ov::TensorVector& input_values,
+                          ov::RemoteContext context) const = 0;
+
+    bool evaluate(const std::shared_ptr<const ov::Node>& node,
+                  ov::TensorVector& output_values,
+                  const ov::TensorVector& input_values) const override {
+        return false;
+    }
+};
+
 #define CHECK_TENSOR_TYPES(NODE, INPUTS, OUTPUTS, TENSOR_TYPE) \
     if (!INPUTS.empty()) {                                     \
         if (NODE->get_input_size() != INPUTS.size())           \

@@ -6,6 +6,7 @@
 #include "ngraph/ops.hpp"
 #include "ngraph_ops/nms_ie_internal.hpp"
 #include "openvino/core/graph_util.hpp"
+#include "openvino/core/evaluate_extension.hpp"
 #include "intel_gpu/plugin/itt.hpp"
 #include "intel_gpu/runtime/debug_configuration.hpp"
 #include "intel_gpu/plugin/transformations_pipeline.hpp"
@@ -398,6 +399,23 @@ void Program::CreateSingleLayerPrimitive(cldnn::topology& topology, const std::s
 
     bool is_created = false;
     const ngraph::NodeTypeInfo* op_type_info = &op->get_type_info();
+
+    auto extensions = ov::get_extensions_for_type(*op_type_info);
+    std::shared_ptr<ov::DPCPPEvaluateExtension> evaluate_extension = nullptr;
+    if (!extensions.empty()) {
+        for (auto ext : extensions) {
+            if (auto eval_ext = std::dynamic_pointer_cast<ov::DPCPPEvaluateExtension>(ext)) {
+                if (eval_ext->support_evaluate(op))
+                    evaluate_extension = eval_ext;
+            }
+        }
+    }
+
+    if (evaluate_extension) {
+        CreateCustomDPCPPOp(*this, op, evaluate_extension);
+        return;
+    }
+
     while (op_type_info != nullptr) {
         auto customLayer = m_config.customLayers.find(op->get_type_name());
         if (customLayer != m_config.customLayers.end()) {

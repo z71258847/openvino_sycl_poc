@@ -15,8 +15,9 @@
 #include <ngraph/ngraph.hpp>
 #include <ngraph/compatibility.hpp>
 
-#include "intel_gpu/plugin/device_config.hpp"
+#include "openvino/core/evaluate_extension.hpp"
 
+#include "intel_gpu/plugin/device_config.hpp"
 #include "intel_gpu/runtime/engine.hpp"
 #include "intel_gpu/graph/topology.hpp"
 
@@ -179,6 +180,7 @@ private:
 };
 
 void CreateCustomOp(Program& p, const std::shared_ptr<ngraph::Node>& node, CustomLayerPtr customLayer);
+void CreateCustomDPCPPOp(Program& p, const std::shared_ptr<ngraph::Node>& node, ov::DPCPPEvaluateExtension::Ptr evaluate_ext);
 void CreateUnaryEltwiseOp(Program& p, const std::shared_ptr<ngraph::Node>& node,
                           cldnn::activation_func func, cldnn::activation_additional_params params);
 void CreateElementwiseOp(Program& p, const std::shared_ptr<ngraph::Node>& node, cldnn::eltwise_mode mode);

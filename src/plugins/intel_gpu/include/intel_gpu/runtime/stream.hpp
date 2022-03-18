@@ -11,6 +11,10 @@
 #include <memory>
 #include <vector>
 
+namespace cl {
+class CommandQueue;
+}
+
 #ifdef ENABLE_ONEDNN_FOR_GPU
 #include <oneapi/dnnl/dnnl.hpp>
 #endif
@@ -25,6 +29,8 @@ public:
 
     virtual void flush() const = 0;
     virtual void finish() const = 0;
+
+    virtual const cl::CommandQueue& get_cl_queue() const = 0;
 
     virtual void set_arguments(kernel& kernel, const kernel_arguments_desc& args_desc, const kernel_arguments_data& args) = 0;
     virtual event::ptr enqueue_kernel(kernel& kernel,

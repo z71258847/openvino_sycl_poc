@@ -132,6 +132,11 @@ static void dump(memory::ptr mem, stream& stream, std::ofstream& file_stream) {
     auto x_pitch = get_x_pitch(mem->get_layout());
     std::stringstream buffer;
 
+    std::cerr << "Dump buffer " << (void*)mem_ptr << std::endl;
+    for (size_t i = 0; i < 10; i++) {
+        std::cerr << (float)mem_ptr[i] << std::endl;
+    }
+
     for (cldnn::tensor::value_type g = 0; g < size.group[0]; ++g) {
         for (cldnn::tensor::value_type b = 0; b < batch_size; ++b) {
             for (cldnn::tensor::value_type f = 0; f < size.feature[0]; ++f) {
