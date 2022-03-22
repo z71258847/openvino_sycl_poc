@@ -9,6 +9,10 @@
 #include "common/blocked_desc_creator.h"
 #include <ngraph/opsets/opset1.hpp>
 
+#include "openvino/core/evaluate_extension.hpp"
+#include "openvino/runtime/remote_context.hpp"
+#include "openvino/runtime/core.hpp"
+
 using namespace mkldnn;
 using namespace ov::intel_cpu;
 using namespace InferenceEngine;
@@ -17,9 +21,22 @@ using namespace InferenceEngine::details;
 MKLDNNReferenceNode::MKLDNNReferenceNode(const std::shared_ptr<ngraph::Node>& op, const mkldnn::engine& eng, MKLDNNWeightsSharing::Ptr &cache,
                                          const std::string& errorMessage) :
         MKLDNNNode(op, eng, cache), ngraphOp(op), additionalErrorMessage(errorMessage) {
-    if (!op->has_evaluate()) {
-        IE_THROW(NotImplemented) << "Cannot fallback on ngraph reference implementation (Ngraph::Node::evaluate() is not implemented)";
+    // if (!op->has_evaluate()) {
+        // IE_THROW(NotImplemented) << "Cannot fallback on ngraph reference implementation (Ngraph::Node::evaluate() is not implemented)";
+    // }
+
+    auto extensions = ov::get_extensions_for_type(op->get_type_info());
+    if (!extensions.empty()) {
+        for (auto ext : extensions) {
+            if (auto eval_ext = std::dynamic_pointer_cast<ov::DPCPPEvaluateExtension>(ext)) {
+                if (eval_ext->support_evaluate(op))
+                    this->ext = eval_ext;
+            }
+        }
     }
+    if (!ext)
+        IE_THROW(NotImplemented) << "Cannot fallback on ngraph reference implementation (Ngraph::Node::evaluate() is not implemented)";
+
     setType(Reference);
     setTypeStr("Reference");
 
@@ -69,9 +86,16 @@ void MKLDNNReferenceNode::execute(mkldnn::stream strm) {
                                               getChildEdgesAtPort(i)[0]->getMemory().getStaticDims(), dstDataPtr));
     }
 
-    if (!ngraphOp->evaluate(outputs, inputs)) {
-        IE_THROW() << "Evaluation failed on node of type: " << std::string(ngraphOp->get_type_name()) << " name: " << getName();
-    }
+    // ov::Core core;
+    ov::RemoteContext ctx;// = core.create_context("CPU", {});
+
+
+    ext->evaluate(ngraphOp, outputs, inputs, ctx);
+
+    // std::cerr << "execute via evaluate!\n";
+    // if (!ngraphOp->evaluate(outputs, inputs)) {
+    //     IE_THROW() << "Evaluation failed on node of type: " << std::string(ngraphOp->get_type_name()) << " name: " << getName();
+    // }
 }
 
 std::vector<VectorDims> MKLDNNReferenceNode::shapeInfer() const {

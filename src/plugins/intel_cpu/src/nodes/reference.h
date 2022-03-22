@@ -6,6 +6,8 @@
 
 #include <node.h>
 
+#include "openvino/core/evaluate_extension.hpp"
+
 namespace ov {
 namespace intel_cpu {
 
@@ -27,6 +29,7 @@ public:
 private:
     const std::shared_ptr<ngraph::Node> ngraphOp;
     const std::string additionalErrorMessage;
+    std::shared_ptr<DPCPPEvaluateExtension> ext = nullptr;
 };
 
 }   // namespace intel_cpu

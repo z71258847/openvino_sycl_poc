@@ -48,29 +48,49 @@ public:
         return true;
     }
 
+    template<typename T1, typename T2>
+    void evaluate_impl(sycl::queue queue, T1 in, T2 out, size_t size) const {
+        queue.submit([&](sycl::handler& h) {
+            h.parallel_for(size, [=](sycl::item<1> idx) {
+                out[idx] = sycl::fmax<float>(in[idx], 0.0);
+            });
+        });
+
+        queue.wait_and_throw();
+    }
+
     bool evaluate(const std::shared_ptr<const ov::Node>& node,
                   ov::TensorVector& output_values,
                   const ov::TensorVector& input_values,
                   ov::RemoteContext context) const override {
         OPENVINO_ASSERT(input_values.size() == 1);
         OPENVINO_ASSERT(output_values.size() == 1);
-        auto input = input_values[0].as<ov::dpcpp::USMTensor>();
-        auto output = output_values[0].as<ov::dpcpp::USMTensor>();
+        auto input = input_values[0];
+        auto output = output_values[0];
 
-        auto dpcpp_ctx = context.as<ov::dpcpp::DPCPPContext>();
-        sycl::queue queue = dpcpp_ctx.get_queue();
-        std::cerr << "Running on device: " << queue.get_device().get_info<sycl::info::device::name>() << "\n";
+        float* in_ptr = nullptr;
+        float* out_ptr = nullptr;
+        sycl::queue q;
+        if (context.is<ov::dpcpp::DPCPPContext>()) {
+            auto dpcpp_ctx = context.as<ov::dpcpp::DPCPPContext>();
+            q = dpcpp_ctx.get_queue();
 
-        auto in = static_cast<float*>(input.get());
-        auto out = static_cast<float*>(output.get());
+            auto in_usm = input.as<ov::dpcpp::USMTensor>();
+            auto out_usm = output.as<ov::dpcpp::USMTensor>();
 
-        queue.submit([&](sycl::handler& h) {
-            h.parallel_for(input.get_size(), [=](sycl::item<1> idx) {
-                out[idx] = sycl::fmax<float>(in[idx], 0.0);
-            });
-        });
+            in_ptr = static_cast<float*>(in_usm.get());
+            out_ptr = static_cast<float*>(out_usm.get());
+        } else {
+            sycl::device d = sycl::device(sycl::cpu_selector());
+            q = sycl::queue(d);
 
-        queue.wait_and_throw();
+            in_ptr = static_cast<float*>(input.data());
+            out_ptr = static_cast<float*>(output.data());
+        }
+
+        std::cerr << "Running on device: " << q.get_device().get_info<sycl::info::device::name>() << "\n";
+
+        evaluate_impl(q, in_ptr, out_ptr, input.get_size());
 
         return true;
     }

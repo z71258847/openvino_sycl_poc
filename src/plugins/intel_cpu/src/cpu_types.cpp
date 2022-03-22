@@ -45,7 +45,7 @@ const InferenceEngine::details::caseless_unordered_map<std::string, Type> type_t
         { "LogicalOr", Eltwise },
         { "LogicalXor", Eltwise },
         { "LogicalNot", Eltwise },
-        { "Relu", Eltwise },
+        // { "Relu", Eltwise },
         { "LeakyRelu", Eltwise },
         { "Gelu", Eltwise },
         { "Elu", Eltwise },
@@ -489,4 +489,3 @@ std::string algToString(const Algorithm alg) {
 
 }   // namespace intel_cpu
 }   // namespace ov
-
