@@ -54,7 +54,7 @@ layout one_hot_inst::calc_output_layout(one_hot_node const& node) {
             {1, depth_tensor}
         };
         ov::op::v1::shape_infer(&op, input_shapes, output_shapes, const_data);
-        return {dt, layout::get_default_format(output_shapes[0].size()), output_shapes[0]};
+        return {dt, format::get_default_format(output_shapes[0].size()), output_shapes[0]};
     }
 }
 

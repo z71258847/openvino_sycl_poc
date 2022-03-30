@@ -757,7 +757,7 @@ static bool is_node_for_onednn(deconvolution_node const& node) {
                             (input_layout.data_type == data_types::f16 && output_layout.data_type == data_types::f16);
 
     bool onednn_valid_params = onednn_valid_dt &&
-                               input_layout.size.feature[0] >= 16 &&
+                               input_layout.feature() >= 16 &&
                                prim->groups == 1 &&
                                get_post_ops_count(node) <= 32 &&
                                input_layout.data_type == output_layout.data_type;
@@ -1478,13 +1478,13 @@ impl_types layout_optimizer::get_preferred_impl_type(program_node& node, format 
             size_t in2_batched_size;
             if (has_input2) {
                 auto in2_l = node.get_dependency(2).get_output_layout();
-                in2_batched_size = in2_l.count() / (in2_l.size.spatial[0] * in2_l.size.spatial[1]);
+                in2_batched_size = in2_l.count() / (in2_l.spatial(0) * in2_l.spatial(1));
             }
-            size_t size_k = gemm_prim->transpose_input0 ? in0_l.size.spatial[1] : in0_l.size.spatial[0];
+            size_t size_k = gemm_prim->transpose_input0 ? in0_l.spatial(1) : in0_l.spatial(0);
 
-            size_t in0_batched_size = in0_l.count() / (in0_l.size.spatial[0] * in0_l.size.spatial[1]);
-            size_t in1_batched_size = in1_l.count() / (in1_l.size.spatial[0] * in1_l.size.spatial[1]);
-            size_t out_batched_size = out_l.count() / (out_l.size.spatial[0] * out_l.size.spatial[1]);
+            size_t in0_batched_size = in0_l.count() / (in0_l.spatial(0) * in0_l.spatial(1));
+            size_t in1_batched_size = in1_l.count() / (in1_l.spatial(0) * in1_l.spatial(1));
+            size_t out_batched_size = out_l.count() / (out_l.spatial(0) * out_l.spatial(1));
 
             auto valid_input_batch = in0_batched_size != 1 && (in1_batched_size == in0_batched_size || in1_batched_size == 1);
             auto valid_output_batch = in0_batched_size > in1_batched_size ? out_batched_size == in0_batched_size :
