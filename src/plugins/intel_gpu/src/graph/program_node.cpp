@@ -226,7 +226,18 @@ bool program_node::is_detached(bool whole_branch) {
 }
 
 layout program_node::calc_output_layout() const {
+    auto out_layouts = type()->calc_output_layouts(*this, *get_kernel_impl_params());
+    if (!out_layouts.empty()) {
+        std::cerr << id() << " out layout: " << out_layouts[0].to_string() << std::endl;
+        return out_layouts[0];
+    }
+
     return type()->calc_output_layout(*this, *get_kernel_impl_params());
+}
+
+std::vector<layout> program_node::calc_output_layouts() const {
+    auto params = get_kernel_impl_params();
+    return type()->calc_output_layouts(*this, *params);
 }
 
 layout program_node::get_output_layout(bool invalidate_users_if_changed) {
