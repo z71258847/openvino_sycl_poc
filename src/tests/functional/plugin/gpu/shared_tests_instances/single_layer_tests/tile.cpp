@@ -15,6 +15,7 @@ const std::vector<InferenceEngine::Precision> netPrecisions = {
 };
 
 const std::vector<std::vector<int64_t>> repeats = {
+        {2, 3},
         {1, 2, 3},
         {2, 1, 1},
         {2, 3, 1},
