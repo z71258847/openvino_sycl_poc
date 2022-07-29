@@ -40,36 +40,6 @@ enum class data_types : size_t {
     i64 = sizeof(int64_t)
 };
 
-class optional_data_type {
-    // Must be the same as the undrelying type of `data_types`.
-    using storage_type = size_t;
-
-    // Implicitly assumes that this value is not used in the `data_types`.
-    static constexpr auto non_specified_type =
-        std::numeric_limits<storage_type>::max();
-
-public:
-    optional_data_type()
-        : storage(non_specified_type) {}
-
-    explicit optional_data_type(data_types type)
-        : storage(static_cast<storage_type>(type)) {}
-
-    operator bool() const { return storage != non_specified_type; }
-
-    // Similarly to std::optional does *not* verify that the object has the type
-    // set. Unlike it, though, returns the value instead of pointer/reference.
-    data_types operator*() const { return static_cast<data_types>(storage); }
-
-    optional_data_type& operator=(const data_types new_type) {
-        storage = static_cast<storage_type>(new_type);
-        return *this;
-    }
-
-private:
-    storage_type storage;
-};
-
 
 /// Converts C++ type to @ref data_types .
 template <typename T>
@@ -471,38 +441,6 @@ private:
 inline ::std::ostream& operator<<(::std::ostream& os, const layout& p) {
     return os << p.to_string();
 }
-
-class optional_layout {
-public:
-    optional_layout() {}
-    optional_layout(const layout& lay) {
-        this->opt_layout_ptr = make_unique<layout>(lay);
-    }
-
-    optional_layout(const optional_layout& new_opt_lay) {
-        if (new_opt_lay) {
-            layout copied_lay = *new_opt_lay;
-            this->opt_layout_ptr = make_unique<layout>(copied_lay);
-        }
-    }
-
-    operator bool() const {
-        return this->opt_layout_ptr != nullptr;
-    }
-
-    layout operator*() const {
-        if (opt_layout_ptr == nullptr)
-            throw std::runtime_error("Attempt to access uninitialized optional layout!");
-        return *this->opt_layout_ptr;
-    }
-
-    std::unique_ptr<layout>& get_layout_ptr() {
-        return opt_layout_ptr;
-    }
-
-private:
-    std::unique_ptr<layout> opt_layout_ptr = nullptr;
-};
 
 /// @}
 /// @}
