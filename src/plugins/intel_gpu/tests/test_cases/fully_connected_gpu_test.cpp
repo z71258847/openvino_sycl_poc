@@ -7,6 +7,7 @@
 #include "test_utils.h"
 #include "network_test.h"
 
+#include <intel_gpu/runtime/layout.hpp>
 #include <intel_gpu/primitives/input_layout.hpp>
 #include "intel_gpu/primitives/fully_connected.hpp"
 #include <intel_gpu/primitives/quantize.hpp>
@@ -1394,7 +1395,7 @@ public:
 
         topo.add(input_layout("input", input_prim->get_layout()));
         auto fc_prim = fully_connected("fc_prim", "input", "weights", "bias");
-        fc_prim.output_data_type = type_to_data_type<OutputT>::value;
+        fc_prim.output_data_type = cldnn::data_types(type_to_data_type<OutputT>::value);
         topo.add(fc_prim);
 
         topo.add(data("quant_input_low", quantization_input_low));
