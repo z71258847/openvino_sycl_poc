@@ -99,7 +99,7 @@ std::unique_ptr<json_composite> program_node::desc_to_json() const {
     json_composite output_layout_info;
     output_layout_info.add("data type", dt_to_str(output_layout.data_type));
     output_layout_info.add("format", fmt_to_str(output_layout.format));
-    output_layout_info.add("size", output_layout.get_tensor().to_string());
+    output_layout_info.add("size", output_layout.to_string());
 
     json_composite padding_info;
     padding_info.add("lower size", output_layout.data_padding.lower_size().to_string());
@@ -228,7 +228,6 @@ bool program_node::is_detached(bool whole_branch) {
 layout program_node::calc_output_layout() const {
     auto out_layouts = type()->calc_output_layouts(*this, *get_kernel_impl_params());
     if (!out_layouts.empty()) {
-        std::cerr << id() << " out layout: " << out_layouts[0].to_string() << std::endl;
         return out_layouts[0];
     }
 
@@ -258,7 +257,7 @@ layout program_node::get_output_layout() const {
 
 layout program_node::get_non_padded_output_layout(bool invalidate_users_if_changed) {
     auto out_layout = get_output_layout(invalidate_users_if_changed);
-    auto result = layout({out_layout.data_type, out_layout.format, out_layout.get_tensor()});
+    auto result = layout({out_layout.get_partial_shape(), out_layout.data_type, out_layout.format});
     return result;
 }
 
@@ -286,6 +285,21 @@ bool program_node::is_dynamic() const {
     }
 
     return get_output_layout().is_dynamic();
+}
+
+std::map<size_t, memory::ptr> program_node::get_const_memory_deps() const {
+    std::map<size_t, memory::ptr> mem_deps;
+    for (auto& i : get_shape_infer_dependencies()) {
+        // Some primitives may have flexible count of deps (e.g. reshape), thus allow skipping some deps
+        if (i >= get_dependencies().size())
+            continue;
+
+        auto& dep = get_dependency(i);
+        if (dep.is_type<data>()) {
+            mem_deps.insert({i, dep.as<data>().get_attached_memory_ptr()});
+        }
+    }
+    return mem_deps;
 }
 
 bool program_node::has_padded_dependency() {
@@ -348,15 +362,15 @@ bool program_node::is_padding_supported(int axis, int padding) const {
 
 bool program_node::need_lockable_memory() const {
     bool need_lockable_mem = get_users().empty() || std::any_of(get_users().begin(), get_users().end(), [](const program_node* n) {
-        return n->get_selected_impl()->is_cpu();
+        return n->get_selected_impl() ? n->get_selected_impl()->is_cpu() : n->get_preferred_impl_type() == impl_types::cpu;
     });
 
     return need_lockable_mem;
 }
 
-    /* ----------------------------------------- */
-    /* Onednn fused operations integration logic */
-    /* ----------------------------------------- */
+/* ----------------------------------------- */
+/* Onednn fused operations integration logic */
+/* ----------------------------------------- */
 
 #ifdef ENABLE_ONEDNN_FOR_GPU
 

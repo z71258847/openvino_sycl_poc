@@ -55,9 +55,9 @@ class typed_primitive_inst<reorder> : public typed_primitive_inst_base<reorder> 
 
 public:
     static layout calc_output_layout(reorder_node const& node, kernel_impl_params const& impl_param);
+    static std::vector<layout> calc_output_layouts(reorder_node const& node, const kernel_impl_params& impl_param);
     static std::string to_string(reorder_node const& node);
 
-public:
     typed_primitive_inst(network& network, reorder_node const& node);
     memory::ptr mean_nv12_memory() const { return dep_memory_ptr(2); }
     memory::ptr mean_memory() const { return dep_memory_ptr(1); }

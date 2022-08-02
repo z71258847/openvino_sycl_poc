@@ -33,9 +33,8 @@ public:
         const size_t dims_num = params.inputs[0].Dimentions();
 
         // Getting data from constant inputs. There are 3 args: Begin, End, Stride
-        for (size_t i = 1; i < arg.get_dependencies().size(); ++i) {
-            auto& input = arg.get_dependency(i).as<data>();
-            auto mem = input.get_attached_memory_ptr();
+        for (size_t i = 0; i < impl_param.memory_deps.size(); ++i) {
+            auto mem = impl_param.memory_deps.at(i);
             std::vector<int32_t> sizes = read_vector<int32_t>(mem, arg.get_program().get_stream());
             pad_vector_to_size(sizes, dims_num, i != 1);  // for "begin" completion used 0 value, for other - 1
             params.striding_params.push_back(sizes);

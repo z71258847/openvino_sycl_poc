@@ -6,6 +6,7 @@
 
 #include "intel_gpu/runtime/engine.hpp"
 #include "intel_gpu/runtime/stream.hpp"
+#include "intel_gpu/runtime/lru_cache.hpp"
 #include "build_options.hpp"
 
 #include <list>
@@ -29,6 +30,7 @@ class pass_manager;
 class base_pass;
 class program_wrapper;
 class kernels_cache;
+struct primitive_impl;
 
 
 struct program {
@@ -150,6 +152,7 @@ public:
     nodes_ordering& get_processing_order();
     uint32_t get_prog_id() { return prog_id; }
     stream& get_stream() { return *_stream; }
+    const stream& get_stream() const { return *_stream; }
     const std::list<primitive_id>& get_optimized_out() const { return optimized_out; }
     const std::list<optimized_info>& get_optimized() const { return optimized; }
     bool has_node(const primitive_id& prim) const { return nodes_map.count(prim) > 0; }
@@ -249,6 +252,7 @@ public:
     std::pair<int64_t/*const alloc*/, int64_t/*general alloc*/> get_estimated_device_mem_usage();
 
     void remove_kernel(kernel_id id);
+    ImplementationsCache get_primitive_impl_cache() const { return primitive_impl_cache; }
 
 private:
     uint32_t prog_id = 0;
@@ -339,6 +343,8 @@ private:
     // old_node - node which will be replaced
     // new_node - node which will replace the old one
     void replace(program_node& old_node, program_node& new_node);
+
+    ImplementationsCache primitive_impl_cache;
 };
 
 }  // namespace cldnn

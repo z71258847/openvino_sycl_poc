@@ -13,15 +13,10 @@ namespace intel_gpu {
 
 static void CreateRangeOp(Program &p, const std::shared_ptr<ngraph::op::v4::Range> &op) {
     p.ValidateInputs(op, { 3 });
-    auto &outShape = op->get_output_shape(0);
-    {
-        auto r = outShape.size();
-        if (r != 1)
-            throw std::runtime_error { "range v4 output rank is " + std::to_string(r) };
-    }
-    cldnn::tensor outTensor { cldnn::spatial(outShape[0]) };
+    auto& out_pshape = op->get_output_partial_shape(0);
+
     auto outDataType = DataTypeFromPrecision(op->get_output_element_type(0));
-    cldnn::layout outLayout { outDataType, cldnn::format::bfyx, outTensor };
+    cldnn::layout outLayout { out_pshape, outDataType, cldnn::format::bfyx };
     cldnn::range prim { layer_type_name_ID(op), p.GetInputPrimitiveIDs(op), outLayout, op->get_friendly_name() };
     p.AddPrimitive(prim);
     p.AddPrimitiveToProfiler(op);

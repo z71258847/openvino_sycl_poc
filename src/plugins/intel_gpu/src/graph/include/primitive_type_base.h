@@ -6,6 +6,7 @@
 #pragma once
 
 #include "intel_gpu/runtime/engine.hpp"
+#include "intel_gpu/runtime/debug_configuration.hpp"
 
 #include "meta_utils.h"
 #include "primitive_type.h"
@@ -45,8 +46,7 @@ struct primitive_type_base : primitive_type {
         if (node.type() != this)
             throw std::invalid_argument("primitive_type_base::choose_impl: primitive type mismatch");
         auto factory = implementation_map<PType>::get(runtime_params, node.get_preferred_impl_type());
-        auto impl = std::unique_ptr<primitive_impl>(factory(node, runtime_params));
-        return impl;
+        return std::unique_ptr<primitive_impl>(factory(node, runtime_params));
     }
 
     bool does_an_implementation_exist(const cldnn::program_node& node) const override {
@@ -81,7 +81,20 @@ struct primitive_type_base : primitive_type {
         if (node.type() != this)
             throw std::invalid_argument("primitive_type_base::calc_output_layouts: primitive type mismatch");
 
-        return typed_primitive_inst<PType>::calc_output_layouts(node, impl_param);
+        auto res = typed_primitive_inst<PType>::calc_output_layouts(node, impl_param);
+        GPU_DEBUG_GET_INSTANCE(debug_config);
+        GPU_DEBUG_IF(debug_config->verbose >= 4) {
+            GPU_DEBUG_COUT << "Infer shapes for node " << node.id() << std::endl;
+            GPU_DEBUG_COUT << "\tInputs: " << std::endl;
+            for (auto& in_layout : impl_param.input_layouts) {
+                GPU_DEBUG_COUT << "\t\t" << in_layout << std::endl;
+            }
+            GPU_DEBUG_COUT << "\tOutputs: " << std::endl;
+            for (auto& out_layout : res) {
+                GPU_DEBUG_COUT << "\t\t" << out_layout << std::endl;
+            }
+        }
+        return res;
     }
 
     std::string to_string(const cldnn::program_node& node) const override {

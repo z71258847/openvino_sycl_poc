@@ -17,8 +17,8 @@ namespace intel_gpu {
 
 static void CreateCommonReshapeOp(Program& p, const std::shared_ptr<ngraph::Node>& op) {
     p.ValidateInputs(op, {1, 2});
-    auto inputPrimitives = p.GetInputPrimitiveIDs(op);
-    std::string layerName = layer_type_name_ID(op);
+    auto input_primitives = p.GetInputPrimitiveIDs(op);
+    std::string layer_name = layer_type_name_ID(op);
 
     auto input_pshape = op->get_input_partial_shape(0);
     auto output_pshape = op->get_output_partial_shape(0);
@@ -28,7 +28,7 @@ static void CreateCommonReshapeOp(Program& p, const std::shared_ptr<ngraph::Node
     auto outTensor = tensor_from_dims(output_pshape.to_shape());
 
     // if we convert from or to 5D/6D, additional reorder also required to change format
-    cldnn::primitive_id reshapeInputId = inputPrimitives[0];
+    cldnn::primitive_id reshapeInputId = input_primitives[0];
     if (input_pshape.size() != output_pshape.size()) {
         cldnn::primitive_id reorderId = "reorder:" + op->get_friendly_name() + "_reorder";
         cldnn::format outputFormat = cldnn::format::bfyx;
@@ -46,14 +46,14 @@ static void CreateCommonReshapeOp(Program& p, const std::shared_ptr<ngraph::Node
                                       std::vector<float>(),
                                       cldnn::reorder_mean_mode::subtract,
                                       op->get_friendly_name()));
-        p.InitProfileInfo(reorderId, "Reorder", false, InferenceEngine::InferenceEngineProfileInfo::EXECUTED, layerName);
-        p.primitiveIDs[layerName + "_reorder"] = reorderId;
+        p.InitProfileInfo(reorderId, "Reorder", false, InferenceEngine::InferenceEngineProfileInfo::EXECUTED, layer_name);
+        p.primitiveIDs[layer_name + "_reorder"] = reorderId;
         p.primitiveIDs[reorderId] = reorderId;
         p.profilingIDs.push_back(reorderId);
         reshapeInputId = reorderId;
     }
 
-    auto reshapePrim = cldnn::reshape(layerName,
+    auto reshapePrim = cldnn::reshape(layer_name,
                                       reshapeInputId,
                                       outTensor,
                                       op->get_friendly_name());
@@ -63,7 +63,35 @@ static void CreateCommonReshapeOp(Program& p, const std::shared_ptr<ngraph::Node
 }
 
 static void CreateReshapeOp(Program& p, const std::shared_ptr<ngraph::op::v1::Reshape>& op) {
-    CreateCommonReshapeOp(p, op);
+    p.ValidateInputs(op, {1, 2});
+    auto input_primitives = p.GetInputPrimitiveIDs(op);
+    std::string layer_name = layer_type_name_ID(op);
+
+    auto out_pshape = op->get_output_partial_shape(0);
+    auto pattern_constant = std::dynamic_pointer_cast<ngraph::op::Constant>(op->get_input_node_shared_ptr(1));
+
+    if (pattern_constant) {
+        std::vector<int64_t> shape_pattern = pattern_constant->cast_vector<int64_t>();
+        auto reshapePrim = cldnn::reshape(layer_name,
+                                          input_primitives[0],
+                                          op->get_special_zero(),
+                                          shape_pattern,
+                                          out_pshape,
+                                          op->get_friendly_name());
+
+        p.AddPrimitive(reshapePrim);
+    } else {
+        auto shape_prim_id = input_primitives[1];
+        auto reshapePrim = cldnn::reshape(layer_name,
+                                          input_primitives[0],
+                                          shape_prim_id,
+                                          op->get_special_zero(),
+                                          out_pshape,
+                                          op->get_friendly_name());
+
+        p.AddPrimitive(reshapePrim);
+    }
+    p.AddPrimitiveToProfiler(op);
 }
 
 static void CreateSqueezeOp(Program& p, const std::shared_ptr<ngraph::op::v0::Squeeze>& op) {

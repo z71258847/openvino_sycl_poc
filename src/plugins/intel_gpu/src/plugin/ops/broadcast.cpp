@@ -19,8 +19,8 @@ static void CreateCommonBroadcastOp(Program& p, const std::shared_ptr<ngraph::No
     auto inputPrimitives = p.GetInputPrimitiveIDs(op);
     std::string layerName = layer_type_name_ID(op);
 
-    auto inputShape = op->get_input_shape(0);
-    auto outputShape = op->get_output_shape(0);
+    auto inputShape = op->get_input_partial_shape(0);
+    auto outputShape = op->get_output_partial_shape(0);
     auto inputRank = inputShape.size();
     auto outputRank = outputShape.size();
 
@@ -53,7 +53,7 @@ static void CreateCommonBroadcastOp(Program& p, const std::shared_ptr<ngraph::No
             inputShape.insert(inputShape.begin(), outputRank - inputRank, 1ul);
         } else {
             // If axis_mapping is specified, then ones are inserted according to it.
-            ngraph::Shape tmp_shape;
+            ov::PartialShape tmp_shape;
             int prev_axis = -1;
             int next_axis = -1;
             size_t currentRank = 0;
@@ -70,9 +70,7 @@ static void CreateCommonBroadcastOp(Program& p, const std::shared_ptr<ngraph::No
             inputShape = tmp_shape;
         }
 
-        auto targetShape = tensor_from_dims(inputShape);
-
-        auto reshapePrim = cldnn::reshape(reshapeName, inputPrimitive, targetShape, op->get_friendly_name());
+        auto reshapePrim = cldnn::reshape(reshapeName, inputPrimitive, false, {}, inputShape, op->get_friendly_name());
         p.AddPrimitive(reshapePrim);
         p.AddInnerPrimitiveToProfiler(reshapeName, layerName, op);
 
@@ -81,7 +79,7 @@ static void CreateCommonBroadcastOp(Program& p, const std::shared_ptr<ngraph::No
 
     auto broadcastPrim = cldnn::broadcast(layerName,
                                           inputPrimitive,
-                                          tensor_from_dims(op->get_output_shape(0)),
+                                          tensor_from_dims({}),
                                           {},
                                           op->get_friendly_name());
 

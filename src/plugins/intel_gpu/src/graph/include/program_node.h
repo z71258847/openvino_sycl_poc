@@ -8,6 +8,7 @@
 #include "intel_gpu/primitives/activation.hpp"
 #include "intel_gpu/primitives/implementation_desc.hpp"
 #include "intel_gpu/graph/program.hpp"
+#include "intel_gpu/runtime/utils.hpp"
 
 #include "kernel_selector_helper.h"
 #include "fused_primitive_desc.h"
@@ -133,6 +134,7 @@ public:
         auto params = std::unique_ptr<kernel_impl_params>(new kernel_impl_params(get_program(), get_primitive(), get_unique_id(), in_layouts, out_layout,
                                                                                  get_fused_primitives(),
                                                                                  get_fused_activations_funcs(), get_fused_activations_params()));
+        params->memory_deps = get_const_memory_deps();
 
         return params;
     }
@@ -246,6 +248,7 @@ public:
     void set_output(bool out) { output = out; }
     bool is_output() const { return output; }
 
+    void invalidate_users() const;
     bool is_valid_output_layout() const { return valid_output_layout; }
 
     uint8_t mark(uint8_t val = 1) {
@@ -398,6 +401,17 @@ public:
         cur_id = 0;
     }
 
+    virtual std::vector<size_t> get_shape_infer_dependencies() const {
+        // Default impl will request all deps for shape infer
+        // It means that update_shape impl will wait for all memory deps
+        std::vector<size_t> res(get_dependencies().size());
+        std::iota(std::begin(res), std::end(res), 0);
+        return res;
+    }
+
+    std::map<size_t, memory::ptr> get_const_memory_deps() const;
+
+
 protected:
     size_t unique_id = 0;
     static thread_local size_t cur_id;
@@ -444,8 +458,6 @@ protected:
 
     std::vector<fused_activation_params> fused_activations;
     std::vector<fused_primitive_desc> fused_prims;
-
-    void invalidate_users() const;
 
 private:
 #ifdef ENABLE_ONEDNN_FOR_GPU

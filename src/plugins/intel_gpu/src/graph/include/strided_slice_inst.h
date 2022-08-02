@@ -69,6 +69,11 @@ public:
     using parent::parent;
 
     program_node& input(size_t index = 0) const { return get_dependency(index); }
+
+
+    std::vector<size_t> get_shape_infer_dependencies() const override {
+        return {1, 2, 3};
+    }
 };
 
 using strided_slice_node = typed_program_node<strided_slice>;

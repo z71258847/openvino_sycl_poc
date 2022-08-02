@@ -11,6 +11,8 @@
 #include "gemm/gemm_kernel_base.h"
 #include "intel_gpu/runtime/error_handler.hpp"
 
+#include "matmul_shape_inference.hpp"
+
 namespace cldnn {
 namespace ocl {
 

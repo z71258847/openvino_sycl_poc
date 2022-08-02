@@ -110,14 +110,21 @@ public:
     event::ptr execute(const std::vector<event::ptr>& events);
     void init_kernels();
     void set_arguments();
+    void realloc_if_needed();
 
     bool validate() const {
-        if (_impl == nullptr)
+        if (_impl == nullptr) {
+            if (is_dynamic())
+                return true;
             throw std::invalid_argument("[Internal cldnn error].  Validation method for nullptr impl is not allowed.");
+        }
         return _impl->validate(*this);
     }
     bool output_changed() const { return _output_changed; }
+    bool shape_changed() const { return _shape_changed; }
     void reset_output_change() { _output_changed = false; }
+    void reset_shape_change() { _shape_changed = false; }
+    void set_shape_change() { _shape_changed = true; }
 
     void build_deps();
 
@@ -150,10 +157,14 @@ public:
     }
 
     void allocate_internal_buffers();
-    static memory::ptr allocate_output(engine& engine, memory_pool& pool,
-                                        const program_node& _node, uint32_t net_id, bool is_internal);
+    static memory::ptr allocate_output(engine& engine, memory_pool& pool,  const program_node& _node,
+                                       const kernel_impl_params& impl_params, uint32_t net_id, bool is_internal);
 
     std::vector<memory::cptr> get_intermediates_memories() const { return _intermediates_memory; }
+
+    virtual void update_shape();
+    virtual void update_weights() {}
+    void update_impl();
 
 protected:
     primitive_inst(network& network, program_node const& node, bool allocate_memory);
@@ -161,7 +172,8 @@ protected:
     network& _network;
     program_node const& _node;
 
-    std::unique_ptr<primitive_impl> _impl;
+    std::shared_ptr<primitive_impl> _impl;
+    std::unique_ptr<kernel_impl_params> _impl_params;
 
     // this is a set of dependencies in terms of memory, if execution of this primitive requires data from another one,
     // it should be added to this set
@@ -184,10 +196,13 @@ protected:
     std::vector<memory::cptr> _intermediates_memory;
 
     bool _output_changed;  // todo: implement output reuse if neither of inputs has changed
+    bool _shape_changed = false;
     bool _has_valid_input =
         true;  // by default all primitives has valid inputs, exception is input_layout (see input_layout_inst)
     bool _has_mutable_input = false;
     bool _mem_allocated = false;
+
+    size_t max_output_layout_size;
 
     memory::ptr allocate_output();
     static std::vector<std::shared_ptr<primitive_inst>> build_exec_deps(
@@ -213,8 +228,7 @@ struct typed_primitive_impl : public primitive_impl {
     using primitive_impl::primitive_impl;
 
 private:
-    event::ptr execute(const std::vector<event::ptr>& event,
-                            primitive_inst& instance) override {
+    event::ptr execute(const std::vector<event::ptr>& event, primitive_inst& instance) override {
         if (instance.type() != PType::type_id())
             throw std::invalid_argument("Implementation type does not match primitive type");
         if (instance.get_impl() != this)

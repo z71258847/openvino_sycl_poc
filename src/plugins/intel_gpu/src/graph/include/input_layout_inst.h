@@ -19,6 +19,11 @@ struct typed_program_node<input_layout> : public typed_program_node_base<input_l
     using parent::parent;
 
     typed_program_node(const std::shared_ptr<input_layout> prim, program& prog);
+
+    using parent::get_kernel_impl_params;
+    std::unique_ptr<kernel_impl_params> get_kernel_impl_params() const override {
+        return parent::get_kernel_impl_params({}, get_primitive()->layout);
+    }
 };
 
 using input_layout_node = typed_program_node<input_layout>;
@@ -29,11 +34,16 @@ class typed_primitive_inst<input_layout> : public typed_primitive_inst_base<inpu
 
 public:
     static layout calc_output_layout(input_layout_node const& node, kernel_impl_params const& impl_param) {
-        return impl_param.typed_desc<input_layout>()->layout;
+        return impl_param.output_layout;
+    }
+
+    void update_shape() override {
+        if (!_output)
+            OPENVINO_ASSERT(false, "[GPU] Can't update shape for input_layout instance as memory is not set");
+        _impl_params->output_layout = _output->get_layout();
     }
     static std::string to_string(input_layout_node const& node);
 
-public:
     typed_primitive_inst(network& network, input_layout_node const& node);
 
     void set_data(memory::ptr mem);

@@ -7,6 +7,7 @@
 #include "primitive_type_base.h"
 #include "intel_gpu/runtime/memory.hpp"
 #include "intel_gpu/runtime/error_handler.hpp"
+#include "intel_gpu/runtime/debug_configuration.hpp"
 #include "json_object.h"
 #include <string>
 
@@ -58,8 +59,11 @@ std::vector<layout> reshape_inst::calc_output_layouts(reshape_node const& node, 
     // On program build stage for the cases with pattern being stored in a runtime tensor
     // we return output_partial_shape taken from the original model intead of something like PartialShape::dynamic(rank)
     // as ngraph may refine output shape using interval arithmetic
-    if (memory_deps.empty() && prim->output_pattern.empty()) {
-        return { layout{prim->output_partial_shape, input_layout.data_type, format::adjust_to_rank(input_layout.format, prim->output_partial_shape.size())} };
+    if ((memory_deps.empty() && prim->output_pattern.empty()) || input_layout.is_dynamic()) {
+        auto rank = 4;
+        if (prim->output_partial_shape.rank().is_static())
+            rank = prim->output_partial_shape.size();
+        return { layout{prim->output_partial_shape, input_layout.data_type, format::adjust_to_rank(input_layout.format, rank)} };
     }
 
     ov::op::v1::Reshape op;
@@ -126,19 +130,25 @@ reshape_inst::typed_primitive_inst(network& network, reshape_node const& node) :
                                     "output layout data type",
                                     output_layout.data_type,
                                     "");
-    CLDNN_ERROR_NOT_EQUAL(node.id(),
-                          "Output layout count",
-                          output_layout.count(),
-                          "input layout count",
-                          input_layout.count(),
-                          "Output layout of reshape primitive changes size of input buffer");
+    if (output_layout.is_static())
+        CLDNN_ERROR_NOT_EQUAL(node.id(),
+                              "Output layout count",
+                              output_layout.count(),
+                              "input layout count",
+                              input_layout.count(),
+                              "Output layout of reshape primitive changes size of input buffer");
 
     // if reshape operated in-place, postpone creation of the output until network run,
     // then create new memory object as the reinterpreted output of the previous primitive
-    if (!node.can_be_optimized())
-        _output = allocate_output();
-    else
-        reuse_input();
+    if (_node.get_output_layout().is_static()) {
+        if (!node.can_be_optimized())
+            _output = allocate_output();
+        else
+            reuse_input();
+    } else {
+        if (_exec_deps.size() > 0 && input_memory_ptr())
+            reuse_input();
+    }
 }
 
 void reshape_inst::on_execute() {

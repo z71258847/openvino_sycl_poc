@@ -321,12 +321,11 @@ void network::validate_primitives() {
 }
 
 void network::set_arguments() {
-    if (!_reset_arguments)
+    if (!_reset_arguments || is_dynamic())
         return;
 
     for (auto const& prim : _exec_order) {
-        if (!prim->is_dynamic())
-            prim->set_arguments();
+        prim->set_arguments();
     }
     _reset_arguments = false;
 }
@@ -686,18 +685,22 @@ void network::execute_impl(const std::vector<event::ptr>& events) {
             std::ostringstream in_addr;
             // buffer_ptr() only support usm_memory
             for (size_t i = 0; i < get_primitive(inst->id())->dependencies().size(); i++) {
-                auto& in_mem = get_primitive(inst->id())->dep_memory(i);
-                in_addr << in_mem.buffer_ptr();
-                if (i < get_primitive(inst->id())->dependencies().size() - 1) {
-                    in_addr << ", ";
+                auto in_mem = get_primitive(inst->id())->dep_memory_ptr(i);
+                if (in_mem) {
+                    in_addr << in_mem->buffer_ptr();
+                    if (i < get_primitive(inst->id())->dependencies().size() - 1) {
+                        in_addr << ", ";
+                    }
                 }
             }
-            auto& out_mem = get_primitive(inst->id())->output_memory();
+            auto out_mem = get_primitive(inst->id())->output_memory_ptr();
+            auto out_alloc_type = out_mem ? out_mem->get_allocation_type() : allocation_type::unknown;
+            auto out_ptr = out_mem ? out_mem->buffer_ptr() : nullptr;
 
             GPU_DEBUG_COUT << "Execute " << inst->id() << ", memory type: "
-                           << inst->output_memory().get_allocation_type() << ", in_usm("
+                           << out_alloc_type << ", in_usm("
                            << in_addr.str() << "), out_usm("
-                           << out_mem.buffer_ptr() << ")" << std::endl;
+                           << out_ptr << ")" << std::endl;
         }
 
         // If a node has mutable input or it's an output, then the input/output buffers might be changed

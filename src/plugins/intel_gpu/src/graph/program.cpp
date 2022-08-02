@@ -103,7 +103,8 @@ program::program(engine& engine_ref,
       options(options),
       processing_order(),
       tuning_cache(nullptr),
-      is_body_program(is_body_program) {
+      is_body_program(is_body_program),
+      primitive_impl_cache(3000) {
     init_primitives();
     set_options();
     pm = std::unique_ptr<pass_manager>(new pass_manager(*this));
@@ -126,7 +127,8 @@ program::program(engine& engine_ref,
       _stream(_engine.create_stream()),
       options(options),
       processing_order(),
-      tuning_cache(nullptr) {
+      tuning_cache(nullptr),
+      primitive_impl_cache(3000) {
     init_primitives();
     set_options();
     _kernels_cache = std::unique_ptr<kernels_cache>(new kernels_cache(_engine, prog_id,
@@ -141,7 +143,8 @@ program::program(engine& engine)
       _stream(_engine.create_stream()),
       options(build_options()),
       processing_order(),
-      tuning_cache(nullptr) { }
+      tuning_cache(nullptr),
+      primitive_impl_cache(3000) { }
 
 program::~program() {
 }
@@ -644,6 +647,12 @@ void program::transfer_memory_to_device() {
                 throw std::invalid_argument(err_str);
             }
 
+            auto users = data_node.get_users();
+            if (users.size() == 1
+                && users.front()->is_type<reshape>()
+                && users.front()->is_dynamic()) {
+                    continue;
+                }
 
             if (alloc_type == allocation_type::usm_host || alloc_type == allocation_type::usm_shared) {
                 GPU_DEBUG_GET_INSTANCE(debug_config);
@@ -1558,7 +1567,7 @@ std::pair<int64_t, int64_t> program::get_estimated_device_mem_usage() {
         } else if (node->is_type<mutable_data>() && node->get_dependencies().empty()) {
             continue;
         } else {
-            allocated_mem_ptrs.insert(primitive_inst::allocate_output(engine, pool, *node, 0, false));
+            allocated_mem_ptrs.insert(primitive_inst::allocate_output(engine, pool, *node, *node->get_kernel_impl_params(), 0, false));
         }
     }
 

@@ -95,6 +95,62 @@ layout reduce_inst::calc_output_layout(reduce_node const& node, kernel_impl_para
         return layout{output_type, input_format, tensor(batch(in_dims[0]), feature(in_dims[1]), spatial(in_dims[2], in_dims[3]))};
 }
 
+std::vector<layout> reduce_inst::calc_output_layouts(reduce_node const& node, kernel_impl_params const& impl_param) {
+    auto desc = impl_param.typed_desc<reduce>();
+
+    auto input_layout = impl_param.get_input_layout();
+    auto input_format = input_layout.format;
+    auto format_dim = input_format.dimension();
+    auto output_type = input_layout.data_type;
+    auto mode = desc->mode;
+    auto reduce_axes = convert_axes(desc->axes, input_layout.get_rank());
+    auto in_dims = input_layout.get_partial_shape();
+
+    for (size_t a = 0; a < reduce_axes.size(); a++) {
+        in_dims[reduce_axes[a]] = 1;
+    }
+
+    ov::PartialShape updated_dims;
+    if (!desc->keep_dims) {
+        // Get unreduced from b-f and x-w range
+        for (size_t b_f_index = 0; b_f_index < 2; b_f_index++) {
+            bool index_to_remove = std::find(reduce_axes.begin(), reduce_axes.end(), b_f_index) != reduce_axes.end();
+            if (!index_to_remove)
+                updated_dims.push_back(in_dims[b_f_index]);
+        }
+        for (size_t x_w_index = format_dim - 1; x_w_index >= 2; x_w_index--) {
+            bool index_to_remove = std::find(reduce_axes.begin(), reduce_axes.end(), x_w_index) != reduce_axes.end();
+            if (!index_to_remove)
+                updated_dims.push_back(in_dims[x_w_index]);
+        }
+
+        if (input_format.dimension() == 4 && reduce_axes.size() == 1)
+            updated_dims.push_back(1);
+        if (updated_dims.size() > 2)
+            std::reverse(updated_dims.begin() + 2, updated_dims.end());
+
+        // Fill updated dims to format_dim size
+        while (updated_dims.size() < format_dim)
+            updated_dims.push_back(1);
+
+        in_dims = std::move(updated_dims);
+    }
+
+    std::vector<reduce_mode> reduce_bool_modes = {reduce_mode::logical_and, reduce_mode::logical_or};
+    if (std::find(reduce_bool_modes.begin(), reduce_bool_modes.end(), mode) != reduce_bool_modes.end())
+        output_type = data_types::i8;
+    else if (output_type == data_types::i8 || output_type == data_types::u8)
+        output_type = data_types::f32;
+
+    if (desc->output_data_type)
+        output_type = *desc->output_data_type;
+
+    if (impl_param.has_fused_primitives())
+        output_type = impl_param.get_fused_output_layout().data_type;
+
+    return { layout{in_dims, output_type, format::adjust_to_rank(input_format, in_dims.size())} };
+}
+
 std::string reduce_inst::to_string(reduce_node const& node) {
     auto desc = node.get_primitive();
     auto node_info = node.desc_to_json();
