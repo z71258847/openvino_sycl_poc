@@ -36,14 +36,17 @@ input_layout_node::typed_program_node(const std::shared_ptr<input_layout> dprim,
 }
 
 input_layout_inst::typed_primitive_inst(network& network, input_layout_node const& node)
-    : parent(network, node, !network.is_internal() || has_optimized_users(node)) {
+    : parent(network, node, !node.is_dynamic() && (!network.is_internal() || has_optimized_users(node))) {
     _has_valid_input = false;  // by default input for 'input_layout' is invalid as long as user doesn't call set_data
 }
 
 void input_layout_inst::set_data(memory::ptr mem) {
     auto ol = node.get_output_layout();
 
-    check_memory_to_set(*mem, ol);
+    if (!_node.is_dynamic())
+        check_memory_to_set(*mem, ol);
+
+    OPENVINO_ASSERT(mem->get_layout().is_static(), "[GPU] set_data: invalid memory object passed. Layout can't be dynamic");
 
     if (mem->is_allocated_by(get_network().get_engine())) {
         _output = mem;
@@ -55,6 +58,7 @@ void input_layout_inst::set_data(memory::ptr mem) {
 
     _has_valid_input = true;
     _output_changed = true;
+    _shape_changed = mem->get_layout() != ol;
 }
 
 std::string input_layout_inst::to_string(input_layout_node const& node) {

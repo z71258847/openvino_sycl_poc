@@ -7,6 +7,7 @@
 #include "intel_gpu/primitives/data.hpp"
 #include "intel_gpu/primitives/mutable_data.hpp"
 #include "intel_gpu/primitives/input_layout.hpp"
+#include "intel_gpu/primitives/reshape.hpp"
 
 #include "intel_gpu/runtime/error_handler.hpp"
 #include "intel_gpu/runtime/memory.hpp"
@@ -324,7 +325,8 @@ void network::set_arguments() {
         return;
 
     for (auto const& prim : _exec_order) {
-        prim->set_arguments();
+        if (!prim->is_dynamic())
+            prim->set_arguments();
     }
     _reset_arguments = false;
 }
@@ -522,14 +524,22 @@ memory::ptr network::get_output_memory(const primitive_id& output_id) {
 
 void network::allocate_primitives() {
     std::vector<std::shared_ptr<program_node>> nodes_to_allocate{};
-    for (auto node : _program->get_processing_order()) {
+    auto& po = _program->get_processing_order();
+    for (auto node : po) {
         nodes_to_allocate.push_back(_program->get_node_ptr(node->id()));
     }
 
     std::sort(nodes_to_allocate.begin(),
               nodes_to_allocate.end(),
-              [](std::shared_ptr<program_node> const& lhs, std::shared_ptr<program_node> const& rhs) {
-                  return (lhs->get_output_layout().bytes_count() > rhs->get_output_layout().bytes_count());
+              [&po](std::shared_ptr<program_node> const& lhs, std::shared_ptr<program_node> const& rhs) {
+                    if (rhs->get_output_layout().is_dynamic() && lhs->get_output_layout().is_dynamic())
+                        return po.get_processing_number(lhs.get()) < po.get_processing_number(rhs.get());
+                    if (rhs->get_output_layout().is_dynamic())
+                        return true;
+                    if (lhs->get_output_layout().is_dynamic())
+                        return false;
+
+                    return (lhs->get_output_layout().bytes_count() > rhs->get_output_layout().bytes_count());
               });
 
     for (auto const& node : nodes_to_allocate) {
@@ -638,13 +648,18 @@ void network::execute_impl(const std::vector<event::ptr>& events) {
     GPU_DEBUG_IF(debug_config->verbose >= 1)
         GPU_DEBUG_COUT << "----------------------------------------------" << std::endl;
 
+    _shape_changed = false;
     std::vector<memory::ptr> in_out_mem;
     for (auto& inst : _inputs) {
-        in_out_mem.push_back(inst->output_memory_ptr());
+        if (inst->output_memory_ptr())
+            in_out_mem.push_back(inst->output_memory_ptr());
+        if (inst->shape_changed())
+            _shape_changed = true;
     }
 
     for (auto& inst : _outputs) {
-        in_out_mem.push_back(inst->output_memory_ptr());
+        if (inst->output_memory_ptr())
+            in_out_mem.push_back(inst->output_memory_ptr());
     }
 
     auto surf_lock = surfaces_lock::create(get_engine().type(), in_out_mem, get_stream());
@@ -687,7 +702,7 @@ void network::execute_impl(const std::vector<event::ptr>& events) {
 
         // If a node has mutable input or it's an output, then the input/output buffers might be changed
         // So we need to set arguments on each execution.
-        if (inst->has_mutable_input() || inst->is_output()) {
+        if (!inst->is_dynamic() && (inst->has_mutable_input() || inst->is_output())) {
             inst->set_arguments();
         }
         execute_primitive(inst, events);
@@ -850,6 +865,11 @@ void network::allocate_primitive_instance(program_node const& node) {
     if (_primitives.count(node.id()))
         return;
 
+    GPU_DEBUG_GET_INSTANCE(debug_config);
+    GPU_DEBUG_IF(debug_config->verbose >= 4) {
+        GPU_DEBUG_COUT << "allocate instance for " << node.id() << std::endl;
+    }
+
     auto inst = node.type()->create_instance(*this, node);
 
     std::function<bool(const program_node&)> is_mutable_input = [&is_mutable_input](const program_node& node) {
@@ -865,6 +885,10 @@ void network::allocate_primitive_instance(program_node const& node) {
         }
         return false;
     };
+
+    if (node.is_dynamic()) {
+        _is_dynamic = true;
+    }
 
     if (is_mutable_input(node)) {
         inst->set_mutable_input(true);
@@ -888,6 +912,12 @@ void network::transfer_memory_to_device(std::shared_ptr<primitive_inst> instance
     OV_ITT_SCOPED_TASK(itt::domains::CLDNN, "NetworkImpl::TransferMemory");
     auto& inst_mem = instance->output_memory();
     auto alloc_type = inst_mem.get_allocation_type();
+
+    auto users = node.get_users();
+    if (users.size() == 1
+        && users.front()->is_type<reshape>()
+        && users.front()->is_dynamic())
+            return;
 
     // Do not transfer memory if a user requires lockable memory.
     // If memory is used in both gpu and cpu implementations, primitive itself is responsible for correct allocation type
