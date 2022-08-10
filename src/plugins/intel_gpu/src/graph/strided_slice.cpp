@@ -32,6 +32,7 @@ layout strided_slice_inst::calc_output_layout(strided_slice_node const& node, ke
     return layout{input_layout.data_type, output_format, out_size};
 }
 
+template<typename ShapeType>
 std::vector<layout> strided_slice_inst::calc_output_layouts(strided_slice_node const& node, const kernel_impl_params& impl_param) {
     auto desc = node.get_primitive();
     auto input_layout = impl_param.input_layouts[0];
@@ -44,12 +45,12 @@ std::vector<layout> strided_slice_inst::calc_output_layouts(strided_slice_node c
     }
 
     ov::op::v1::StridedSlice op;
-    std::vector<ov::PartialShape> output_shapes = {ov::PartialShape()};
-    std::vector<ov::PartialShape> input_shapes = {
-        input_layout.get_partial_shape(),
-        impl_param.input_layouts[1].get_partial_shape(),
-        impl_param.input_layouts[2].get_partial_shape(),
-        impl_param.input_layouts[3].get_partial_shape()
+    std::vector<ShapeType> output_shapes = {ShapeType()};
+    std::vector<ShapeType> input_shapes = {
+        input_layout.get<ShapeType>(),
+        impl_param.input_layouts[1].get<ShapeType>(),
+        impl_param.input_layouts[2].get<ShapeType>(),
+        impl_param.input_layouts[3].get<ShapeType>()
     };
 
     op.set_begin_mask(desc->begin_mask);

@@ -14,6 +14,21 @@
 
 #include <cmath>
 #include <algorithm>
+#include <chrono>
+
+
+#if 1
+#define PRINT_TIME(func) \
+{ \
+ auto start = std::chrono::high_resolution_clock::now(); \
+ func; \
+ auto duration = std::chrono::high_resolution_clock::now() - start; \
+ std::cerr <<  #func <<  " " << std::chrono::duration_cast<std::chrono::microseconds>(duration).count() << "us\n"; \
+}
+#else
+#define PRINT_TIME(func) func;
+#endif
+
 
 using namespace cldnn;
 using namespace ::tests;
@@ -77,10 +92,27 @@ TEST_P(strided_slice_test, shape_infer) {
     program_wrapper::add_connection(prog, strides_node, strided_slice_node);
     auto params = strided_slice_node.get_kernel_impl_params();
     params->memory_deps = {{1, begin_mem}, {2, end_mem}, {3, strides_mem}};
-    auto res = strided_slice_inst::calc_output_layouts(strided_slice_node, *params);
 
-    ASSERT_EQ(res.size(), 1);
-    ASSERT_EQ(res[0], p.expected_layout);
+    std::vector<layout> results;
+    std::vector<layout> results1;
+
+    results.reserve(1000);
+    results1.reserve(1000);
+    PRINT_TIME(
+        for (size_t i = 0; i < 1000; i++) {
+            results.push_back(strided_slice_inst::calc_output_layouts<ov::PartialShape>(strided_slice_node, *params)[0]);
+
+        }
+    );
+
+    PRINT_TIME(
+        for (size_t i = 0; i < 1000; i++) {
+            results1.push_back(strided_slice_inst::calc_output_layouts<ov::intel_gpu::StaticShape>(strided_slice_node, *params)[0]);
+        }
+    );
+
+    ASSERT_EQ(results[0], p.expected_layout);
+    ASSERT_EQ(results1[0], p.expected_layout);
 }
 
 INSTANTIATE_TEST_SUITE_P(smoke, strided_slice_test,

@@ -64,6 +64,7 @@ layout gather_inst::calc_output_layout(gather_node const& node, kernel_impl_para
                   tensor(format::get_default_format(dims_converted.size()), dims_converted)};
 }
 
+template<typename ShapeType>
 std::vector<layout> gather_inst::calc_output_layouts(gather_node const& node, const kernel_impl_params& impl_param) {
     auto desc = node.get_primitive();
 
@@ -76,11 +77,11 @@ std::vector<layout> gather_inst::calc_output_layouts(gather_node const& node, co
 
     ov::op::v8::Gather op;
     op.set_batch_dims(desc->batch_dim);
-    std::vector<ov::PartialShape> output_shapes = {ov::PartialShape()};
-    std::vector<ov::PartialShape> input_shapes = {
-        impl_param.input_layouts[0].get_partial_shape(),
-        impl_param.input_layouts[1].get_partial_shape(),
-        ov::PartialShape{1} // axis input is removed on gather primitive creation, so we can't user get_dependency(2)
+    std::vector<ShapeType> output_shapes = {ShapeType()};
+    std::vector<ShapeType> input_shapes = {
+        impl_param.input_layouts[0].get<ShapeType>(),
+        impl_param.input_layouts[1].get<ShapeType>(),
+        ShapeType{1} // axis input is removed on gather primitive creation, so we can't user get_dependency(2)
     };
 
     int64_t axis = desc->axis;

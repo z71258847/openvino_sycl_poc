@@ -28,31 +28,6 @@ layout broadcast_inst::calc_output_layout(broadcast_node const& node, kernel_imp
     return {input_layout.data_type, input_layout.format, desc->broadcast_sizes};
 }
 
-std::vector<layout> broadcast_inst::calc_output_layouts(broadcast_node const& node, const kernel_impl_params& impl_param) {
-    auto desc = node.get_primitive();
-    auto input_layout = impl_param.input_layouts[0];
-
-    ov::op::v3::Broadcast op;
-    op.set_broadcast_spec(ov::op::BroadcastType::NUMPY);
-
-    std::vector<ov::PartialShape> output_shapes = {ov::PartialShape()};
-    std::vector<ov::PartialShape> input_shapes = {
-        input_layout.get_partial_shape(),
-        ov::PartialShape{4},
-    };
-
-    std::vector<int64_t> target_shape = {1, 2, 10, 20};
-
-    auto tensor1 = make_host_tensor({ov::PartialShape{4}, data_types::i64, format::bfyx}, target_shape.data());
-    std::map<size_t, std::shared_ptr<ngraph::runtime::HostTensor>> const_data = {
-        {1, tensor1},
-    };
-    ov::op::v3::shape_infer(&op, input_shapes, output_shapes, const_data);
-    auto output_format = format::get_default_format(output_shapes[0].size());
-
-    return { layout{output_shapes[0], input_layout.data_type, output_format} };
-}
-
 std::string broadcast_inst::to_string(broadcast_node const& node) {
     auto desc = node.get_primitive();
     auto node_info = node.desc_to_json();

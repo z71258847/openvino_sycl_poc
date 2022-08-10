@@ -48,6 +48,7 @@ layout reshape_inst::calc_output_layout(reshape_node const& node, kernel_impl_pa
     return layout{input_layout.data_type, input_layout.format, tensor(sizes)};
 }
 
+template<typename ShapeType>
 std::vector<layout> reshape_inst::calc_output_layouts(reshape_node const& node, const kernel_impl_params& impl_param) {
     assert(static_cast<bool>(node.get_primitive()->output_data_type) == false &&
            "Output data type forcing is not supported for reshape_node!");
@@ -65,11 +66,11 @@ std::vector<layout> reshape_inst::calc_output_layouts(reshape_node const& node, 
     ov::op::v1::Reshape op;
     op.set_special_zero(prim->special_zero);
 
-    ov::PartialShape pattern_shape = impl_param.input_layouts.size() == 2 ? impl_param.input_layouts[1].get_partial_shape()
-                                                                          : ov::Shape{ prim->output_pattern.size() };
-    std::vector<ov::PartialShape> output_shapes = {ov::PartialShape()};
-    std::vector<ov::PartialShape> input_shapes = {
-        impl_param.input_layouts[0].get_partial_shape(),
+    ShapeType pattern_shape = impl_param.input_layouts.size() == 2 ? impl_param.input_layouts[1].get<ShapeType>()
+                                                           : ShapeType(ov::Shape{ prim->output_pattern.size() });
+    std::vector<ShapeType> output_shapes = {ShapeType()};
+    std::vector<ShapeType> input_shapes = {
+        impl_param.input_layouts[0].get<ShapeType>(),
         pattern_shape,
     };
 

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "tensor.hpp"
+#include "static_shape.hpp"
 #include "half.hpp"
 
 #include <cmath>
@@ -356,6 +357,9 @@ struct layout {
                                                                                                    format::is_weights_format(fmt),
                                                                                                    format::is_grouped(fmt)));
             ov::Shape shape(sizes.begin(), sizes.end());
+
+            this->size_static = shape;
+            this->_is_dynamic = false;
             this->size = ov::PartialShape(shape);
         }
 
@@ -363,7 +367,17 @@ struct layout {
         : data_type(data_type)
         , format(fmt)
         , data_padding(apadding)
-        , size(size) { }
+        , size(size)
+        , _is_dynamic(size.is_dynamic())
+        , size_static(_is_dynamic ? ov::intel_gpu::StaticShape{} : size.to_shape()) { }
+
+    layout(ov::intel_gpu::StaticShape size, data_types data_type, cldnn::format fmt, padding apadding = padding())
+        : data_type(data_type)
+        , format(fmt)
+        , data_padding(apadding)
+        , size(size.to_partial_shape())
+        , _is_dynamic(false)
+        , size_static(size) { }
 
     layout(const layout& other) = default;
 
@@ -373,6 +387,8 @@ struct layout {
         data_type = other.data_type;
         format = other.format;
         size = other.size;
+        _is_dynamic = other._is_dynamic;
+        size_static = other.size_static;
         data_padding = other.data_padding;
         return *this;
     }
@@ -471,6 +487,11 @@ struct layout {
 
     ov::Shape get_shape() const;
 
+    ov::intel_gpu::StaticShape get_static_shape() const;
+
+    template<typename T>
+    T get() const;
+
     tensor get_tensor() const;
 
     void set_tensor(const tensor& size);
@@ -488,6 +509,9 @@ struct layout {
 private:
     /// The size of the @ref memory (excluding padding)
     ov::PartialShape size;
+    bool _is_dynamic;
+    ov::intel_gpu::StaticShape size_static;
+
 };
 
 inline ::std::ostream& operator<<(::std::ostream& os, const layout& p) {

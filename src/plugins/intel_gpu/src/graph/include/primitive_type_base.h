@@ -6,6 +6,7 @@
 #pragma once
 
 #include "intel_gpu/runtime/engine.hpp"
+#include "intel_gpu/runtime/layout.hpp"
 
 #include "meta_utils.h"
 #include "primitive_type.h"
@@ -81,7 +82,14 @@ struct primitive_type_base : primitive_type {
         if (node.type() != this)
             throw std::invalid_argument("primitive_type_base::calc_output_layouts: primitive type mismatch");
 
-        return typed_primitive_inst<PType>::calc_output_layouts(node, impl_param);
+        return typed_primitive_inst<PType>::template calc_output_layouts<ov::PartialShape>(node, impl_param);
+    }
+
+    std::vector<cldnn::layout> calc_output_layouts_rt(const cldnn::program_node& node, const kernel_impl_params& impl_param) const override {
+        if (node.type() != this)
+            throw std::invalid_argument("primitive_type_base::calc_output_layouts: primitive type mismatch");
+
+        return typed_primitive_inst<PType>::template calc_output_layouts<ov::intel_gpu::StaticShape>(node, impl_param);
     }
 
     std::string to_string(const cldnn::program_node& node) const override {

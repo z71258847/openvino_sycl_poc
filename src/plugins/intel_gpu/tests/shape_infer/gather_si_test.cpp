@@ -18,6 +18,20 @@
 using namespace cldnn;
 using namespace ::tests;
 
+
+#if 1
+#define PRINT_TIME(func) \
+{ \
+ auto start = std::chrono::high_resolution_clock::now(); \
+ func; \
+ auto duration = std::chrono::high_resolution_clock::now() - start; \
+ std::cerr <<  #func <<  " " << std::chrono::duration_cast<std::chrono::microseconds>(duration).count() << "us\n"; \
+}
+#else
+#define PRINT_TIME(func) func;
+#endif
+
+
 namespace shape_infer_tests {
 
 struct gather_test_params {
@@ -46,10 +60,31 @@ TEST_P(gather_test, shape_infer) {
     auto& gather_node = prog.get_or_create(gather_prim);
     program_wrapper::add_connection(prog, input0_layout_node, gather_node);
     program_wrapper::add_connection(prog, input1_layout_node, gather_node);
-    auto res = gather_inst::calc_output_layouts(gather_node, *gather_node.get_kernel_impl_params());
+    // auto res = gather_inst::calc_output_layouts<ov::PartialShape>(gather_node, *gather_node.get_kernel_impl_params());
 
-    ASSERT_EQ(res.size(), 1);
-    ASSERT_EQ(res[0], p.expected_layout);
+    std::vector<layout> results;
+    std::vector<layout> results1;
+
+    results.reserve(1000);
+    results1.reserve(1000);
+    PRINT_TIME(
+        for (size_t i = 0; i < 1000; i++) {
+            results.push_back(gather_inst::calc_output_layouts<ov::PartialShape>(gather_node, *gather_node.get_kernel_impl_params())[0]);
+
+        }
+    );
+
+    PRINT_TIME(
+        for (size_t i = 0; i < 1000; i++) {
+            results1.push_back(gather_inst::calc_output_layouts<ov::intel_gpu::StaticShape>(gather_node, *gather_node.get_kernel_impl_params())[0]);
+        }
+    );
+
+    ASSERT_EQ(results[0], p.expected_layout);
+    ASSERT_EQ(results1[0], p.expected_layout);
+
+    // ASSERT_EQ(res.size(), 1);
+    // ASSERT_EQ(res[0], p.expected_layout);
 }
 
 INSTANTIATE_TEST_SUITE_P(smoke, gather_test,

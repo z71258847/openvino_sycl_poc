@@ -267,6 +267,7 @@ public:
     const typed_node& node;
     const PType& argument;
 
+    template<typename T>
     static std::vector<layout> calc_output_layouts(const typed_node& node, const kernel_impl_params& impl_param) { return {}; }
 
     typed_primitive_inst_base(network& network, typed_node const& node)

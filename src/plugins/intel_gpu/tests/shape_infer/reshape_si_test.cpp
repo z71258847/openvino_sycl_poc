@@ -51,10 +51,10 @@ TEST_P(reshape_test_two_inputs, shape_infer) {
     program_wrapper::add_connection(prog, pattern_node, reshape_node);
     auto params = reshape_node.get_kernel_impl_params();
 
-    auto res_wo_data = reshape_inst::calc_output_layouts(reshape_node, *params);
+    auto res_wo_data = reshape_inst::calc_output_layouts<ov::intel_gpu::StaticShape>(reshape_node, *params);
 
     params->memory_deps = {{1, pattern_mem}};
-    auto res_w_data = reshape_inst::calc_output_layouts(reshape_node, *params);
+    auto res_w_data = reshape_inst::calc_output_layouts<ov::intel_gpu::StaticShape>(reshape_node, *params);
 
     layout expected_layout_wo_data{p.output_partial_shape, p.expected_layout.data_type, p.expected_layout.format};
     ASSERT_EQ(res_wo_data.size(), 1);
@@ -97,7 +97,7 @@ TEST_P(reshape_test_single_input, shape_infer) {
     auto& input_node = prog.get_or_create(input_prim);
     auto& reshape_node = prog.get_or_create(reshape_prim);
     program_wrapper::add_connection(prog, input_node, reshape_node);
-    auto res = reshape_inst::calc_output_layouts(reshape_node, *reshape_node.get_kernel_impl_params());
+    auto res = reshape_inst::calc_output_layouts<ov::intel_gpu::StaticShape>(reshape_node, *reshape_node.get_kernel_impl_params());
 
     ASSERT_EQ(res.size(), 1);
     ASSERT_EQ(res[0], p.expected_layout);

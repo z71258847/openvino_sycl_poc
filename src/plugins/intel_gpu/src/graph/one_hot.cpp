@@ -47,6 +47,7 @@ layout one_hot_inst::calc_output_layout(one_hot_node const& node, kernel_impl_pa
     return {dt, format, desc->shape};
 }
 
+template<typename ShapeType>
 std::vector<layout> one_hot_inst::calc_output_layouts(const one_hot_node& node, const kernel_impl_params& impl_param) {
     auto desc = node.get_primitive();
     auto input_layout = impl_param.input_layouts[0];
@@ -60,12 +61,12 @@ std::vector<layout> one_hot_inst::calc_output_layouts(const one_hot_node& node, 
         op.set_axis(desc->one_hot_axis);
     } catch (...) {}
 
-    std::vector<ov::PartialShape> output_shapes = { ov::PartialShape::dynamic() };
-    std::vector<ov::PartialShape> input_shapes = {
+    std::vector<ShapeType> output_shapes = { ShapeType{} };
+    std::vector<ShapeType> input_shapes = {
         input_layout.get_partial_shape(),
-        ov::PartialShape{},
-        ov::PartialShape{},
-        ov::PartialShape{}
+        ShapeType{},
+        ShapeType{},
+        ShapeType{}
     };
 
     int64_t depth = desc->depth;

@@ -247,7 +247,7 @@ size_t layout::count() const {
 }
 
 bool layout::is_dynamic() const {
-    return size.is_dynamic();
+    return _is_dynamic;
 }
 
 bool layout::is_static() const {
@@ -259,7 +259,13 @@ ov::PartialShape layout::get_partial_shape() const {
 }
 
 ov::Shape layout::get_shape() const {
-    return size.to_shape();
+    OPENVINO_ASSERT(_is_dynamic == false, "Shape is not static");
+    return size_static.to_shape();
+}
+
+ov::intel_gpu::StaticShape layout::get_static_shape() const {
+    OPENVINO_ASSERT(_is_dynamic == false, "Shape is not static");
+    return size_static;
 }
 
 tensor layout::get_tensor() const {
@@ -423,6 +429,21 @@ bool layout::compatible(const layout& other) const {
 
 bool layout::identical(const layout& other) const {
     return are_layouts_identical(*this, other).first;
+}
+
+template<typename T>
+T layout::get() const {
+    static_assert(meta::always_false<T>::value, "Unexpected layout::get() template speciaization");
+}
+
+template<>
+ov::PartialShape layout::get<ov::PartialShape>() const {
+    return size;
+}
+
+template<>
+ov::intel_gpu::StaticShape layout::get<ov::intel_gpu::StaticShape>() const {
+    return size_static;
 }
 
 }  // namespace cldnn
