@@ -104,18 +104,20 @@ layout fully_connected_inst::calc_output_layout(fully_connected_node const& node
     }
 
     if (input_layout.is_dynamic()) {
-        auto rank = input_layout.get_rank();
+        auto rank = input_layout.get_partial_shape().size();
         format output_format = format::get_default_format(rank);
         return layout(ov::PartialShape::dynamic(rank), output_type, output_format);
     }
 
-    auto output_size = tensor(input_layout.batch(), weights_layout.batch(), 1, 1);
+    auto batch = input_layout.get_partial_shape()[0];
+    auto feature = input_layout.get_partial_shape()[1];
+    auto output_size = ov::PartialShape{batch, weights_layout.batch()};
     if (desc->input_size == 3) {
-        output_size = tensor(input_layout.batch(), input_layout.feature(), 1, weights_layout.batch());
+        output_size = ov::PartialShape{batch, feature, weights_layout.batch()};
     }
     format output_format = get_preferred_format(impl_param);
 
-    return layout(output_type, output_format, output_size);
+    return layout(output_size, output_type, output_format);
 }
 
 template<typename ShapeType>

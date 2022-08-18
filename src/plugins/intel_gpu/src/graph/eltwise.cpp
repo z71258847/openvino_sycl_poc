@@ -30,6 +30,11 @@ layout eltwise_inst::calc_output_layout(eltwise_node const& node, kernel_impl_pa
     auto input_node_layout = impl_param.get_non_padded_input_layout(primary_input_idx);
     auto desc = impl_param.typed_desc<eltwise>();
     auto output_type = desc->output_data_type ? *desc->output_data_type : input_node_layout.data_type;
+    for (auto& in_l : impl_param.input_layouts) {
+        if (in_l.is_dynamic()) {
+            return layout{ov::PartialShape::dynamic(in_l.get_rank()), in_l.data_type, in_l.format};
+        }
+    }
 
     auto size = input_node_layout.get_tensor();
     auto format = input_node_layout.format;
@@ -352,6 +357,9 @@ eltwise_inst::typed_primitive_inst(network& network, eltwise_node const& node) :
     // check for stride
     auto prim = node.get_primitive();
     auto inputs_count = node.inputs_count();
+
+    if (is_dynamic())
+        return;
 
     if (!prim->stride.empty()) {
         // number of strides must match number of inputs
