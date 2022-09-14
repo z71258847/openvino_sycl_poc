@@ -197,7 +197,7 @@ void add_required_reorders::run(program& p) {
 
             if (!correct_layout_selected) {
                 for (auto new_layout_format : preferred_layout_formats) {
-                    layout current_layout(original_layout.data_type, new_layout_format, original_layout.get_tensor());
+                    layout current_layout(original_layout.get_partial_shape(), original_layout.data_type, new_layout_format);
                     usr->set_output_layout(current_layout, false);
                     if (usr->type()->does_possible_implementation_exist(*usr)) {
                         correct_layout_selected = true;
@@ -222,9 +222,9 @@ void add_required_reorders::run(program& p) {
 
                     if (!correct_layout_selected) {
                         for (auto new_layout_format : preferred_layout_formats) {
-                            layout current_layout_i32(original_layout_i32.data_type,
-                                                  new_layout_format,
-                                                  original_layout_i32.get_tensor());
+                            layout current_layout_i32(original_layout_i32.get_partial_shape(),
+                                                      original_layout_i32.data_type,
+                                                      new_layout_format);
                             usr->set_output_layout(current_layout_i32, false);
                             if (usr->type()->does_possible_implementation_exist(*usr)) {
                                 correct_layout_selected = true;
