@@ -42,6 +42,8 @@ public:
         return std::make_shared<kernel_selector::reorder_fuse_params>(ks_input_layout, ks_output_layout);
     }
 
+    std::vector<size_t> get_shape_infer_dependencies() const override { return {}; }
+
 private:
     bool req_reinterpr = false;
     layout input_layout = layout(data_types::f32, format::bfyx, { 0, 0, 0, 0 });

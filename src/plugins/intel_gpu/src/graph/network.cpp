@@ -62,7 +62,7 @@ static void dump_perf_data_raw(std::string dump_path, const std::list<std::share
         return s.str();
     };
 
-    const std::string perf_raw_csv_header = "prim_id,prim_type,stage,in_shapes,out_shapes,impl,iters,time_usec\n";
+    const std::string perf_raw_csv_header = "prim_id,prim_type,stage,net_in_shapes,in_shapes,out_shapes,impl,iters,time_usec\n";
     std::ofstream of(dump_path);
     if (of.is_open()) {
         of << perf_raw_csv_header;
@@ -103,11 +103,13 @@ static void dump_perf_data_raw(std::string dump_path, const std::list<std::share
                 auto& time = std::get<0>(entry);
                 auto& num_iters = std::get<1>(entry);
                 int64_t time_avg = time / num_iters;
+                std::string net_in_l_str = layouts_to_str(key.network_input_layouts);
                 std::string in_l_str = layouts_to_str(key.input_layouts);
                 std::string out_l_str = layouts_to_str(key.output_layouts);
                 of << prim_id << ","
                 << inst->desc()->type_string() << ","
                 << key.stage << (key.cache_hit ? " (cache_hit)" : "") << ","
+                << net_in_l_str << ","
                 << in_l_str << ","
                 << out_l_str << ","
                 << (key.stage == instrumentation::pipeline_stage::inference ? key.impl_name : "undef") << ","
@@ -824,6 +826,13 @@ std::vector<primitive_id> network::get_input_ids() const {
     std::vector<primitive_id> ret;
     ret.reserve(_inputs.size());
     for (auto const& input : _inputs) ret.push_back(input->id());
+    return ret;
+}
+
+std::vector<layout> network::get_input_layouts() const {
+    std::vector<layout> ret;
+    ret.reserve(_inputs.size());
+    for (auto const& input : _inputs) ret.push_back(input->output_memory_ptr()->get_layout());
     return ret;
 }
 
