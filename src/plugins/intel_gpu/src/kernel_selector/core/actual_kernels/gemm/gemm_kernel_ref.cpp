@@ -28,6 +28,7 @@ ParamsKey GemmKernelRef::GetSupportedKey() const {
     k.EnableTensorPitches();
     k.EnableTensorOffset();
     k.EnableQuantization(QuantizationType::SYMMETRIC);
+    k.EnableDynamicShapesSupport();
 
     return k;
 }

@@ -22,11 +22,18 @@ struct broadcast_impl : typed_primitive_impl_ocl<broadcast> {
         return make_unique<broadcast_impl>(*this);
     }
 
-    static primitive_impl* create(const broadcast_node& arg, const kernel_impl_params& impl_param) {
-        const auto& primitive = arg.get_primitive();
+    void update_dispatch_data(const kernel_impl_params& impl_param) override {
+        auto kernel_params = get_params(impl_param);
+        auto& kernel_data = this->_kernel_data;
+
+        (kernel_data.update_kernels_func)(kernel_params.first, kernel_data);
+    }
+
+    static std::pair<kernel_selector::broadcast_params, kernel_selector::broadcast_optional_params> get_params(const kernel_impl_params& impl_param) {
+        const auto& primitive = impl_param.typed_desc<broadcast>();
         auto bc_params = get_default_params<kernel_selector::broadcast_params>(impl_param, 1);
         auto bc_optional_params =
-            get_default_optional_params<kernel_selector::broadcast_optional_params>(arg.get_program());
+            get_default_optional_params<kernel_selector::broadcast_optional_params>(impl_param.prog);
 
         const auto format = impl_param.output_layout.format;
         size_t max_axes_num = format.dimension();
@@ -46,8 +53,14 @@ struct broadcast_impl : typed_primitive_impl_ocl<broadcast> {
             }
         }
 
+        return {bc_params, bc_optional_params};
+    }
+
+    static primitive_impl* create(const broadcast_node& arg, const kernel_impl_params& impl_param) {
+        auto kernel_params = get_params(impl_param);
+
         auto& kernel_selector = kernel_selector::broadcast_kernel_selector::Instance();
-        auto best_kernels = kernel_selector.GetBestKernels(bc_params, bc_optional_params);
+        auto best_kernels = kernel_selector.GetBestKernels(kernel_params.first, kernel_params.second);
 
         CLDNN_ERROR_BOOL(arg.id(),
                          "Best_kernel.empty()",
@@ -61,7 +74,7 @@ struct broadcast_impl : typed_primitive_impl_ocl<broadcast> {
 namespace detail {
 
 attach_broadcast_impl::attach_broadcast_impl() {
-    implementation_map<broadcast>::add(impl_types::ocl, broadcast_impl::create, {
+    std::set<implementation_map<broadcast>::key_type> supported_keys = {
         std::make_tuple(data_types::f32, format::bfyx),
         std::make_tuple(data_types::f16, format::bfyx),
         std::make_tuple(data_types::i8, format::bfyx),
@@ -166,7 +179,9 @@ attach_broadcast_impl::attach_broadcast_impl() {
         std::make_tuple(data_types::u8, format::bs_fs_yx_bsv32_fsv32),
         std::make_tuple(data_types::i32, format::bs_fs_yx_bsv32_fsv32),
         std::make_tuple(data_types::i64, format::bs_fs_yx_bsv32_fsv32),
-    });
+    };
+
+    implementation_map<broadcast>::add(impl_types::ocl, broadcast_impl::create, { shape_types::dynamic_shape, shape_types::static_shape}, supported_keys);
 }
 
 }  // namespace detail

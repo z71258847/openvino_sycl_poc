@@ -82,6 +82,9 @@
 
 __attribute__((intel_reqd_sub_group_size(SIMD)))
 KERNEL(fc)(
+#if IS_DYNAMIC
+    const __global SHAPE_INFO_TYPE* shape_info,
+#endif
     const __global INPUT0_TYPE* input,
     __global OUTPUT_TYPE* output,
     const __global FILTER_TYPE* weights

@@ -21,6 +21,13 @@ enum class impl_types : uint8_t {
     any = 0xFF,
 };
 
+/// @brief Primitives implementation type.
+enum class shape_types : uint8_t {
+    static_shape = 1 << 0,
+    dynamic_shape = 1 << 1,
+    any = 0xFF,
+};
+
 inline impl_types operator&(impl_types a, impl_types b) {
     typedef std::underlying_type<impl_types>::type underlying_type;
     return static_cast<impl_types>(static_cast<underlying_type>(a) & static_cast<underlying_type>(b));
@@ -43,6 +50,16 @@ inline std::ostream& operator<<(std::ostream& out, const impl_types& impl_type) 
         case impl_types::ocl: out << "ocl"; break;
         case impl_types::onednn: out << "onednn"; break;
         case impl_types::any: out << "any"; break;
+        default: out << "unknown"; break;
+    }
+
+    return out;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const shape_types& shape_type) {
+    switch (shape_type) {
+        case shape_types::static_shape: out << "static_shape"; break;
+        case shape_types::dynamic_shape: out << "dynamic_shape"; break;
         default: out << "unknown"; break;
     }
 

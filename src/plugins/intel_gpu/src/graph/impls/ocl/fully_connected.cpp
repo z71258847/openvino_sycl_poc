@@ -41,15 +41,28 @@ protected:
     }
 
 public:
-    static primitive_impl* create(const fully_connected_node& arg, const kernel_impl_params& impl_param) {
-        const auto primitive = arg.get_primitive();
+
+    void update_dispatch_data(const kernel_impl_params& impl_param) override {
+        auto kernel_params = get_params(impl_param);
+        auto& kernel_data = this->_kernel_data;
+
+        (kernel_data.update_kernels_func)(kernel_params.first, kernel_data);
+    }
+
+    static std::pair<kernel_selector::fully_connected_params, kernel_selector::fully_connected_optional_params> get_params(const kernel_impl_params& impl_param) {
+        const auto primitive = impl_param.typed_desc<fully_connected>();
 
         auto get_fc_input_layouts = [primitive](const std::vector<layout>& input_layouts) {
-            auto reshape_to_2d = [](const ov::PartialShape& shape, int64_t feature) {
+            auto reshape_to_2d = [](const ov::PartialShape& shape, ov::Dimension feature) -> ov::PartialShape {
+                if (shape.is_static()) {
                     auto staticShape = shape.to_shape();
                     size_t total = std::accumulate(staticShape.begin(), staticShape.end(), 1, std::multiplies<size_t>());
-                    std::vector<int64_t> reshapeSize = { static_cast<int64_t>(total) / feature, feature };
+                    std::vector<int64_t> reshapeSize = { static_cast<int64_t>(total) / feature.get_length(), feature.get_length() };
                     return reshapeSize;
+                } else {
+                    ov::PartialShape reshapeSize = { ov::Dimension::dynamic(), feature };
+                    return reshapeSize;
+                }
             };
 
             auto input0_layout = input_layouts[0];
@@ -58,7 +71,7 @@ public:
             auto input0_pshape = input0_layout.get_partial_shape();
             auto input1_pshape = input1_layout.get_partial_shape();
 
-            int64_t feature = input0_pshape[std::min(primitive->input_size, static_cast<size_t>(4)) - 1ul].get_length();
+            ov::Dimension feature = input0_pshape[std::min(primitive->input_size, static_cast<size_t>(4)) - 1ul];
 
             if (primitive->input_size > 3) {
                 input0_layout.set_partial_shape(reshape_to_2d(input0_pshape, feature));
@@ -73,13 +86,11 @@ public:
 
         auto get_fc_output_layout = [primitive](const std::vector<layout>& input_layouts, const layout& output_layout) {
             auto updated_out_layout = output_layout;
-
-            ov::PartialShape updated_out_pshape { input_layouts[0].get_partial_shape().begin()->get_length(),
-                                                  input_layouts[1].get_partial_shape().begin()->get_length() };
+            auto input0_pshape = input_layouts[0].get_partial_shape();
+            auto input1_pshape = input_layouts[1].get_partial_shape();
+            ov::PartialShape updated_out_pshape {input0_pshape[0], input1_pshape[0]};
             if (primitive->input_size == 3) {
-                updated_out_pshape = { input_layouts[0].get_partial_shape().begin()->get_length(),
-                                       (input_layouts[0].get_partial_shape().begin() + 1)->get_length(),
-                                       input_layouts[1].get_partial_shape().begin()->get_length() };
+                updated_out_pshape = { input0_pshape[0], input0_pshape[1], input1_pshape[0] };
             }
             updated_out_layout.set_partial_shape(updated_out_pshape);
 
@@ -98,7 +109,7 @@ public:
         auto fc_params = get_weights_bias_default_params<kernel_selector::fully_connected_params>(updated_impl_param);
         auto fc_optional_params =
             get_default_weights_bias_optional_params<kernel_selector::fully_connected_optional_params>(
-                arg.get_program());
+                impl_param.prog);
         fc_optional_params.allowInputReordering = true;
 
         if (primitive->input_size != 3)
@@ -115,10 +126,15 @@ public:
         }
 
         fc_optional_params.tuningParams.runner =
-            std::make_shared<gpu::kernel_runner>(arg.get_program().get_engine(), arg.get_program().get_id(), true);
+            std::make_shared<gpu::kernel_runner>(impl_param.prog.get_engine(), impl_param.prog.get_id(), true);
 
+        return {fc_params, fc_optional_params};
+    }
+
+    static primitive_impl* create(const fully_connected_node& arg, const kernel_impl_params& impl_param) {
+        auto kernel_params = get_params(impl_param);
         auto& kernel_selector = kernel_selector::fully_connected_kernel_selector::Instance();
-        auto best_kernels = kernel_selector.GetBestKernels(fc_params, fc_optional_params);
+        auto best_kernels = kernel_selector.GetBestKernels(kernel_params.first, kernel_params.second);
 
         CLDNN_ERROR_BOOL(arg.id(),
                          "Best_kernel.empty()",
@@ -134,7 +150,7 @@ public:
 namespace detail {
 
 attach_fully_connected_impl::attach_fully_connected_impl() {
-    implementation_map<fully_connected>::add(impl_types::ocl, fully_connected_impl::create, {
+    implementation_map<fully_connected>::add(impl_types::ocl, fully_connected_impl::create, {shape_types::static_shape, shape_types::dynamic_shape}, {
         std::make_tuple(data_types::f32, format::yxfb),
         std::make_tuple(data_types::f16, format::yxfb),
         std::make_tuple(data_types::f32, format::bfyx),

@@ -157,8 +157,8 @@ void Config::UpdateFromMap(const std::map<std::string, std::string>& configMap) 
                 }
             } else {
                 task_exec_config._threadPreferredCoreType = IStreamsExecutor::Config::ANY;
-                task_exec_config._streams =
-                    std::min(task_exec_config._streams, static_cast<int>(std::thread::hardware_concurrency()));
+                task_exec_config._streams = 1;
+                    // std::min(task_exec_config._streams, static_cast<int>(std::thread::hardware_concurrency()));
             }
         } else if (key.compare(GPUConfigParams::KEY_GPU_PLUGIN_THROTTLE) == 0 ||
                    key.compare(CLDNNConfigParams::KEY_CLDNN_PLUGIN_THROTTLE) == 0) {

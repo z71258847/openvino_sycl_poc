@@ -34,6 +34,16 @@ KernelsData ShapeOfKernelRef::GetKernelsData(const Params &params, const optiona
         return kernels_data;
     kernels_data.push_back(KernelData::Default<shape_of_params>(params));
     KernelData &kernel_data = kernels_data.front();
+
+    kernel_data.update_kernels_func = [this](const Params& params, KernelData& kd) {
+        const auto& prim_params = static_cast<const shape_of_params&>(params);
+        auto dispatchData = SetDefault(prim_params);
+        OPENVINO_ASSERT(kd.kernels.size() == 1, "[GPU] Invalid kernels size for update dispatch data func");
+        kd.kernels[0].params.workGroups.global = dispatchData.gws;
+        kd.kernels[0].params.workGroups.local = dispatchData.lws;
+    };
+
+
     auto &derived_params = dynamic_cast<shape_of_params&>(*kernel_data.params.get());
     auto dispatch_data = SetDefault(derived_params);
     auto entry_point = GetEntryPoint(kernelName, derived_params.layerID, params, options);
@@ -41,7 +51,7 @@ KernelsData ShapeOfKernelRef::GetKernelsData(const Params &params, const optiona
     auto jit = CreateJit(kernelName, jit_constants, entry_point);
     auto &clKernelData = kernel_data.kernels[0];
     FillCLKernelData(clKernelData, dispatch_data, params.engineInfo, kernelName, jit, entry_point, DEFAULT,
-                     false, false, 0);
+                     false, false, 0, 0, 1, derived_params.inputs[0].is_dynamic());
     return kernels_data;
 }
 
@@ -68,6 +78,7 @@ ParamsKey ShapeOfKernelRef::GetSupportedKey() const {
     k.EnableDifferentTypes();
     k.EnableBatching();
     k.EnableTensorOffset();
+    k.EnableDynamicShapesSupport();
     return k;
 }
 

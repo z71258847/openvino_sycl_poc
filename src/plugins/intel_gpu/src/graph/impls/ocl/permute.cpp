@@ -50,17 +50,30 @@ struct permute_impl : typed_primitive_impl_ocl<permute> {
         return make_unique<permute_impl>(*this);
     }
 
-    static primitive_impl* create(const permute_node& arg, const kernel_impl_params& impl_param) {
-        const auto& prim = arg.get_primitive();
+    static std::pair<kernel_selector::permute_params, kernel_selector::permute_optional_params> get_params(const kernel_impl_params& impl_param) {
+        const auto& prim = impl_param.typed_desc<permute>();
         auto permute_params = get_default_params<kernel_selector::permute_params>(impl_param);
         auto permute_optional_params =
-            get_default_optional_params<kernel_selector::permute_optional_params>(arg.get_program());
+            get_default_optional_params<kernel_selector::permute_optional_params>(impl_param.prog);
 
         auto in_rank = impl_param.input_layouts[0].get_rank();
         auto permute_order = convert_permute_order(prim->permute_order, in_rank);
         permute_params.order = permute_order;
+
+        return {permute_params, permute_optional_params};
+    }
+
+    void update_dispatch_data(const kernel_impl_params& impl_param) override {
+        auto kernel_params = get_params(impl_param);
+        auto& kernel_data = this->_kernel_data;
+
+        (kernel_data.update_kernels_func)(kernel_params.first, kernel_data);
+    }
+
+    static primitive_impl* create(const permute_node& arg, const kernel_impl_params& impl_param) {
+        auto kernel_params = get_params(impl_param);
         auto& kernel_selector = kernel_selector::permute_kernel_selector::Instance();
-        auto best_kernels = kernel_selector.GetBestKernels(permute_params, permute_optional_params);
+        auto best_kernels = kernel_selector.GetBestKernels(kernel_params.first, kernel_params.second);
 
         CLDNN_ERROR_BOOL(arg.id(),
                          "Best_kernel.empty()",
@@ -76,7 +89,7 @@ struct permute_impl : typed_primitive_impl_ocl<permute> {
 namespace detail {
 
 attach_permute_impl::attach_permute_impl() {
-    implementation_map<permute>::add(impl_types::ocl, permute_impl::create, {});
+    implementation_map<permute>::add(impl_types::ocl, permute_impl::create, {shape_types::static_shape, shape_types::dynamic_shape}, {});
 }
 
 }  // namespace detail

@@ -56,20 +56,32 @@ struct cum_sum_impl : typed_primitive_impl_ocl<cum_sum> {
     }
 
 public:
-    static primitive_impl* create(const cum_sum_node& arg, const kernel_impl_params& impl_param) {
-        const auto& prim = arg.get_primitive();
+    void update_dispatch_data(const kernel_impl_params& impl_param) override {
+        auto kernel_params = get_params(impl_param);
+        auto& kernel_data = this->_kernel_data;
 
+        (kernel_data.update_kernels_func)(kernel_params.first, kernel_data);
+    }
+
+    static std::pair<kernel_selector::cum_sum_params, kernel_selector::cum_sum_optional_params> get_params(const kernel_impl_params& impl_param) {
+        const auto& primitive = impl_param.typed_desc<cum_sum>();
         auto cum_sum_params = get_default_params<kernel_selector::cum_sum_params>(impl_param);
         auto cum_sum_optional_params =
-            get_default_optional_params<kernel_selector::cum_sum_optional_params>(arg.get_program());
+            get_default_optional_params<kernel_selector::cum_sum_optional_params>(impl_param.prog);
 
-        size_t rank = arg.get_output_layout().get_rank();
-        cum_sum_params.axis = convert_axis(prim->axis, rank);
-        cum_sum_params.exclusive = arg.get_primitive()->exclusive;
-        cum_sum_params.reverse = arg.get_primitive()->reverse;
+        size_t rank = impl_param.output_layout.get_rank();
+        cum_sum_params.axis = convert_axis(primitive->axis, rank);
+        cum_sum_params.exclusive = primitive->exclusive;
+        cum_sum_params.reverse = primitive->reverse;
+
+        return {cum_sum_params, cum_sum_optional_params};
+    }
+
+    static primitive_impl* create(const cum_sum_node& arg, const kernel_impl_params& impl_param) {
+        auto kernel_params = get_params(impl_param);
 
         auto& kernel_selector = kernel_selector::cum_sum_kernel_selector::Instance();
-        auto best_kernels = kernel_selector.GetBestKernels(cum_sum_params, cum_sum_optional_params);
+        auto best_kernels = kernel_selector.GetBestKernels(kernel_params.first, kernel_params.second);
 
         CLDNN_ERROR_BOOL(arg.id(),
                          "Best_kernel.empty()",
@@ -85,7 +97,7 @@ public:
 namespace detail {
 
 attach_cum_sum_impl::attach_cum_sum_impl() {
-    implementation_map<cum_sum>::add(impl_types::ocl, cum_sum_impl::create, {
+    implementation_map<cum_sum>::add(impl_types::ocl, cum_sum_impl::create, { shape_types::dynamic_shape, shape_types::static_shape}, {
         std::make_tuple(data_types::i32, format::bfyx),
         std::make_tuple(data_types::i32, format::bfzyx),
         std::make_tuple(data_types::i32, format::bfwzyx),

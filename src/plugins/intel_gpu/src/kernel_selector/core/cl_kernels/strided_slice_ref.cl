@@ -5,7 +5,12 @@
 #include "include/batch_headers/data_types.cl"
 #include "include/batch_headers/fetch_data.cl"
 
-KERNEL(strided_slice_ref)(const __global INPUT0_TYPE* input, __global OUTPUT_TYPE* output)
+KERNEL(strided_slice_ref)(
+#if IS_DYNAMIC
+    const __global SHAPE_INFO_TYPE* shape_info,
+#endif
+    const __global INPUT0_TYPE* input,
+    __global OUTPUT_TYPE* output)
 {
     const uint batch = get_global_id(0);
     const uint feature = get_global_id(1);

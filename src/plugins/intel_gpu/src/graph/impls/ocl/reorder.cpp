@@ -56,23 +56,24 @@ protected:
     }
 
 public:
-    static primitive_impl* create(const reorder_node& arg, const kernel_impl_params& impl_param) {
-        const auto& prim = arg.get_primitive();
+
+    static std::pair<kernel_selector::reorder_params, kernel_selector::reorder_optional_params> get_params(const kernel_impl_params& impl_param) {
+        const auto& prim = impl_param.typed_desc<reorder>();
         auto&& output_layout = impl_param.output_layout;
         auto reorder_params = get_default_params<kernel_selector::reorder_params>(impl_param);
         auto reorder_optional_params =
-            get_default_optional_params<kernel_selector::reorder_optional_params>(arg.get_program());
+            get_default_optional_params<kernel_selector::reorder_optional_params>(impl_param.prog);
 
-        for (size_t i = 1; i < arg.inputs_count(); i++) {
+        for (size_t i = 1; i < prim->input_size(); i++) {
             reorder_params.inputs.push_back(convert_data_tensor(impl_param.input_layouts[i]));
         }
         if (impl_param.output_layout.data_padding) {
             reorder_params.has_padded_output = true;
         }
 
-        if (arg.has_mean()) {
+        if (!prim->mean.empty()) {
             if (impl_param.input_layouts[0].format == cldnn::format::nv12) {
-                const auto& mean_layout = arg.mean_nv12().get_output_layout();
+                const auto& mean_layout = impl_param.get_input_layout(2);
                 reorder_params.mean = convert_data_tensor(mean_layout);
                 reorder_params.mode = kernel_selector::mean_subtruct_mode::IN_BUFFER;
             } else {
@@ -103,7 +104,7 @@ public:
                     reorder_params.mean_op = kernel_selector::mean_op::DIV;
                     break;
                 default:
-                    throw std::out_of_range(arg.id() + ": unsupported mean_mode value.");
+                    throw std::out_of_range(prim->id + ": unsupported mean_mode value.");
             }
         }
 
@@ -115,8 +116,21 @@ public:
 
         reorder_params.winograd = impl_param.input_layouts[0].format.is_winograd() || output_layout.format.is_winograd();
 
+
+        return {reorder_params, reorder_optional_params};
+    }
+
+    void update_dispatch_data(const kernel_impl_params& impl_param) override {
+        auto kernel_params = get_params(impl_param);
+        auto& kernel_data = this->_kernel_data;
+
+        (kernel_data.update_kernels_func)(kernel_params.first, kernel_data);
+    }
+
+    static primitive_impl* create(const reorder_node& arg, const kernel_impl_params& impl_param) {
+        auto kernel_params = get_params(impl_param);
         auto& kernel_selector = kernel_selector::reorder_kernel_selector::Instance();
-        auto best_kernels = kernel_selector.GetBestKernels(reorder_params, reorder_optional_params);
+        auto best_kernels = kernel_selector.GetBestKernels(kernel_params.first, kernel_params.second);
 
         CLDNN_ERROR_BOOL(arg.id(),
                          "Best_kernel.empty()",
@@ -136,7 +150,7 @@ private:
 namespace detail {
 
 attach_reorder_impl::attach_reorder_impl() {
-    implementation_map<reorder>::add(impl_types::ocl, reorder_impl::create, {});
+    implementation_map<reorder>::add(impl_types::ocl, reorder_impl::create, {shape_types::static_shape, shape_types::dynamic_shape}, {});
 }
 
 }  // namespace detail

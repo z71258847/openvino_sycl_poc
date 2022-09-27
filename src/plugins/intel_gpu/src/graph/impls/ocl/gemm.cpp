@@ -23,11 +23,12 @@ struct gemm_impl : typed_primitive_impl_ocl<gemm> {
     }
 
 public:
-    static primitive_impl* create(const gemm_node& arg, const kernel_impl_params& impl_param) {
-        auto desc = arg.get_primitive();
+
+    static std::pair<kernel_selector::gemm_params, kernel_selector::gemm_optional_params> get_params(const kernel_impl_params& impl_param) {
+        const auto& desc = impl_param.typed_desc<gemm>();
         auto get_gemm_input_layouts = [desc](const std::vector<layout>& input_layouts, const layout& output_layout) {
             auto gemm_specific_pshape = [](ov::PartialShape& pshape) {
-                switch (pshape.rank().get_length()) {
+                switch (pshape.size()) {
                     case 2: { // batch, feature representation (rank == 2)
                         pshape.insert(pshape.begin(), 1ul);
                         pshape.insert(pshape.begin(), 1ul);
@@ -41,11 +42,11 @@ public:
             };
             std::vector<layout> layouts;
             auto output_pshape = output_layout.get_partial_shape();
-            auto output_rank = output_pshape.rank().get_length();
+            auto output_rank = output_pshape.size();
             for (size_t i = 0; i != input_layouts.size(); ++i) {
                 auto input_layout = input_layouts[i];
                 auto input_pshape = input_layout.get_partial_shape();
-                auto input_rank = input_pshape.rank().get_length();
+                auto input_rank = input_pshape.size();
                 if (input_rank != output_rank || input_rank < 4) {
                     if (input_rank == 1) {
                         bool transpose = false;
@@ -73,22 +74,21 @@ public:
         auto get_gemm_output_layout = [desc](const std::vector<layout>& input_layouts, const layout& output_layout) {
             auto layout = output_layout;
             auto output_pshape = output_layout.get_partial_shape();
-            auto output_rank = output_pshape.rank().get_length();
+            auto output_rank = output_pshape.size();
             if (output_rank < 4) {
-                auto input0_layout = input_layouts[0];
-                auto input1_layout = input_layouts[1];
+                auto input0_pshape = input_layouts[0].get_partial_shape();
+                auto input1_pshape = input_layouts[1].get_partial_shape();
                 bool transpose_input0 = desc->transpose_input0;
                 bool transpose_input1 = desc->transpose_input1;
 
-                auto M = !transpose_input0 ? input0_layout.spatial(1) : input0_layout.spatial(0);
-                auto N = !transpose_input1 ? input1_layout.spatial(0) : input1_layout.spatial(1);
+                auto M = !transpose_input0 ? input0_pshape[input0_pshape.size() - 2] : input0_pshape[input0_pshape.size() - 1];
+                auto N = !transpose_input1 ? input1_pshape[input1_pshape.size() - 1] : input1_pshape[input1_pshape.size() - 2];
 
-                auto output_shape = input_layouts[0].get_partial_shape().to_shape();
+                auto output_pshape = input_layouts[0].get_partial_shape();
                 for (size_t i = 0; i != input_layouts.size(); ++i) {
                     auto input_pshape = input_layouts[i].get_partial_shape();
-                    auto input_shape = input_pshape.to_shape();
-                    for (int32_t j = 0; j != input_pshape.rank().get_length(); ++j) {
-                        output_shape[j] = std::max(output_shape[j], input_shape[j]);
+                    for (size_t j = 0; j != input_pshape.size(); ++j) {
+                        ov::Dimension::merge(output_pshape[j], output_pshape[j], input_pshape[j]);
                     }
                 }
 #if 0
@@ -105,9 +105,9 @@ public:
                     return idx;
                 };
 
-                output_shape[get_spatial_idx(layout.format, 0)] = N;
-                output_shape[get_spatial_idx(layout.format, 1)] = M;
-                layout.set_partial_shape(output_shape);
+                output_pshape[get_spatial_idx(layout.format, 0)] = N;
+                output_pshape[get_spatial_idx(layout.format, 1)] = M;
+                layout.set_partial_shape(output_pshape);
             }
             return layout;
         };
@@ -121,7 +121,7 @@ public:
         }
         auto gemm_params = get_default_params<kernel_selector::gemm_params>(impl_param, 1);
         auto gemm_optional_params =
-            get_default_optional_params<kernel_selector::gemm_optional_params>(arg.get_program());
+            get_default_optional_params<kernel_selector::gemm_optional_params>(impl_param.prog);
 
         gemm_params.inputs.clear();
         for (size_t i = 0; i < std::min(input_layouts.size(), first_fused_input_idx); i++) {
@@ -144,8 +144,20 @@ public:
             gemm_params.quantization = kernel_selector::QuantizationType::NONE;
         }
 
+        return {gemm_params, gemm_optional_params};
+    }
+
+    void update_dispatch_data(const kernel_impl_params& impl_param) override {
+        auto kernel_params = get_params(impl_param);
+        auto& kernel_data = this->_kernel_data;
+
+        (kernel_data.update_kernels_func)(kernel_params.first, kernel_data);
+    }
+
+    static primitive_impl* create(const gemm_node& arg, const kernel_impl_params& impl_param) {
+        auto kernel_param = get_params(impl_param);
         auto& kernel_selector = kernel_selector::gemm_kernel_selector::Instance();
-        auto best_kernels = kernel_selector.GetBestKernels(gemm_params, gemm_optional_params);
+        auto best_kernels = kernel_selector.GetBestKernels(kernel_param.first, kernel_param.second);
 
         CLDNN_ERROR_BOOL(arg.id(),
                          "Best_kernel.empty()",
@@ -159,7 +171,7 @@ public:
 namespace detail {
 
 attach_gemm_impl::attach_gemm_impl() {
-    implementation_map<gemm>::add(impl_types::ocl, gemm_impl::create, {
+    implementation_map<gemm>::add(impl_types::ocl, gemm_impl::create, {shape_types::static_shape, shape_types::dynamic_shape}, {
         std::make_tuple(data_types::f32, format::bfyx),
         std::make_tuple(data_types::f16, format::bfyx),
         std::make_tuple(data_types::i8, format::bfyx),

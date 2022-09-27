@@ -51,6 +51,7 @@ ParamsKey FullyConnected_bf_tiled::GetSupportedKey() const {
     k.EnableTensorPitches();
     k.EnableDifferentTypes();
     k.EnableDifferentInputWeightsTypes();
+    k.EnableDynamicShapesSupport();
     return k;
 }
 
@@ -86,6 +87,9 @@ bool FullyConnected_bf_tiled::Validate(const Params& params, const optional_para
         if (input.X().v > 1)
             return false;
     }
+
+    // if (fc_params.layerID != "matmul:MatMul_1161")
+    //     return false;
 
     return true;
 }
@@ -176,12 +180,13 @@ FullyConnected_bf_tiled::GetAutoTuneParams(const fully_connected_params& params,
         batch *= params.outputs[0].Feature().v;
         output_f = params.outputs[0].Y().v;
     }
+
     Datatype dtype = params.inputs[0].GetDType();
 
     auto selector = TuneParamsSelector(params);
 
     unsigned max_tile_ofm = 1;
-    while (max_tile_ofm * 2 * simd <= output_f && max_tile_ofm < 4)
+    while (output_f > 0 && max_tile_ofm * 2 * simd <= output_f && max_tile_ofm < 4)
         max_tile_ofm *= 2;
 
     if (dtype == Datatype::F16) {
@@ -196,7 +201,7 @@ FullyConnected_bf_tiled::GetAutoTuneParams(const fully_connected_params& params,
                 .Case(tune_params(8,  std::min(max_tile_ofm, 2u), 1, 2, 1,  1, AGE_BASED));
     }
 
-    if (dtype == Datatype::F32) {
+    if (dtype == Datatype::F32 && batch > 0 && output_f > 0) {
         // tune_params(tile_b, tile_ofm, tile_ifm, tile_k, dispatch_bsv, dispatch_fsv, exec_options)
         selector.Case(tune_params(8,  std::min(max_tile_ofm, 2u), 1, 1, 16, 2, AGE_BASED))
                 .Case(tune_params(8,  std::min(max_tile_ofm, 2u), 1, 1, 16, 1, AGE_BASED))
@@ -206,21 +211,25 @@ FullyConnected_bf_tiled::GetAutoTuneParams(const fully_connected_params& params,
                 .Case(tune_params(8,  std::min(max_tile_ofm, 2u), 1, 1, 1,  1, AGE_BASED));
     }
 
-    selector.Case([&](const fully_connected_params&) -> tune_params {
-        tune_params result(8, std::min(max_tile_ofm, 2u), 1, 2, 1, 1, DEFAULT);
+    if (batch > 0 && output_f > 0) {
+        selector.Case([&](const fully_connected_params&) -> tune_params {
+            tune_params result(8, std::min(max_tile_ofm, 2u), 1, 2, 1, 1, DEFAULT);
 
-        while (batch % result.tile_b != 0)
-            result.tile_b--;
+            while (batch % result.tile_b != 0)
+                result.tile_b--;
 
-        result.dispatch_bsv = 16;
-        while (batch % (result.tile_b * result.dispatch_bsv) != 0)
-            result.dispatch_bsv--;
+            result.dispatch_bsv = 16;
+            while (batch % (result.tile_b * result.dispatch_bsv) != 0)
+                result.dispatch_bsv--;
 
-        if (result.tile_b >= 8)
-            result.exec_options = AGE_BASED;
+            if (result.tile_b >= 8)
+                result.exec_options = AGE_BASED;
 
-        return result;
-    });
+            return result;
+        });
+    } else if (output_f > 0) {
+        selector.Case(tune_params(8,  std::min(max_tile_ofm, 2u), 1, 1, 1, 2, AGE_BASED));
+    }
 
     return selector.Default(tune_params(1, 1, 1, 1, 1, 1, DEFAULT));
 }
@@ -252,6 +261,9 @@ FullyConnected_bf_tiled::SetDefault(const fully_connected_params& params, int au
     dispatchData.tile_ms = tparams.dispatch_bsv;
     dispatchData.tile_ns = tparams.dispatch_fsv;
 
+
+    std::cerr << "SetDefault " << params.layerID << " tuning params:  " << tparams.tile_ofm << " " << tparams.tile_b << "\n";
+
     return dispatchData;
 }
 
@@ -273,6 +285,8 @@ KernelsPriority FullyConnected_bf_tiled::GetKernelsPriority(const Params& params
 
 JitConstants FullyConnected_bf_tiled::GetJitConstants(const fully_connected_params& params, const DispatchData& dispatchData) const {
     JitConstants jit = Parent::GetJitConstants(params, dispatchData);
+
+    std::cerr << "Jit tuning params bf_tiles " << params.layerID << " tuning params:  " << dispatchData.tile_n << " " << dispatchData.tile_m << "\n";
 
     jit.AddConstant(MakeJitConstant("SIMD", simd));
     jit.AddConstant(MakeJitConstant("TILE_B", dispatchData.tile_m));
@@ -380,7 +394,33 @@ KernelsData FullyConnected_bf_tiled::GetKernelsData(const Params& params, const 
     KernelsData kds = GetTunedKernelsDataByIndex(params, optParams, -1);
     if (!kds.empty()) {
         res.emplace_back(kds[0]);
+        // res[0].update_kernels_func = [this, tparams](const Params& params, KernelData& kd) {
+        //     const auto& prim_params = static_cast<const fully_connected_params&>(params);
+
+        //     size_t feature_threads = CeilDiv(prim_params.outputs[0].Feature().v, tparams.tile_ofm * simd);
+        //     size_t batch_threads = prim_params.outputs[0].Batch().v / tparams.tile_b;
+        //     if (prim_params.outputs[0].GetLayout() == DataLayout::bfyx) {
+        //         feature_threads = CeilDiv(prim_params.outputs[0].Y().v, tparams.tile_ofm * simd);
+        //         batch_threads = (prim_params.outputs[0].Batch().v * prim_params.outputs[0].Feature().v) / tparams.tile_b;
+        //     }
+
+        //     kd.kernels[0].params.workGroups.global[0] = feature_threads * batch_threads * simd;
+        //     kd.kernels[0].params.workGroups.global[1] = 1;
+        //     kd.kernels[0].params.workGroups.global[2] = 1;
+
+        //     kd.kernels[0].params.workGroups.local[0] = simd;
+        //     kd.kernels[0].params.workGroups.local[1] = 1;
+        //     kd.kernels[0].params.workGroups.local[2] = 1;
+
+        //     auto& gws =  kd.kernels[0].params.workGroups.global;
+        //     auto& lws =  kd.kernels[0].params.workGroups.local;
+
+        //     std::cerr << "update bf_tiles " << params.layerID << " tuning params:  " << tparams.tile_ofm << " " << tparams.tile_b << "\n";
+        //     std::cerr << "update bf_tiles " << params.layerID << " dispatch data: gws: " << gws[0] << " " << gws[1] << " " << gws[2] << "\n";
+        //     std::cerr << "update bf_tiles " << params.layerID << " dispatch data: lws: " << lws[0] << " " << lws[1] << " " << lws[2] << "\n";
+        // };
     }
+
 
     return res;
 }

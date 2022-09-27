@@ -80,10 +80,8 @@ std::vector<layout> broadcast_inst::calc_output_layouts(broadcast_node const& /*
         const_data.emplace(1, make_host_tensor(target_shape_mem->get_layout(), target_shape_lock.data()));
         ov::op::v3::shape_infer(&op, input_shapes, output_shapes, const_data);
     } else {
-        auto target_shape_tensor = make_host_tensor({pattern_shape, data_types::i64, format::bfyx},
-                                                     static_cast<void*>(target_shape.data()));
-        const_data.emplace(1, target_shape_tensor);
-        ov::op::v3::shape_infer(&op, input_shapes, output_shapes, const_data);
+        auto output_rank = input_shapes[0].size();
+        output_shapes[0] =  ov::PartialShape::dynamic(output_rank);
     }
 
     format output_format = format::adjust_to_rank(input0_layout.format, output_shapes[0].size());
@@ -118,61 +116,61 @@ std::string broadcast_inst::to_string(broadcast_node const& node) {
 }
 
 broadcast_inst::typed_primitive_inst(network& network, broadcast_node const& node) : parent(network, node) {
-    auto input_layout = node.input().get_output_layout();
+    // auto input_layout = node.input().get_output_layout();
 
-    const auto& output_sizes = argument.broadcast_sizes;
+    // const auto& output_sizes = argument.broadcast_sizes;
 
-    std::vector<tensor::value_type> input_dims = input_layout.get_dims();
-    size_t max_axes_num = input_layout.get_rank();
+    // std::vector<tensor::value_type> input_dims = input_layout.get_dims();
+    // size_t max_axes_num = input_layout.get_rank();
 
-    std::vector<tensor::value_type> reordered_input_dims(max_axes_num, 0);
-    std::set<uint16_t> existing;
+    // std::vector<tensor::value_type> reordered_input_dims(max_axes_num, 0);
+    // std::set<uint16_t> existing;
 
-    const auto& broadcast_axes = node.get_primitive()->broadcast_axes;
-    size_t broadcast_axes_size = broadcast_axes.size();
-    size_t index = 0;
-    size_t input_index = broadcast_axes_size;
+    // const auto& broadcast_axes = node.get_primitive()->broadcast_axes;
+    // size_t broadcast_axes_size = broadcast_axes.size();
+    // size_t index = 0;
+    // size_t input_index = broadcast_axes_size;
 
-    OPENVINO_ASSERT(broadcast_axes_size >= 0 && broadcast_axes_size <= max_axes_num,
-                    "Incorrect parameters configuration: broadcast_axes size should be less or equal ", std::to_string(max_axes_num), ".");
-    for (size_t i = 0; i < broadcast_axes_size; ++i) {
-        if (broadcast_axes.at(i) >= max_axes_num) {
-            CLDNN_ERROR_MESSAGE(
-                node.id(),
-                "Incorrect parameters configuration: broadcast_axes index should be within broadcast_sizes range.");
-        }
-        if (existing.find(broadcast_axes.at(i)) != existing.end()) {
-            CLDNN_ERROR_MESSAGE(
-                node.id(),
-                "Incorrect parameters configuration: Duplicate axes numbers was found in broadcast_axes.");
-        }
-        existing.insert(broadcast_axes.at(i));
-    }
-    for (size_t i = 0; i < input_index; ++i) {
-        CLDNN_ERROR_NOT_EQUAL(node.id(),
-                              "Input size on dimension number " + std::to_string(i),
-                              input_dims.at(i),
-                              "",
-                              1,
-                              "Must be equal 1.");
-    }
-    // bfyx, bfzyx format
-    for (size_t i = 0; i < max_axes_num; ++i) {
-        if (std::find(broadcast_axes.begin(), broadcast_axes.end(), i) != broadcast_axes.end()) {
-            reordered_input_dims.at(i) = input_dims.at(index);
-            ++index;
-        } else {
-            reordered_input_dims.at(i) = input_dims.at(input_index);
-            ++input_index;
-        }
-    }
-    tensor input_sizes_to_compare = tensor(format::get_default_format(reordered_input_dims.size()), reordered_input_dims);
+    // OPENVINO_ASSERT(broadcast_axes_size >= 0 && broadcast_axes_size <= max_axes_num,
+    //                 "Incorrect parameters configuration: broadcast_axes size should be less or equal ", std::to_string(max_axes_num), ".");
+    // for (size_t i = 0; i < broadcast_axes_size; ++i) {
+    //     if (broadcast_axes.at(i) >= max_axes_num) {
+    //         CLDNN_ERROR_MESSAGE(
+    //             node.id(),
+    //             "Incorrect parameters configuration: broadcast_axes index should be within broadcast_sizes range.");
+    //     }
+    //     if (existing.find(broadcast_axes.at(i)) != existing.end()) {
+    //         CLDNN_ERROR_MESSAGE(
+    //             node.id(),
+    //             "Incorrect parameters configuration: Duplicate axes numbers was found in broadcast_axes.");
+    //     }
+    //     existing.insert(broadcast_axes.at(i));
+    // }
+    // for (size_t i = 0; i < input_index; ++i) {
+    //     CLDNN_ERROR_NOT_EQUAL(node.id(),
+    //                           "Input size on dimension number " + std::to_string(i),
+    //                           input_dims.at(i),
+    //                           "",
+    //                           1,
+    //                           "Must be equal 1.");
+    // }
+    // // bfyx, bfzyx format
+    // for (size_t i = 0; i < max_axes_num; ++i) {
+    //     if (std::find(broadcast_axes.begin(), broadcast_axes.end(), i) != broadcast_axes.end()) {
+    //         reordered_input_dims.at(i) = input_dims.at(index);
+    //         ++index;
+    //     } else {
+    //         reordered_input_dims.at(i) = input_dims.at(input_index);
+    //         ++input_index;
+    //     }
+    // }
+    // tensor input_sizes_to_compare = tensor(format::get_default_format(reordered_input_dims.size()), reordered_input_dims);
 
-    CLDNN_ERROR_TENSOR_SIZES_NOT_DIVIDABLE(node.id(),
-                                           "Broadcast sizes",
-                                           output_sizes,
-                                           "input sizes",
-                                           input_sizes_to_compare,
-                                           "Invalid broadcast size: not dividable by input size");
+    // CLDNN_ERROR_TENSOR_SIZES_NOT_DIVIDABLE(node.id(),
+    //                                        "Broadcast sizes",
+    //                                        output_sizes,
+    //                                        "input sizes",
+    //                                        input_sizes_to_compare,
+    //                                        "Invalid broadcast size: not dividable by input size");
 }
 }  // namespace cldnn

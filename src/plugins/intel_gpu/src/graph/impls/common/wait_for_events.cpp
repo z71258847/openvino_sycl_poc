@@ -39,6 +39,9 @@ public:
         return new wait_for_events_impl(input);
     }
 
+    void update_dispatch_data(const kernel_impl_params& /* impl_param */) override {
+    }
+
     static primitive_impl* create_prior_box(const prior_box_node& prior_box, const kernel_impl_params&) {
         // This primitive is being executed on CPU during network compilation.
         return new wait_for_events_impl(prior_box);
@@ -48,11 +51,12 @@ public:
 namespace detail {
 
 attach_data_common::attach_data_common() {
-    implementation_map<data>::add(impl_types::common, wait_for_events_impl::create_data, {});
+    implementation_map<data>::add(impl_types::common, wait_for_events_impl::create_data, {shape_types::static_shape, shape_types::dynamic_shape}, {});
 }
 
 attach_input_layout_common::attach_input_layout_common() {
-    implementation_map<input_layout>::add(impl_types::common, wait_for_events_impl::create_input_layout, {});
+    implementation_map<input_layout>::add(impl_types::common, wait_for_events_impl::create_input_layout,
+                                          {shape_types::static_shape, shape_types::dynamic_shape}, {});
 }
 
 attach_prior_box_common::attach_prior_box_common() {

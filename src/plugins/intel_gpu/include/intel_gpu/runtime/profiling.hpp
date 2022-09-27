@@ -101,6 +101,7 @@ inline std::ostream& operator<<(std::ostream& os, const pipeline_stage& stage) {
 }
 
 struct perf_counter_key {
+    std::vector<layout> network_input_layouts;
     std::vector<layout> input_layouts;
     std::vector<layout> output_layouts;
     std::string impl_name;

@@ -194,12 +194,14 @@ void kernels_cache::build_batch(const engine& build_engine, const batch_program&
 
     std::string current_dump_file_name = "";
     if (dump_sources) {
+        static int id = 0;
+        id++;
         current_dump_file_name = dump_sources_dir;
         if (!current_dump_file_name.empty() && current_dump_file_name.back() != '/')
             current_dump_file_name += '/';
 
         current_dump_file_name += "clDNN_program_" + std::to_string(_prog_id) + "_bucket_" + std::to_string(batch.bucket_id)
-                               + "_part_" + std::to_string(batch.batch_id) + ".cl";
+                               + "_part_" + std::to_string(batch.batch_id) + "_" + std::to_string(id) + ".cl";
     }
 
     std::ofstream dump_file;

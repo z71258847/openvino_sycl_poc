@@ -73,6 +73,8 @@ public:
     void set_output_lo_val(float val) { out_lo = clamp(val); }
     void set_output_hi_val(float val) { out_hi = clamp(val); }
 
+    std::vector<size_t> get_shape_infer_dependencies() const override { return {}; }
+
     std::shared_ptr<kernel_selector::fuse_params> get_fuse_params() const override {
         return std::make_shared<kernel_selector::quantize_fuse_params>(scale_shift_opt,
                                                                        need_post_scale,

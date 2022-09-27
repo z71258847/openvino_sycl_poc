@@ -25,6 +25,9 @@
 #define GET_LOCAL_SIZE(IDX) ((uint)get_local_size(IDX))
 
 KERNEL (permute_tile_8x8_4x4_fsv)(
+    #if IS_DYNAMIC
+    const __global SHAPE_INFO_TYPE* shape_info,
+    #endif
     const __global INPUT0_TYPE* input,
     __global OUTPUT_TYPE* output
 #if HAS_FUSED_OPS_DECLS

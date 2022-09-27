@@ -27,6 +27,7 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
+#include <future>
 
 namespace {
 
@@ -252,53 +253,161 @@ void primitive_inst::realloc_if_needed() {
         _output = allocate_output();
         max_output_layout_size = _output->get_layout().count();
     }
+
+    // TODO: reuse memory
+    allocate_internal_buffers();
 }
 
 void primitive_inst::update_impl() {
     GPU_DEBUG_PROFILED_STAGE(instrumentation::pipeline_stage::update_implementation);
     auto prev_impl_str =  _impl != nullptr ? _impl->get_kernel_name() : "nullptr";
-    if (!_node.is_type<data>() && !(_node.is_type<mutable_data>() && _node.get_dependencies().empty())) {
-        auto get_layout_key = [&]() -> size_t {
-            size_t seed = 0;
-            auto& id = _impl_params->desc->id;
-            for (size_t i = 0; i < id.size(); i++) {
-                seed = hash_combine(seed, id[i]);
-            }
-            seed = hash_combine(seed, _node.get_unique_id());
-            for (auto& layout : _impl_params->input_layouts) {
-                for (auto& d : layout.get_shape()) {
-                    seed = hash_combine(seed, d);
-                }
-            }
-            for (auto& d : _impl_params->output_layout.get_shape()) {
+    GPU_DEBUG_GET_INSTANCE(debug_config);
+    auto extend_to_6d = [this](ov::PartialShape ps) -> std::vector<size_t> {
+        // For shape_of we extend shape with 1-s to 6d rank to make kernel simpler
+        if (_node.is_type<shape_of>()) {
+            ps.insert(ps.end(), 6 - ps.size(), ov::Dimension(1));
+            return ps.to_shape();
+        }
+        if (ps.size() < 4) {
+            ps.insert(ps.end(), 4 - ps.size(), ov::Dimension(1));
+        }
+        layout l(ps, data_types::i32, format::get_default_format(ps.size()));
+        return l.transform(format::bfwzyx).to_shape();
+    };
+
+    auto get_layout_key = [&]() -> size_t {
+        size_t seed = 0;
+        auto& id = _impl_params->desc->id;
+        for (size_t i = 0; i < id.size(); i++) {
+            seed = hash_combine(seed, id[i]);
+        }
+        seed = hash_combine(seed, _node.get_unique_id());
+        for (auto& layout : _impl_params->input_layouts) {
+            for (auto& d : layout.get_shape()) {
                 seed = hash_combine(seed, d);
             }
-            return seed;
-        };
+        }
+        for (auto& d : _impl_params->output_layout.get_shape()) {
+            seed = hash_combine(seed, d);
+        }
+        return seed;
+    };
 
+    auto update_shape_info = [this, extend_to_6d, debug_config, prev_impl_str]() {
+        mem_lock<int32_t> lock(_shape_info_memory, _network.get_stream());
+        size_t offset = 0;
+        for (size_t i = 0; i < _node.get_dependencies().size(); i++) {
+            if (_node.get_dependency(i).get_output_layout().is_dynamic()) {
+                auto input_shape = extend_to_6d(_impl_params->get_input_layout(i).get_partial_shape());
+                for (size_t j = 0; j < input_shape.size(); j++)
+                    lock[offset++] = static_cast<int32_t>(input_shape[j]);
+            }
+        }
+
+        if (_node.get_output_layout().is_dynamic()) {
+            auto output_shape = extend_to_6d(_impl_params->output_layout.get_partial_shape());
+            for (size_t j = 0; j < output_shape.size(); j++)
+                lock[offset++] = static_cast<int32_t>(output_shape[j]);
+        }
+        GPU_DEBUG_IF(debug_config->verbose >= 4) {
+            std::stringstream s;
+            s << "shapes: ";
+            for (size_t i = 0; i < offset; i++)
+                s << lock[i] << " ";
+            GPU_DEBUG_COUT << id() << ": update dynamic impl " << prev_impl_str << " to new shape: " << s.str() << std::endl;
+        }
+    };
+
+    if (!_node.is_type<data>() && !(_node.is_type<mutable_data>() && _node.get_dependencies().empty())) {
         auto layout_key = get_layout_key();
-        auto& cache = _network.get_program()->get_implementations_cache();
+        auto& cache = *_impls_cache;
         if (cache.has(layout_key)) {
+            std::lock_guard<std::mutex> lock(_cache_mutex);
             _impl = cache.get(layout_key)->clone();
             GPU_DEBUG_PROFILED_STAGE_CACHE_HIT(true);
-        } else {
-            auto lru = cache.get_lru_element();
-            _impl = _node.type()->choose_impl(_node, *_impl_params);
-            bool lru_popped = cache.add(layout_key, _impl->clone());
-            if (lru_popped) {
-                for (auto& id : lru->get_kernel_ids())
-                    _network.get_program()->remove_kernel(id);
+            GPU_DEBUG_IF(debug_config->verbose >= 4) {
+                GPU_DEBUG_COUT << id() << ": update impl to static version" << std::endl;
             }
-            _network.get_program()->compile();
+        } else {
+            bool can_run_compilation = false;
+            // check if we have run compilation task before
+            if (_future != nullptr) {
+                // if the task has been run, then check it's status
+                auto status = _future->wait_for(std::chrono::nanoseconds(0));
+                can_run_compilation = status == std::future_status::ready;
+            } else {
+                // no task has been run before, so we can safely execute
+                can_run_compilation = true;
+            }
+            can_run_compilation = false;
+
+            if (can_run_compilation) {
+                auto task_executor = _network.get_engine().get_task_executor();
+                auto& node = _node;
+                auto& network = _network;
+                auto& impl_params = *_impl_params;
+                auto& cache_mutex = _cache_mutex;
+                auto& impls_cache = *_impls_cache;
+                InferenceEngine::Task task = [&node, &network, &impl_params, &cache_mutex, &impls_cache, layout_key]() {
+                    std::lock_guard<std::mutex> lock1(network.get_program()->get_impls_cache_mutex());
+                    auto impl = node.type()->choose_impl(node, impl_params);
+                    network.get_program()->compile();
+                    // impl->init_kernels(network.get_program()->get_kernels_cache());
+                    network.get_program()->get_kernels_cache().reset();
+
+                    std::lock_guard<std::mutex> lock(cache_mutex);
+                    // impls_cache.add(layout_key, impl->clone());
+                };
+                // _promise = {};
+                // _future = std::make_shared<std::shared_future<void>>(_promise.get_future());
+                _future = std::make_shared<std::shared_future<void>>(std::async(std::launch::async, task));
+                // auto& promise = _promise;
+                // task_executor->run([task, &promise] {
+                //     std::exception_ptr currentException;
+                //     try {
+                //         task();
+                //     } catch(...) {
+                //         // If there is some exceptions store the pointer to current exception
+                //         currentException = std::current_exception();
+                //     }
+
+                //     if (nullptr == currentException) {
+                //         promise.set_value();
+                //     } else {
+                //         promise.set_exception(currentException);
+                //     }
+                // });
+            }
+
+            if (_dynamic_impl) {
+                _impl = _dynamic_impl->clone();
+                _impl->update_dispatch_data(*_impl_params);
+                update_shape_info();
+                GPU_DEBUG_IF(debug_config->verbose >= 4) {
+                   GPU_DEBUG_COUT << id() << ": update impl to dynamic impl as static one not found in the cache" << std::endl;
+                }
+            } else {
+                if (_future) {
+                    _future->get();
+                }
+                if (cache.has(layout_key)) {
+                    _impl = cache.get(layout_key)->clone();
+                } else {
+                    std::lock_guard<std::mutex> lock1(_network.get_program()->get_impls_cache_mutex());
+                    _impl = _node.type()->choose_impl(_node, *_impl_params);
+                    _network.get_program()->compile();
+                    _impl->init_kernels(_network.get_program()->get_kernels_cache());
+                    cache.add(layout_key, _impl->clone());
+                    _network.get_program()->get_kernels_cache().reset();
+                }
+                GPU_DEBUG_IF(debug_config->verbose >= 4) {
+                    auto new_impl_str = _impl != nullptr ? _impl->get_kernel_name() : "nullptr";
+                    GPU_DEBUG_COUT << id() << ": update impl from " << prev_impl_str << " to " << new_impl_str << std::endl;
+                }
+            }
         }
-        _impl->init_kernels(_network.get_program()->get_kernels_cache());
 
         reset_shape_change();
-        GPU_DEBUG_GET_INSTANCE(debug_config);
-        GPU_DEBUG_IF(debug_config->verbose >= 4) {
-            auto new_impl_str = _impl != nullptr ? _impl->get_kernel_name() : "nullptr";
-            GPU_DEBUG_COUT << id() << ": update impl from " << prev_impl_str << " to " << new_impl_str << std::endl;
-        }
     }
 }
 
@@ -454,15 +563,26 @@ primitive_inst::primitive_inst(network& network, program_node const& node, bool 
             _output = allocate_output();
         }
     }
-    if (_impl)
+    _impls_cache = std::unique_ptr<ImplementationsCache>(new ImplementationsCache(0));
+    if (_impl) {
         _impl->set_node_params(node);
+        if (_impl->is_dynamic()) {
+            _dynamic_impl = _impl->clone();
+        }
+    }
+
 
     if (_output)
         max_output_layout_size = _output->get_layout().count();
+
+    if (_impl && _impl->is_dynamic()) {
+        int64_t buffers_count = _node.get_dependencies().size() + 1;
+        _shape_info_memory = _network.get_engine().allocate_memory(layout{{buffers_count * 6}, data_types::i32, format::bfyx});
+    }
 }
 
 void primitive_inst::allocate_internal_buffers(void) {
-    if (_impl == nullptr)
+    if (_impl == nullptr || _output == nullptr)
         return;
     const auto& ibuf_layouts = _impl->get_internal_buffer_layouts();
     if (ibuf_layouts.empty())
@@ -830,6 +950,7 @@ bool primitive_inst::is_valid_fusion() const {
 
 void primitive_inst::add_profiling_data(instrumentation::pipeline_stage stage, bool cache_hit, int64_t time) {
     instrumentation::perf_counter_key key {
+            _network.get_input_layouts(),
             _impl_params->input_layouts,
             { _impl_params->output_layout },
             get_implementation_name(),
@@ -856,6 +977,32 @@ std::string primitive_inst::get_implementation_name() const {
     } catch (...) { }
 
     return "undef";
+}
+
+size_t primitive_inst::get_dynamic_impl_hash() const {
+    size_t seed = 0;
+    auto& id = _impl_params->desc->id;
+    for (size_t i = 0; i < id.size(); i++) {
+        seed = hash_combine(seed, id[i]);
+    }
+    seed = hash_combine(seed, _node.get_unique_id());
+    for (auto& layout : _node.get_input_layouts()) {
+        for (auto& d : layout.get_partial_shape()) {
+            seed = hash_combine(seed, d.is_dynamic() ? -1 : d.get_length());
+        }
+    }
+    for (auto& d : _node.get_output_layout().get_partial_shape()) {
+        seed = hash_combine(seed, d.is_dynamic() ? -1 : d.get_length());
+    }
+    return seed;
+};
+
+void primitive_inst::wait_for_tasks() {
+    if (_future != nullptr) {
+        _future.get();
+    }
+
+    _future.reset();
 }
 
 }  // namespace cldnn

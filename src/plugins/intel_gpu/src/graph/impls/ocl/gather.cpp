@@ -68,23 +68,36 @@ struct gather_impl : typed_primitive_impl_ocl<gather> {
     }
 
 public:
-    static primitive_impl* create(const gather_node& arg, const kernel_impl_params& impl_param) {
-        const auto& prim = arg.get_primitive();
+
+    static std::pair<kernel_selector::gather_params, kernel_selector::gather_optional_params> get_params(const kernel_impl_params& impl_param) {
+        const auto& primitive = impl_param.typed_desc<gather>();
         auto gather_params = get_default_params<kernel_selector::gather_params>(impl_param);
         auto gather_optional_params =
-            get_default_optional_params<kernel_selector::gather_optional_params>(arg.get_program());
+            get_default_optional_params<kernel_selector::gather_optional_params>(impl_param.prog);
 
         auto input_layout = impl_param.input_layouts[0];
         auto indices_shape = impl_param.input_layouts[1].get_partial_shape();
-        gather_params.axis = convert_axis(prim->axis, input_layout.get_rank());
-        gather_params.batch_dim = (prim->batch_dim >= 0) ? prim->batch_dim
-                                                         : (indices_shape.rank().get_length() + prim->batch_dim);
-        gather_params.support_neg_ind = prim->support_neg_ind;
+        gather_params.axis = convert_axis(primitive->axis, input_layout.get_rank());
+        gather_params.batch_dim = (primitive->batch_dim >= 0) ? primitive->batch_dim
+                                                         : (indices_shape.rank().get_length() + primitive->batch_dim);
+        gather_params.support_neg_ind = primitive->support_neg_ind;
 
         gather_params.inputs.push_back(convert_data_tensor(impl_param.input_layouts[1]));
 
+        return {gather_params, gather_optional_params};
+    }
+
+    void update_dispatch_data(const kernel_impl_params& impl_param) override {
+        auto kernel_params = get_params(impl_param);
+        auto& kernel_data = this->_kernel_data;
+
+        (kernel_data.update_kernels_func)(kernel_params.first, kernel_data);
+    }
+
+    static primitive_impl* create(const gather_node& arg, const kernel_impl_params& impl_param) {
+        auto kernel_params = get_params(impl_param);
         auto& kernel_selector = kernel_selector::gather_kernel_selector::Instance();
-        auto best_kernels = kernel_selector.GetBestKernels(gather_params, gather_optional_params);
+        auto best_kernels = kernel_selector.GetBestKernels(kernel_params.first, kernel_params.second);
 
         CLDNN_ERROR_BOOL(arg.id(),
                          "Best_kernel.empty()",
@@ -100,7 +113,7 @@ public:
 namespace detail {
 
 attach_gather_impl::attach_gather_impl() {
-    implementation_map<gather>::add(impl_types::ocl, gather_impl::create, {
+    implementation_map<gather>::add(impl_types::ocl, gather_impl::create, {shape_types::static_shape, shape_types::dynamic_shape}, {
         std::make_tuple(data_types::f32, format::fyxb),
         std::make_tuple(data_types::f16, format::fyxb),
         std::make_tuple(data_types::i32, format::fyxb),

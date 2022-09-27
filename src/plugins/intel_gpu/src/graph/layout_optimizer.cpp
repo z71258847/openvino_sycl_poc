@@ -131,6 +131,7 @@ std::vector<std::pair<std::shared_ptr<primitive>, bool>> reorder_factory::get_we
     }
 
     layout expected_layout = from_weights_tensor(reorder_params.dest);
+    expected_layout.set_partial_shape(old_layout.get_partial_shape());
 
     cache_key ckey{ input_id, expected_layout, false };
     auto itr = _cached_generic_reorders.find(ckey);

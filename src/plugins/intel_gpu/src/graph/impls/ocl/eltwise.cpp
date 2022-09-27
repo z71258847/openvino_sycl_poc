@@ -29,14 +29,15 @@ protected:
     }
 
 public:
-    static primitive_impl* create(const eltwise_node& arg, const kernel_impl_params& impl_param) {
-        const auto& primitive = arg.get_primitive();
 
+    static std::pair<kernel_selector::eltwise_params, kernel_selector::eltwise_optional_params> get_params(const kernel_impl_params& impl_param) {
+        const auto& primitive = impl_param.typed_desc<eltwise>();
         auto ew_params = get_default_params<kernel_selector::eltwise_params>(impl_param);
         auto ew_optional_params =
-            get_default_optional_params<kernel_selector::eltwise_optional_params>(arg.get_program());
+            get_default_optional_params<kernel_selector::eltwise_optional_params>(impl_param.prog);
 
-        for (size_t i = 1; i < arg.inputs_count(); i++) {
+        auto inputs_count = primitive->input.size();
+        for (size_t i = 1; i < inputs_count; i++) {
             ew_params.inputs.push_back(convert_data_tensor(impl_param.input_layouts[i]));
         }
 
@@ -45,7 +46,7 @@ public:
                                          kernel_selector::eltwise_params::InputType::Buffer(1)},
                                         convert_to_eltwise_mode(primitive->mode)});
 
-        for (uint32_t i = 2; i < static_cast<uint32_t>(arg.inputs_count()); i++) {
+        for (uint32_t i = 2; i < static_cast<uint32_t>(inputs_count); i++) {
             ew_params.operations.push_back({{kernel_selector::eltwise_params::InputType::Intermediate(i - 2),
                                              kernel_selector::eltwise_params::InputType::Buffer(i)},
                                             convert_to_eltwise_mode(primitive->mode)});
@@ -57,9 +58,13 @@ public:
 
         for (size_t i = 0; i < ew_params.inputs.size(); i++) {
             if (!ew_params.inputs[i].SameDims(ew_params.outputs[0])) {
-                std::vector<int32_t> input_size = impl_param.input_layouts[i].get_tensor().raw.vector();
-                std::vector<int32_t> output_size = impl_param.output_layout.get_tensor().raw.vector();
+                auto input_size = impl_param.input_layouts[i].get_partial_shape();
+                auto output_size = impl_param.output_layout.get_partial_shape();
                 bool broadcast = false;
+                if (input_size.size() != output_size.size()) {
+                    ew_params.broadcast = true;
+                    break;
+                }
                 for (size_t d = 0; d < output_size.size(); d++) {
                     if (output_size[d] != 1 && input_size[d] == 1)
                         broadcast = true;
@@ -98,7 +103,7 @@ public:
 
         // TODO [LOW PRECISION]: check if this parameter's really needed. Maybe data types are enough
         bool quantization = true;
-        for (size_t i = 0; i < arg.inputs_count(); i++) {
+        for (size_t i = 0; i < inputs_count; i++) {
             if (impl_param.input_layouts[i].data_type != data_types::u8 &&
                 impl_param.input_layouts[i].data_type != data_types::i8) {
                 quantization = false;
@@ -106,8 +111,26 @@ public:
         }
         ew_params.int8_quantization = quantization;
 
+        // WA to always match compiled dynamic kernel with dispatch data
+        // W/O enforcing this option we may generate kernel for "broadcast" scneario due to umatched tensor dimensions
+        // but in runtime dispatch data will be generated for non-broadcast case as shapes are actually same.
+        if (impl_param.prog.get_node(primitive->id).is_dynamic())
+            ew_params.broadcast = true;
+        return {ew_params, ew_optional_params};
+    }
+
+    void update_dispatch_data(const kernel_impl_params& impl_param) override {
+        auto kernel_params = get_params(impl_param);
+        auto& kernel_data = this->_kernel_data;
+
+        (kernel_data.update_kernels_func)(kernel_params.first, kernel_data);
+    }
+
+
+    static primitive_impl* create(const eltwise_node& arg, const kernel_impl_params& impl_param) {
+        auto kernel_params = get_params(impl_param);
         auto& kernel_selector = kernel_selector::eltwise_kernel_selector::Instance();
-        auto best_kernels = kernel_selector.GetBestKernels(ew_params, ew_optional_params);
+        auto best_kernels = kernel_selector.GetBestKernels(kernel_params.first, kernel_params.second);
 
         CLDNN_ERROR_BOOL(arg.id(),
                          "Best_kernel.empty()",
@@ -123,7 +146,7 @@ public:
 namespace detail {
 
 attach_eltwise_impl::attach_eltwise_impl() {
-    implementation_map<eltwise>::add(impl_types::ocl, eltwise_impl::create, {
+    implementation_map<eltwise>::add(impl_types::ocl, eltwise_impl::create, {shape_types::static_shape, shape_types::dynamic_shape}, {
         std::make_tuple(data_types::f32, format::yxfb),
         std::make_tuple(data_types::f16, format::yxfb),
         std::make_tuple(data_types::i8, format::yxfb),

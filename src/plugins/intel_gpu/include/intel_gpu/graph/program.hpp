@@ -255,6 +255,8 @@ public:
 
     void remove_kernel(kernel_id id);
 
+    std::mutex& get_impls_cache_mutex() const { return _impls_cache_mutex; }
+
 private:
     uint32_t prog_id = 0;
     engine& _engine;
@@ -273,6 +275,7 @@ private:
     std::unique_ptr<pass_manager> pm;
     std::shared_ptr<kernel_selector::TuningCache> tuning_cache;
     bool is_body_program;
+    mutable std::mutex _impls_cache_mutex;
 
     std::map<primitive_id, std::shared_ptr<program_node>> nodes_map;
     std::list<primitive_id> optimized_out;

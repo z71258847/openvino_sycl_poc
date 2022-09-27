@@ -51,6 +51,45 @@
 namespace cldnn {
 
 #ifdef GPU_DEBUG_CONFIG
+static void dump_perf_data_per_primitive_type(std::string dump_path, const std::list<std::shared_ptr<primitive_inst>>& exec_order) {
+    const std::string csv_header = "prim_type,stage,time_usec\n";
+    std::ofstream of(dump_path);
+    std::map<std::pair<std::string, instrumentation::pipeline_stage>, std::pair<int64_t, int64_t>> aggregated_result;
+    if (of.is_open()) {
+        of << csv_header;
+        for (auto& inst : exec_order) {
+            auto prim_id = inst->id();
+            auto& perf_data = inst->get_profiling_data();
+            auto& perf_info = inst->get_profiling_info();
+
+            for (auto& kv : perf_data) {
+                auto hash = kv.first;
+                auto time = std::get<0>(kv.second);
+                auto info = perf_info.at(hash);
+                auto stage = info.stage;
+
+                auto aggregated_key = std::make_pair(inst->desc()->type_string(), stage);
+                if (aggregated_result.find(aggregated_key) == aggregated_result.end()) {
+                    aggregated_result[aggregated_key] = {0, 0};
+                }
+                std::get<0>(aggregated_result[aggregated_key]) += time;
+                std::get<1>(aggregated_result[aggregated_key])++;
+            }
+
+        }
+        for (auto& kv : aggregated_result) {
+            auto& primitive_type = std::get<0>(kv.first);
+            auto& stage = std::get<1>(kv.first);
+            auto& time_total = std::get<0>(kv.second);
+            auto& entries_count = std::get<1>(kv.second);
+            of << primitive_type << ","
+            << stage << ","
+            << static_cast<float>(time_total) / entries_count << "\n";
+        }
+    }
+}
+
+
 static void dump_perf_data_raw(std::string dump_path, const std::list<std::shared_ptr<primitive_inst>>& exec_order) {
     auto layouts_to_str = [](const std::vector<layout>& layouts) -> std::string {
         std::stringstream s;
@@ -62,7 +101,7 @@ static void dump_perf_data_raw(std::string dump_path, const std::list<std::share
         return s.str();
     };
 
-    const std::string perf_raw_csv_header = "prim_id,prim_type,stage,in_shapes,out_shapes,impl,iters,time_usec\n";
+    const std::string perf_raw_csv_header = "prim_id,prim_type,stage,net_in_shapes,in_shapes,out_shapes,impl,iters,time_usec\n";
     std::ofstream of(dump_path);
     if (of.is_open()) {
         of << perf_raw_csv_header;
@@ -103,11 +142,13 @@ static void dump_perf_data_raw(std::string dump_path, const std::list<std::share
                 auto& time = std::get<0>(entry);
                 auto& num_iters = std::get<1>(entry);
                 int64_t time_avg = time / num_iters;
+                std::string net_in_l_str = layouts_to_str(key.network_input_layouts);
                 std::string in_l_str = layouts_to_str(key.input_layouts);
                 std::string out_l_str = layouts_to_str(key.output_layouts);
                 of << prim_id << ","
                 << inst->desc()->type_string() << ","
                 << key.stage << (key.cache_hit ? " (cache_hit)" : "") << ","
+                << net_in_l_str << ","
                 << in_l_str << ","
                 << out_l_str << ","
                 << (key.stage == instrumentation::pipeline_stage::inference ? key.impl_name : "undef") << ","
@@ -294,6 +335,7 @@ static void wait_for_the_turn() {
 }
 
 #else
+static void dump_perf_data_per_primitive_type(std::string, const std::list<std::shared_ptr<primitive_inst>>&) {}
 static void dump_perf_data_raw(std::string, const std::list<std::shared_ptr<primitive_inst>>&) {}
 static void log_memory_to_file(memory::ptr, stream&, std::string) {}
 static void wait_for_the_turn() {}
@@ -349,9 +391,13 @@ network::network(program::ptr program, stream::ptr stream, uint16_t stream_id)
 
 network::~network() {
     _memory_pool->clear_pool_for_network(net_id);
+    for (auto& inst : _exec_order) {
+        inst->wait_for_tasks();
+    }
     GPU_DEBUG_GET_INSTANCE(debug_config);
     GPU_DEBUG_IF(!debug_config->dump_profiling_data.empty()) {
         dump_perf_data_raw(debug_config->dump_profiling_data + "/perf_raw" + std::to_string(net_id) + ".csv", _exec_order);
+        dump_perf_data_per_primitive_type(debug_config->dump_profiling_data + "/perf_per_primitive_type" + std::to_string(net_id) + ".csv", _exec_order);
     }
 }
 
@@ -827,6 +873,13 @@ std::vector<primitive_id> network::get_input_ids() const {
     return ret;
 }
 
+std::vector<layout> network::get_input_layouts() const {
+    std::vector<layout> ret;
+    ret.reserve(_inputs.size());
+    for (auto const& input : _inputs) ret.push_back(input->output_memory_ptr()->get_layout());
+    return ret;
+}
+
 std::vector<primitive_id> network::get_output_ids() const {
     std::vector<primitive_id> ret;
     ret.reserve(_outputs.size());
@@ -958,7 +1011,7 @@ void network::allocate_primitive_instance(program_node const& node) {
     }
 
     _primitives[node.id()] = inst;
-    if (node.is_input()) {
+    if (node.is_type<input_layout>()) {
         if (inst->output_memory_ptr())
             _in_out_shared_mem_types.push_back(inst->output_memory_ptr()->get_internal_params().mem_type);
         _inputs.push_back(inst);

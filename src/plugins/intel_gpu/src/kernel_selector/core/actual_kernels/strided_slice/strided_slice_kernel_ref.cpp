@@ -56,6 +56,7 @@ ParamsKey StridedSliceKernelRef::GetSupportedKey() const {
     k.EnableTensorOffset();
     k.EnableTensorPitches();
     k.EnableBatching();
+    k.EnableDynamicShapesSupport();
     return k;
 }
 
@@ -170,7 +171,13 @@ KernelsData StridedSliceKernelRef::GetKernelsData(const Params& params, const op
 
     auto& kernel = kd.kernels[0];
 
-    FillCLKernelData(kernel, dispatchData, params.engineInfo, kernelName, jit, entry_point);
+    FillCLKernelData(kernel, dispatchData, params.engineInfo, kernelName, jit, entry_point,  DEFAULT,
+                     false,
+                     false,
+                     1,
+                     GetFusedPrimitiveInputsCount(params),
+                     1,
+                     newParams.outputs[0].is_dynamic());
 
     return {kd};
 }
