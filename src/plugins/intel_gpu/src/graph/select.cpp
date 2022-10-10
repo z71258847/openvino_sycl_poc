@@ -20,15 +20,19 @@ layout select_inst::calc_output_layout(select_node const& node, kernel_impl_para
            "Output data type forcing is not supported for select_node!");
 
     auto in_layout = impl_param.get_non_padded_input_layout(1);
-    auto output_size = in_layout.get_tensor();
+    auto output_size = in_layout.get_partial_shape();
 
     if (impl_param.typed_desc<select>()->broadcast_type == "numpy") {
-        auto input1_size = impl_param.get_input_layout(1).get_tensor();
-        auto input2_size = impl_param.get_input_layout(2).get_tensor();
-        output_size = tensor::max(input1_size, input2_size);
+        auto input1_size = impl_param.get_input_layout(1).get_partial_shape();
+        auto input2_size = impl_param.get_input_layout(2).get_partial_shape();
+        output_size = input2_size;
+        for (int input_port = 1; input_port >= 0; input_port--) {
+            auto input_size = impl_param.get_input_layout(input_port).get_partial_shape();
+            ov::PartialShape::broadcast_merge_into(output_size, input_size, ov::op::AutoBroadcastType::NUMPY);
+        }
     }
 
-    return layout(in_layout.data_type, in_layout.format, output_size);
+    return layout(output_size, in_layout.data_type, in_layout.format);
 }
 
 std::string select_inst::to_string(select_node const& node) {

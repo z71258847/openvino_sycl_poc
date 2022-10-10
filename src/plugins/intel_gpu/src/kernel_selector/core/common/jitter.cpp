@@ -944,6 +944,10 @@ JitConstants MakeActivationJitConstants(ActivationFunction activation_function,
         JitTerm jit_term{type_handler("TO_", "_TYPE") + "(" + arg.str() + ")"};
         return jit_term;
     };
+    auto to_float = [type_handler](const JitTerm& arg) -> JitTerm {
+        JitTerm jit_term{"convert_float(" + arg.str() + ")"};
+        return jit_term;
+    };
 
     std::string macro_def = name + (use_type_parameter ? "(jit_type, input, m, n)" : "(input, m, n)");
     std::string macro_def_params = use_type_parameter ? "(jit_type, input, params)" : "(input, params)";
@@ -980,11 +984,12 @@ JitConstants MakeActivationJitConstants(ActivationFunction activation_function,
             break;
         }
         case ActivationFunction::CLAMP: {
-            const JitTerm m = disable_type_conversion ? "m"_jit : to_type("m"_jit);
-            const JitTerm n = disable_type_conversion ? "n"_jit : to_type("n"_jit);
+            const JitTerm m = disable_type_conversion ? "m"_jit : to_float("m"_jit);
+            const JitTerm n = disable_type_conversion ? "n"_jit : to_float("n"_jit);
+            const JitTerm input_converted = disable_type_conversion ? input : to_float(input);
             jitConstants.AddConstant(MakeJitConstant(
                  macro_def,
-                 max_func(m, min_func(n, input)).str()));
+                 to_type(max_func(m, min_func(n, input_converted))).str()));
             break;
         }
         case ActivationFunction::SOFTRELU:
@@ -1769,23 +1774,27 @@ JitConstants FusedOpsCodeGenerator::MakeOpJitConstants(const FusedOpsConfigurati
                 std::string nl_m = toCodeString(activation_p.m);
                 std::string nl_n = toCodeString(activation_p.n);
 
+                auto intermediate_type = out_type;
+                if (activation_p.function == ActivationFunction::CLAMP) {
+                    intermediate_type = Datatype::F32;
+                }
                 if (desc.tensors.size() == 1) {
-                    if (desc.tensors[0].GetDType() != out_type) {
+                    if (desc.tensors[0].GetDType() != intermediate_type) {
                         nl_m = ConvertToOutputType(GetInputVarName(0), vec_size);
                     } else {
                         nl_m = GetInputVarName(0);
                     }
                 } else {
-                    nl_m = Broadcast(nl_m, out_type, vec_size);
+                    nl_m = Broadcast(nl_m, intermediate_type, vec_size);
                 }
 
-                nl_n = Broadcast(nl_n, out_type, vec_size);
+                nl_n = Broadcast(nl_n, intermediate_type, vec_size);
 
                 // Disable type casts in activation, since current jit generator for activation don't respect vector size of parameters.
                 // So conversion is explicitly done in params declaration
-                jit.Merge(MakeActivationJitConstants(activation_p.function, out_type, suffix, false, true));
+                jit.Merge(MakeActivationJitConstants(activation_p.function, intermediate_type, suffix, false, true));
                 std::string params = nl_m + ","+ nl_n;
-                op_decls += "\\\n\t" + out_var + " = ACTIVATION_FUNC" + suffix + "(" + out_var + ", " + params + ");";
+                op_decls += "\\\n\t" + out_var + " = " + ConvertToOutputType("ACTIVATION_FUNC" + suffix + "(" + out_var + ", " + params + ")", vec_size) + ";";
             }
             break;
         }

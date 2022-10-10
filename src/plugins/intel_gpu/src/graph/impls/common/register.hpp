@@ -13,6 +13,15 @@
 
 namespace cldnn {
 namespace common {
+
+inline int call(std::function<void(void)> f) {
+    static const int res = [&f]() {
+        f();
+        return 0;
+    }();
+    return res;
+}
+
 void register_implementations();
 
 namespace detail {
@@ -23,8 +32,8 @@ namespace detail {
     }
 
 REGISTER_COMMON(condition);
-REGISTER_COMMON(data);
-REGISTER_COMMON(input_layout);
+// REGISTER_COMMON(data);
+// REGISTER_COMMON(input_layout);
 REGISTER_COMMON(loop);
 REGISTER_COMMON(prior_box);
 

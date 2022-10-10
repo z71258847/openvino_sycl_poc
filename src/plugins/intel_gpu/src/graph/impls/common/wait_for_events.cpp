@@ -47,13 +47,19 @@ public:
 
 namespace detail {
 
-attach_data_common::attach_data_common() {
-    implementation_map<data>::add(impl_types::common, wait_for_events_impl::create_data, {});
-}
+#define REGISTER(primitive_type, impl_type, func, args) \
+static const int res_helper_##primitive_type = call([]() { \
+    implementation_map<primitive_type>::add(impl_type,func,args); \
+});
 
-attach_input_layout_common::attach_input_layout_common() {
-    implementation_map<input_layout>::add(impl_types::common, wait_for_events_impl::create_input_layout, {});
-}
+
+
+// REGISTER(data, impl_types::common, wait_for_events_impl::create_data, {});
+REGISTER(input_layout, impl_types::common, wait_for_events_impl::create_input_layout, {});
+
+// attach_input_layout_common::attach_input_layout_common() {
+//     implementation_map<input_layout>::add(impl_types::common, wait_for_events_impl::create_input_layout, {});
+// }
 
 attach_prior_box_common::attach_prior_box_common() {
     implementation_map<prior_box>::add(impl_types::common, wait_for_events_impl::create_prior_box, {});

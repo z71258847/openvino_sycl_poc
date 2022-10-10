@@ -14,6 +14,14 @@
 #include "intel_gpu/primitives/non_max_suppression.hpp"
 #include "intel_gpu/runtime/debug_configuration.hpp"
 
+#include <ngraph/opsets/opset8.hpp>
+#include "ngraph_ops/nms_static_shape_ie.hpp"
+
+
+namespace ngraph { namespace op { namespace internal {
+using NmsStaticShapeIE8 = ngraph::op::internal::NmsStaticShapeIE<ngraph::opset8::MatrixNms>;
+}}}
+
 namespace ov {
 namespace intel_gpu {
 
@@ -150,7 +158,13 @@ static void CreateNonMaxSuppressionIEInternalOp(Program& p, const std::shared_pt
     }
 }
 
+
+static void CreateNmsStaticShapeIE8Op(Program& p, const std::shared_ptr<ngraph::op::internal::NmsStaticShapeIE8>& op) {
+
+}
+
 REGISTER_FACTORY_IMPL(internal, NonMaxSuppressionIEInternal);
+REGISTER_FACTORY_IMPL(internal, NmsStaticShapeIE8);
 
 }  // namespace intel_gpu
 }  // namespace ov
