@@ -35,6 +35,9 @@ void remove_redundant_reorders::run(program& p) {
         if (!update_implementations)
             return;
 
+        if (node.is_dynamic())
+            return;
+
         node.set_unique_id();
         auto new_impl = node.type()->choose_impl(node);
         node.set_selected_impl(std::move(new_impl));

@@ -238,6 +238,7 @@ struct Dim {
     size_t v;
     size_t pitch;
     Pad pad;
+    bool is_dynamic;
 
     size_t LogicalDimPadded() const { return v + pad.Total(); }
 };
@@ -405,6 +406,10 @@ public:
     TensorBase() = default;
     TensorBase(const TensorBase&) = default;
     TensorBase& operator=(const TensorBase&) = default;
+
+    bool is_dynamic() const {
+        return std::any_of(dims.begin(), dims.end(), [](const Dim& d) { return d.is_dynamic; });
+    }
 
     TensorBase(const NDims& nd, size_t viewOf, size_t sz, float pv)
         : dims(nd),

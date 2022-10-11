@@ -143,7 +143,7 @@ std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, T value) {
     return std::static_pointer_cast<JitConstant>(std::make_shared<simple_jit_constant>(name, toCodeString(value)));
 }
 
-std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, const struct Tensor::DataTensor& value);
+std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, const struct Tensor::DataTensor& value, size_t dyn_tensor_index = 0);
 std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, const struct Tensor::WeightsTensor& value);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

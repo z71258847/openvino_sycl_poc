@@ -796,9 +796,77 @@ kernel_selector::dev_type get_device_type(cldnn::device_type type) {
     }
 }
 
+std::string vec_to_str(std::string prefix, const kernel_selector::Tensor::NDims& dv) {
+    std::stringstream ss;
+    ss << prefix << " ";
+    for (auto& d : dv) {
+        ss << "[" << d.v << " " << d.pitch << " " << d.pad.before << " " << d.pad.after << " " << d.is_dynamic << "]";
+    }
+    ss << std::endl;
+    return ss.str();
+}
+
 kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_t split, const tensor view_offset) {
+    kernel_selector::n_dims vec_ref(kernel_selector::DataTensor::ChannelsCount(to_data_layout(l.format)));
+    if (l.is_static())
+    {
+        const auto& pad = l.data_padding;
+        const auto& vals = l.get_tensor().sizes(l.format);
+        const auto& add_offsets = view_offset.sizes(l.format);
+        const auto& lower_pad = pad.lower_size().sizes(l.format);
+        const auto& upper_pad = pad.upper_size().sizes(l.format);
+        const auto ks_layout = to_data_layout(l.format);
+
+        size_t pitch = 1;
+        auto new_vals = vals;
+
+        if (ks_layout == kernel_selector::Tensor::b_fs_yx_fsv32) {
+            new_vals[1] = align_to(vals[1], 32);
+        }
+        if (ks_layout == kernel_selector::Tensor::bs_fs_yx_bsv16_fsv16) {
+            new_vals[0] = align_to(vals[0], 16);
+            new_vals[1] = align_to(vals[1], 16);
+        }
+        if (ks_layout == kernel_selector::Tensor::bs_fs_zyx_bsv16_fsv16) {
+            new_vals[0] = align_to(vals[0], 16);
+            new_vals[1] = align_to(vals[1], 16);
+        }
+
+        for (size_t i = 0; i < vec_ref.size(); i++) {
+            const size_t tensor_index = vec_ref.size() - 1 - i;
+            const auto d = vals[tensor_index];
+            const auto lp = lower_pad[tensor_index] + add_offsets[tensor_index];
+            const auto up = upper_pad[tensor_index];
+            // tells us how many elements are reserved in memory for this tensor index
+            const auto reserved_in_mem_count = new_vals[tensor_index] - add_offsets[tensor_index];
+
+            auto& elm = vec_ref[i];
+            elm.v = static_cast<size_t>(d - add_offsets[tensor_index]);
+            elm.pitch = pitch;
+            elm.pad.before = lp;
+            elm.pad.after = up;
+
+            pitch *= (reserved_in_mem_count + lp + up);
+        }
+
+        if (ks_layout == kernel_selector::Tensor::bs_fs_yx_bsv16_fsv16) {
+            vec_ref[2].pitch = (vec_ref[0].v * vec_ref[1].v) * 16;
+            vec_ref[3].pitch = vec_ref[2].pitch * vec_ref[2].v;
+        }
+        if (ks_layout == kernel_selector::Tensor::bs_fs_zyx_bsv16_fsv16) {
+            vec_ref[3].pitch = (vec_ref[0].v * vec_ref[1].v * vec_ref[2].v) * 16;
+            vec_ref[4].pitch = vec_ref[3].pitch * vec_ref[3].v;
+        }
+
+        const int feature_index =
+            kernel_selector::DataTensor::Channelndex(ks_layout, kernel_selector::Tensor::DataChannelName::FEATURE);
+        vec_ref[feature_index].v /= split;
+
+    }
+
     const auto& pad = l.data_padding;
-    const auto& vals = l.get_tensor().sizes(l.format);
+    const auto& vals = l.get_partial_shape();
+    // const auto& vals = l.get_tensor().sizes(l.format);
     const auto& add_offsets = view_offset.sizes(l.format);
     const auto& lower_pad = pad.lower_size().sizes(l.format);
     const auto& upper_pad = pad.upper_size().sizes(l.format);
@@ -806,49 +874,30 @@ kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_t split
     kernel_selector::n_dims vec(kernel_selector::DataTensor::ChannelsCount(ks_layout));
 
     size_t pitch = 1;
-    auto new_vals = vals;
-
-    if (ks_layout == kernel_selector::Tensor::b_fs_yx_fsv32) {
-        new_vals[1] = align_to(vals[1], 32);
-    }
-    if (ks_layout == kernel_selector::Tensor::bs_fs_yx_bsv16_fsv16) {
-        new_vals[0] = align_to(vals[0], 16);
-        new_vals[1] = align_to(vals[1], 16);
-    }
-    if (ks_layout == kernel_selector::Tensor::bs_fs_zyx_bsv16_fsv16) {
-        new_vals[0] = align_to(vals[0], 16);
-        new_vals[1] = align_to(vals[1], 16);
-    }
-
     for (size_t i = 0; i < vec.size(); i++) {
         const size_t tensor_index = vec.size() - 1 - i;
-        const auto d = vals[tensor_index];
+        const auto d = tensor_index < vals.size() ? vals[tensor_index] : ov::Dimension(1);
         const auto lp = lower_pad[tensor_index] + add_offsets[tensor_index];
         const auto up = upper_pad[tensor_index];
         // tells us how many elements are reserved in memory for this tensor index
-        const auto reserved_in_mem_count = new_vals[tensor_index] - add_offsets[tensor_index];
+        const auto reserved_in_mem_count = d.is_dynamic() ? 0 : d.get_length() - add_offsets[tensor_index];
 
         auto& elm = vec[i];
-        elm.v = static_cast<size_t>(d - add_offsets[tensor_index]);
+        elm.v = d.is_dynamic() ? 0 : static_cast<size_t>(d.get_length() - add_offsets[tensor_index]);
         elm.pitch = pitch;
         elm.pad.before = lp;
         elm.pad.after = up;
+        elm.is_dynamic = d.is_dynamic();
 
         pitch *= (reserved_in_mem_count + lp + up);
-    }
-
-    if (ks_layout == kernel_selector::Tensor::bs_fs_yx_bsv16_fsv16) {
-        vec[2].pitch = (vec[0].v * vec[1].v) * 16;
-        vec[3].pitch = vec[2].pitch * vec[2].v;
-    }
-    if (ks_layout == kernel_selector::Tensor::bs_fs_zyx_bsv16_fsv16) {
-        vec[3].pitch = (vec[0].v * vec[1].v * vec[2].v) * 16;
-        vec[4].pitch = vec[3].pitch * vec[3].v;
     }
 
     const int feature_index =
         kernel_selector::DataTensor::Channelndex(ks_layout, kernel_selector::Tensor::DataChannelName::FEATURE);
     vec[feature_index].v /= split;
+
+    // std::cerr << vec_to_str("ref", vec_ref);
+    // std::cerr << vec_to_str("new", vec);
 
     return kernel_selector::data_tensor(vec, to_data_type(l.data_type), ks_layout);
 }

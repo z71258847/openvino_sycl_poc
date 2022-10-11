@@ -258,46 +258,70 @@ void primitive_inst::update_impl() {
     GPU_DEBUG_PROFILED_STAGE(instrumentation::pipeline_stage::update_implementation);
     auto prev_impl_str =  _impl != nullptr ? _impl->get_kernel_name() : "nullptr";
     if (!_node.is_type<data>() && !(_node.is_type<mutable_data>() && _node.get_dependencies().empty())) {
-        auto get_layout_key = [&]() -> size_t {
-            size_t seed = 0;
-            auto& id = _impl_params->desc->id;
-            for (size_t i = 0; i < id.size(); i++) {
-                seed = hash_combine(seed, id[i]);
-            }
-            seed = hash_combine(seed, _node.get_unique_id());
-            for (auto& layout : _impl_params->input_layouts) {
-                for (auto& d : layout.get_shape()) {
-                    seed = hash_combine(seed, d);
+        if (_impl && _impl->is_dynamic()) {
+            _impl->update_dispatch_data(*_impl_params);
+            mem_lock<int32_t> lock(_shape_info_memory, _network.get_stream());
+            const size_t tensor_shape_size = 6;
+            size_t offset = 0;
+            for (size_t i = 0; i < _node.get_dependencies().size(); i++) {
+                if (_node.get_dependency(i).get_output_layout().is_dynamic()) {
+                    auto input_shape = _impl_params->get_input_layout(i).get_partial_shape();
+                    for (size_t j = 0; j < input_shape.size(); j++)
+                        lock[offset++] = static_cast<int32_t>(input_shape[j].get_length());
+                    for (size_t j = input_shape.size(); j < tensor_shape_size; j++)
+                        lock[offset++] = 1;
                 }
             }
-            for (auto& d : _impl_params->output_layout.get_shape()) {
-                seed = hash_combine(seed, d);
-            }
-            return seed;
-        };
 
-        auto layout_key = get_layout_key();
-        auto& cache = _network.get_program()->get_implementations_cache();
-        if (cache.has(layout_key)) {
-            _impl = cache.get(layout_key)->clone();
-            GPU_DEBUG_PROFILED_STAGE_CACHE_HIT(true);
+            if (_node.get_output_layout().is_dynamic()) {
+                auto output_shape = _impl_params->output_layout.get_partial_shape();
+                for (size_t j = 0; j < output_shape.size(); j++)
+                    lock[offset++] = static_cast<int32_t>(output_shape[j].get_length());
+                for (size_t j = output_shape.size(); j < tensor_shape_size; j++)
+                    lock[offset++] = 1;
+            }
         } else {
-            auto lru = cache.get_lru_element();
-            _impl = _node.type()->choose_impl(_node, *_impl_params);
-            bool lru_popped = cache.add(layout_key, _impl->clone());
-            if (lru_popped) {
-                for (auto& id : lru->get_kernel_ids())
-                    _network.get_program()->remove_kernel(id);
-            }
-            _network.get_program()->compile();
-        }
-        _impl->init_kernels(_network.get_program()->get_kernels_cache());
+            auto get_layout_key = [&]() -> size_t {
+                size_t seed = 0;
+                auto& id = _impl_params->desc->id;
+                for (size_t i = 0; i < id.size(); i++) {
+                    seed = hash_combine(seed, id[i]);
+                }
+                seed = hash_combine(seed, _node.get_unique_id());
+                for (auto& layout : _impl_params->input_layouts) {
+                    for (auto& d : layout.get_shape()) {
+                        seed = hash_combine(seed, d);
+                    }
+                }
+                for (auto& d : _impl_params->output_layout.get_shape()) {
+                    seed = hash_combine(seed, d);
+                }
+                return seed;
+            };
 
-        reset_shape_change();
-        GPU_DEBUG_GET_INSTANCE(debug_config);
-        GPU_DEBUG_IF(debug_config->verbose >= 4) {
-            auto new_impl_str = _impl != nullptr ? _impl->get_kernel_name() : "nullptr";
-            GPU_DEBUG_COUT << id() << ": update impl from " << prev_impl_str << " to " << new_impl_str << std::endl;
+            auto layout_key = get_layout_key();
+            auto& cache = _network.get_program()->get_implementations_cache();
+            if (cache.has(layout_key)) {
+                _impl = cache.get(layout_key)->clone();
+                GPU_DEBUG_PROFILED_STAGE_CACHE_HIT(true);
+            } else {
+                auto lru = cache.get_lru_element();
+                _impl = _node.type()->choose_impl(_node, *_impl_params);
+                bool lru_popped = cache.add(layout_key, _impl->clone());
+                if (lru_popped) {
+                    for (auto& id : lru->get_kernel_ids())
+                        _network.get_program()->remove_kernel(id);
+                }
+                _network.get_program()->compile();
+            }
+            _impl->init_kernels(_network.get_program()->get_kernels_cache());
+
+            reset_shape_change();
+            GPU_DEBUG_GET_INSTANCE(debug_config);
+            GPU_DEBUG_IF(debug_config->verbose >= 4) {
+                auto new_impl_str = _impl != nullptr ? _impl->get_kernel_name() : "nullptr";
+                GPU_DEBUG_COUT << id() << ": update impl from " << prev_impl_str << " to " << new_impl_str << std::endl;
+            }
         }
     }
 }
@@ -459,6 +483,10 @@ primitive_inst::primitive_inst(network& network, program_node const& node, bool 
 
     if (_output)
         max_output_layout_size = _output->get_layout().count();
+
+    if (_impl && _impl->is_dynamic()) {
+        _shape_info_memory = _network.get_engine().allocate_memory(layout{{6 * 2}, data_types::i32, format::bfyx});
+    }
 }
 
 void primitive_inst::allocate_internal_buffers(void) {

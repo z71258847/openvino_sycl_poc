@@ -89,15 +89,29 @@ JitConstants KernelBase::MakeBaseParamsJitConstants(const base_params& params) c
     jit.Merge(MakeUnitTypeJitConstants(unitType));
     jit.Merge(MakeActivationJitConstants(params.activations, unitType));
 
+    size_t dyn_tensor_idx = 0;
+
     for (size_t i = 0; i < params.inputs.size(); i++) {
-        jit.AddConstant(MakeJitConstant("INPUT" + toCodeString(i), params.inputs[i]));
+        jit.AddConstant(MakeJitConstant("INPUT" + toCodeString(i), params.inputs[i], dyn_tensor_idx));
+        if (params.inputs[i].is_dynamic())
+            dyn_tensor_idx++;
     }
 
     // NOTE : until all cl kernels legacy is resolved, the outputs are to be OUTPUT, OUTPUT1, OUTPUT2, ...
-    jit.AddConstant(MakeJitConstant("OUTPUT", params.outputs[0]));
+    jit.AddConstant(MakeJitConstant("OUTPUT", params.outputs[0], dyn_tensor_idx));
+    if (params.outputs[0].is_dynamic())
+            dyn_tensor_idx++;
     for (size_t i = 1; i < params.outputs.size(); i++) {
-        jit.AddConstant(MakeJitConstant("OUTPUT" + toCodeString(i), params.outputs[i]));
+        jit.AddConstant(MakeJitConstant("OUTPUT" + toCodeString(i), params.outputs[i], dyn_tensor_idx));
+        if (params.outputs[0].is_dynamic())
+            dyn_tensor_idx++;
     }
+
+    if (dyn_tensor_idx > 0) {
+        jit.AddConstant(MakeJitConstant("IS_DYNAMIC", 1));
+        jit.Merge(MakeTypeJitConstants(Datatype::INT32, "SHAPE_INFO"));
+    }
+
 
 #ifndef NDEBUG
     jit.AddConstant(MakeJitConstant("LayerID", params.layerID));

@@ -35,8 +35,8 @@ class typed_primitive_inst;
 */
 struct primitive_impl {
     primitive_impl() = default;
-    explicit primitive_impl(const kernel_selector::weights_reorder_params& params, std::string kernel_name = "")
-        : _weights_reorder_params(params), _kernel_name(kernel_name) {}
+    explicit primitive_impl(const kernel_selector::weights_reorder_params& params, std::string kernel_name = "", bool is_dynamic = false)
+        : _weights_reorder_params(params), _kernel_name(kernel_name), _is_dynamic(is_dynamic) {}
     virtual ~primitive_impl() = default;
 
     virtual std::vector<layout> get_internal_buffer_layouts() const = 0;
@@ -58,8 +58,16 @@ struct primitive_impl {
     // If this flag is set as false, the memory allocated for this primitive is not allowed to be reused
     bool can_reuse_memory = true;
 
+    void set_dynamic(bool val) { _is_dynamic = val; }
+    bool is_dynamic() const { return _is_dynamic; }
+
+    virtual void update_dispatch_data(const kernel_impl_params& impl_params) {
+        OPENVINO_ASSERT(false, "update dispatch data is not implemented for dyn impl");
+    };
+
 protected:
     std::string _kernel_name;
+    bool _is_dynamic = false;
 };
 
 /*
@@ -171,6 +179,8 @@ public:
     const std::unordered_map<size_t, std::tuple<int64_t, size_t>>& get_profiling_data() const { return _profiling_data; }
     const std::unordered_map<size_t, instrumentation::perf_counter_key>& get_profiling_info() const { return _profiling_info; }
 
+    memory::ptr shape_info_memory_ptr() const { return _shape_info_memory; }
+
 protected:
     primitive_inst(network& network, program_node const& node, bool allocate_memory);
 
@@ -204,6 +214,7 @@ protected:
     memory::ptr _output;
 
     std::vector<memory::cptr> _intermediates_memory;
+    memory::ptr _shape_info_memory = nullptr;
 
     bool _output_changed;  // todo: implement output reuse if neither of inputs has changed
     bool _shape_changed = false;

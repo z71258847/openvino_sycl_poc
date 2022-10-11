@@ -111,6 +111,8 @@ struct KernelData {
 
     bool can_reuse_memory = true;
 
+    std::function<void(const Params&, std::vector<clKernelData>&)> update_kernels_func = nullptr;
+
     template <typename T>
     inline static KernelData Default(const Params& _params, size_t kernel_nums = 1) {
         KernelData kd;

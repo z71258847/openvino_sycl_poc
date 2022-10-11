@@ -168,7 +168,7 @@ std::string getMeanOpString(MeanOp op) {
     }
 }
 // Longest notation for value represented by double type has 24 chars
-static thread_local char buf[24 + 24 + 18] = "";
+static thread_local char buf[24 + 24 + 18 + 100] = "";
 
 std::string toCodeString(uint8_t val) {
     snprintf(buf, sizeof(buf), "%d", static_cast<int>(val));
@@ -182,6 +182,15 @@ std::string toCodeString(int8_t val) {
 
 std::string toCodeString(size_t val) {
     snprintf(buf, sizeof(buf), "%zu", val);
+    return buf;
+}
+
+std::string toCodeString(const Tensor::Dim& dim, size_t offset) {
+    if (dim.is_dynamic) {
+        snprintf(buf, sizeof(buf), "shape_info[%zu]", offset);
+    } else {
+        snprintf(buf, sizeof(buf), "%zu", dim.v);
+    }
     return buf;
 }
 
@@ -258,9 +267,13 @@ public:
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class DataTensorJitConstant : public TensorBaseTJitConstant<Datatype, DataLayout> {
     const DataTensor _tensor;
+    const size_t _dyn_array_index;
 
 public:
-    DataTensorJitConstant(const std::string& name, const DataTensor& t) : TensorBaseTJitConstant(name), _tensor(t) {}
+    DataTensorJitConstant(const std::string& name, const DataTensor& t, size_t dyn_array_index = 0)
+    : TensorBaseTJitConstant(name)
+    , _tensor(t)
+    , _dyn_array_index(dyn_array_index) {}
 
     JitDefinitions GetDefinitions() const override;
 };
@@ -268,32 +281,58 @@ public:
 JitDefinitions DataTensorJitConstant::GetDefinitions() const {
     JitDefinitions baseDefinitions = TensorBaseTJitConstant::GetDefinitions(_tensor);
 
-    JitDefinitions definitions{
-        {_name + "_SIZE_X", toCodeString(_tensor.X().v)},
-        {_name + "_SIZE_Y", toCodeString(_tensor.Y().v)},
-        {_name + "_SIZE_Z", toCodeString(_tensor.Z().v)},
-        {_name + "_SIZE_W", toCodeString(_tensor.W().v)},
-        {_name + "_FEATURE_NUM", toCodeString(_tensor.Feature().v)},
-        {_name + "_BATCH_NUM", toCodeString(_tensor.Batch().v)},
-        {_name + "_X_PITCH", toCodeString(_tensor.X().pitch)},
-        {_name + "_Y_PITCH", toCodeString(_tensor.Y().pitch)},
-        {_name + "_Z_PITCH", toCodeString(_tensor.Z().pitch)},
-        {_name + "_W_PITCH", toCodeString(_tensor.W().pitch)},
-        {_name + "_FEATURE_PITCH", toCodeString(_tensor.Feature().pitch)},
-        {_name + "_BATCH_PITCH", toCodeString(_tensor.Batch().pitch)},
-        {_name + "_PAD_BEFORE_SIZE_X", toCodeString(_tensor.X().pad.before)},
-        {_name + "_PAD_BEFORE_SIZE_Y", toCodeString(_tensor.Y().pad.before)},
-        {_name + "_PAD_BEFORE_SIZE_Z", toCodeString(_tensor.Z().pad.before)},
-        {_name + "_PAD_BEFORE_SIZE_W", toCodeString(_tensor.W().pad.before)},
-        {_name + "_PAD_BEFORE_FEATURE_NUM", toCodeString(_tensor.Feature().pad.before)},
-        {_name + "_PAD_BEFORE_BATCH_NUM", toCodeString(_tensor.Batch().pad.before)},
-        {_name + "_PAD_AFTER_SIZE_X", toCodeString(_tensor.X().pad.after)},
-        {_name + "_PAD_AFTER_SIZE_Y", toCodeString(_tensor.Y().pad.after)},
-        {_name + "_PAD_AFTER_SIZE_Z", toCodeString(_tensor.Z().pad.after)},
-        {_name + "_PAD_AFTER_SIZE_W", toCodeString(_tensor.W().pad.after)},
-        {_name + "_PAD_AFTER_FEATURE_NUM", toCodeString(_tensor.Feature().pad.after)},
-        {_name + "_PAD_AFTER_BATCH_NUM", toCodeString(_tensor.Batch().pad.after)},
-    };
+    size_t idx_offset = _dyn_array_index * 6; // 6D max
+    JitDefinitions definitions{};
+    if (_tensor.is_dynamic()) {
+        definitions = {
+            {_name + "_SIZE_X", toCodeString(_tensor.X(), idx_offset + 5)},
+            {_name + "_SIZE_Y", toCodeString(_tensor.Y(), idx_offset + 4)},
+            {_name + "_SIZE_Z", toCodeString(_tensor.Z(), idx_offset + 3)},
+            {_name + "_SIZE_W", toCodeString(_tensor.W(), idx_offset + 2)},
+            {_name + "_FEATURE_NUM", toCodeString(_tensor.Feature(), idx_offset + 1)},
+            {_name + "_BATCH_NUM", toCodeString(_tensor.Batch(), idx_offset + 0)},
+            {_name + "_PAD_BEFORE_SIZE_X", toCodeString(_tensor.X().pad.before)},
+            {_name + "_PAD_BEFORE_SIZE_Y", toCodeString(_tensor.Y().pad.before)},
+            {_name + "_PAD_BEFORE_SIZE_Z", toCodeString(_tensor.Z().pad.before)},
+            {_name + "_PAD_BEFORE_SIZE_W", toCodeString(_tensor.W().pad.before)},
+            {_name + "_PAD_BEFORE_FEATURE_NUM", toCodeString(_tensor.Feature().pad.before)},
+            {_name + "_PAD_BEFORE_BATCH_NUM", toCodeString(_tensor.Batch().pad.before)},
+            {_name + "_PAD_AFTER_SIZE_X", toCodeString(_tensor.X().pad.after)},
+            {_name + "_PAD_AFTER_SIZE_Y", toCodeString(_tensor.Y().pad.after)},
+            {_name + "_PAD_AFTER_SIZE_Z", toCodeString(_tensor.Z().pad.after)},
+            {_name + "_PAD_AFTER_SIZE_W", toCodeString(_tensor.W().pad.after)},
+            {_name + "_PAD_AFTER_FEATURE_NUM", toCodeString(_tensor.Feature().pad.after)},
+            {_name + "_PAD_AFTER_BATCH_NUM", toCodeString(_tensor.Batch().pad.after)},
+        };
+    } else {
+        definitions = {
+            {_name + "_SIZE_X", toCodeString(_tensor.X().v)},
+            {_name + "_SIZE_Y", toCodeString(_tensor.Y().v)},
+            {_name + "_SIZE_Z", toCodeString(_tensor.Z().v)},
+            {_name + "_SIZE_W", toCodeString(_tensor.W().v)},
+            {_name + "_FEATURE_NUM", toCodeString(_tensor.Feature().v)},
+            {_name + "_BATCH_NUM", toCodeString(_tensor.Batch().v)},
+            {_name + "_X_PITCH", toCodeString(_tensor.X().pitch)},
+            {_name + "_Y_PITCH", toCodeString(_tensor.Y().pitch)},
+            {_name + "_Z_PITCH", toCodeString(_tensor.Z().pitch)},
+            {_name + "_W_PITCH", toCodeString(_tensor.W().pitch)},
+            {_name + "_FEATURE_PITCH", toCodeString(_tensor.Feature().pitch)},
+            {_name + "_BATCH_PITCH", toCodeString(_tensor.Batch().pitch)},
+            {_name + "_PAD_BEFORE_SIZE_X", toCodeString(_tensor.X().pad.before)},
+            {_name + "_PAD_BEFORE_SIZE_Y", toCodeString(_tensor.Y().pad.before)},
+            {_name + "_PAD_BEFORE_SIZE_Z", toCodeString(_tensor.Z().pad.before)},
+            {_name + "_PAD_BEFORE_SIZE_W", toCodeString(_tensor.W().pad.before)},
+            {_name + "_PAD_BEFORE_FEATURE_NUM", toCodeString(_tensor.Feature().pad.before)},
+            {_name + "_PAD_BEFORE_BATCH_NUM", toCodeString(_tensor.Batch().pad.before)},
+            {_name + "_PAD_AFTER_SIZE_X", toCodeString(_tensor.X().pad.after)},
+            {_name + "_PAD_AFTER_SIZE_Y", toCodeString(_tensor.Y().pad.after)},
+            {_name + "_PAD_AFTER_SIZE_Z", toCodeString(_tensor.Z().pad.after)},
+            {_name + "_PAD_AFTER_SIZE_W", toCodeString(_tensor.W().pad.after)},
+            {_name + "_PAD_AFTER_FEATURE_NUM", toCodeString(_tensor.Feature().pad.after)},
+            {_name + "_PAD_AFTER_BATCH_NUM", toCodeString(_tensor.Batch().pad.after)},
+        };
+    }
+
 
     auto is_common_nd_layout = [](std::vector<Tensor::DataChannelName> common_channels, DataLayout l) -> bool {
         for (size_t c = 0; c < static_cast<size_t>(Tensor::DataChannelName::COUNT); c++) {
@@ -507,8 +546,8 @@ JitDefinitions DataTensorJitConstant::GetDefinitions() const {
     return definitions;
 }
 
-std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, const DataTensor& value) {
-    return std::static_pointer_cast<JitConstant>(std::make_shared<DataTensorJitConstant>(name, value));
+std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, const DataTensor& value, size_t dyn_tensor_index) {
+    return std::static_pointer_cast<JitConstant>(std::make_shared<DataTensorJitConstant>(name, value, dyn_tensor_index));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
