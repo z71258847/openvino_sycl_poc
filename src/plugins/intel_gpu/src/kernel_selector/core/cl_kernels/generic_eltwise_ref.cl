@@ -14,6 +14,9 @@
 #endif
 
 KERNEL(eltwise)(
+#if IS_DYNAMIC
+    const __global SHAPE_INFO_TYPE* shape_info,
+#endif
     INPUTS_DECLS
     __global OUTPUT_TYPE* output
 #if HAS_FUSED_OPS_DECLS

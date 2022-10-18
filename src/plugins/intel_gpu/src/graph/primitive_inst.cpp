@@ -252,33 +252,53 @@ void primitive_inst::realloc_if_needed() {
         _output = allocate_output();
         max_output_layout_size = _output->get_layout().count();
     }
+
+    // TODO: reuse memory
+    allocate_internal_buffers();
 }
 
 void primitive_inst::update_impl() {
     GPU_DEBUG_PROFILED_STAGE(instrumentation::pipeline_stage::update_implementation);
     auto prev_impl_str =  _impl != nullptr ? _impl->get_kernel_name() : "nullptr";
+    GPU_DEBUG_GET_INSTANCE(debug_config);
+    auto extend_to_6d = [this](ov::PartialShape ps) -> std::vector<size_t> {
+        // For shape_of we extend shape with 1-s to 6d rank to make kernel simpler
+        if (_node.is_type<shape_of>()) {
+            ps.insert(ps.end(), 6 - ps.size(), ov::Dimension(1));
+            return ps.to_shape();
+        }
+        if (ps.size() < 4) {
+            ps.insert(ps.end(), 4 - ps.size(), ov::Dimension(1));
+        }
+        layout l(ps, data_types::i32, format::get_default_format(ps.size()));
+        return l.transform(format::bfwzyx).to_shape();
+    };
+
+
     if (!_node.is_type<data>() && !(_node.is_type<mutable_data>() && _node.get_dependencies().empty())) {
         if (_impl && _impl->is_dynamic()) {
             _impl->update_dispatch_data(*_impl_params);
             mem_lock<int32_t> lock(_shape_info_memory, _network.get_stream());
-            const size_t tensor_shape_size = 6;
             size_t offset = 0;
             for (size_t i = 0; i < _node.get_dependencies().size(); i++) {
                 if (_node.get_dependency(i).get_output_layout().is_dynamic()) {
-                    auto input_shape = _impl_params->get_input_layout(i).get_partial_shape();
+                    auto input_shape = extend_to_6d(_impl_params->get_input_layout(i).get_partial_shape());
                     for (size_t j = 0; j < input_shape.size(); j++)
-                        lock[offset++] = static_cast<int32_t>(input_shape[j].get_length());
-                    for (size_t j = input_shape.size(); j < tensor_shape_size; j++)
-                        lock[offset++] = 1;
+                        lock[offset++] = static_cast<int32_t>(input_shape[j]);
                 }
             }
 
             if (_node.get_output_layout().is_dynamic()) {
-                auto output_shape = _impl_params->output_layout.get_partial_shape();
+                auto output_shape = extend_to_6d(_impl_params->output_layout.get_partial_shape());
                 for (size_t j = 0; j < output_shape.size(); j++)
-                    lock[offset++] = static_cast<int32_t>(output_shape[j].get_length());
-                for (size_t j = output_shape.size(); j < tensor_shape_size; j++)
-                    lock[offset++] = 1;
+                    lock[offset++] = static_cast<int32_t>(output_shape[j]);
+            }
+            GPU_DEBUG_IF(debug_config->verbose >= 4) {
+                std::stringstream s;
+                s << "shapes: ";
+                for (size_t i = 0; i < offset; i++)
+                    s << lock[i] << " ";
+                GPU_DEBUG_COUT << id() << ": update dynamic impl " << prev_impl_str << " to new shape: " << s.str() << std::endl;
             }
         } else {
             auto get_layout_key = [&]() -> size_t {
@@ -317,7 +337,6 @@ void primitive_inst::update_impl() {
             _impl->init_kernels(_network.get_program()->get_kernels_cache());
 
             reset_shape_change();
-            GPU_DEBUG_GET_INSTANCE(debug_config);
             GPU_DEBUG_IF(debug_config->verbose >= 4) {
                 auto new_impl_str = _impl != nullptr ? _impl->get_kernel_name() : "nullptr";
                 GPU_DEBUG_COUT << id() << ": update impl from " << prev_impl_str << " to " << new_impl_str << std::endl;
@@ -485,12 +504,13 @@ primitive_inst::primitive_inst(network& network, program_node const& node, bool 
         max_output_layout_size = _output->get_layout().count();
 
     if (_impl && _impl->is_dynamic()) {
-        _shape_info_memory = _network.get_engine().allocate_memory(layout{{6 * 2}, data_types::i32, format::bfyx});
+        int64_t buffers_count = _node.get_dependencies().size() + 1;
+        _shape_info_memory = _network.get_engine().allocate_memory(layout{{buffers_count}, data_types::i32, format::bfyx});
     }
 }
 
 void primitive_inst::allocate_internal_buffers(void) {
-    if (_impl == nullptr)
+    if (_impl == nullptr || _output == nullptr)
         return;
     const auto& ibuf_layouts = _impl->get_internal_buffer_layouts();
     if (ibuf_layouts.empty())

@@ -5,8 +5,16 @@
 #include "include/batch_headers/data_types.cl"
 #include "include/batch_headers/fetch_data.cl"
 
+#ifdef IS_DYNAMIC
+#define OPTIONAL_SHAPE_INFO __global SHAPE_INFO_TYPE* shape_info,
+#define OPTIONAL_SHAPE_INFO_ARG shape_info,
+#else
+#define OPTIONAL_SHAPE_INFO
+#define OPTIONAL_SHAPE_INFO_ARG
+#endif
+
 ///////////////////////// Input Index /////////////////////////
-inline uint FUNC(get_input_index)(uint b, uint f, uint w, uint z, uint y, uint x)
+inline uint FUNC(get_input_index)(OPTIONAL_SHAPE_INFO uint b, uint f, uint w, uint z, uint y, uint x)
 {
 #if INPUT0_DIMS < 5
     return INPUT0_GET_INDEX(b, f, y, x);
@@ -20,7 +28,7 @@ inline uint FUNC(get_input_index)(uint b, uint f, uint w, uint z, uint y, uint x
 }
 
 ///////////////////////// Output Index /////////////////////////
-inline uint FUNC(get_output_index)(uint b, uint f, uint w, uint z, uint y, uint x)
+inline uint FUNC(get_output_index)(OPTIONAL_SHAPE_INFO uint b, uint f, uint w, uint z, uint y, uint x)
 {
 #if OUTPUT_DIMS < 5
     return OUTPUT_GET_INDEX(b, f, y, x);
@@ -33,7 +41,12 @@ inline uint FUNC(get_output_index)(uint b, uint f, uint w, uint z, uint y, uint 
 #endif
 }
 
-KERNEL(cum_sum_ref)( const __global INPUT0_TYPE* input, __global OUTPUT_TYPE* output)
+KERNEL(cum_sum_ref)(
+#if IS_DYNAMIC
+    const __global SHAPE_INFO_TYPE* shape_info,
+#endif
+    const __global INPUT0_TYPE* input,
+    __global OUTPUT_TYPE* output)
 {
     const uint batch = (uint)get_global_id(0);
     const uint features = (uint)get_global_id(1) / OUTPUT_SIZE_W;
@@ -67,10 +80,10 @@ KERNEL(cum_sum_ref)( const __global INPUT0_TYPE* input, __global OUTPUT_TYPE* ou
 
     INPUT0_TYPE res = INPUT0_VAL_ZERO;
     for (; axes[AXIS] < stop_ind; ++axes[AXIS]) {
-        uint ind = FUNC_CALL(get_input_index)(axes[0], axes[1], axes[2], axes[3], axes[4], axes[5]);
+        uint ind = FUNC_CALL(get_input_index)(OPTIONAL_SHAPE_INFO_ARG axes[0], axes[1], axes[2], axes[3], axes[4], axes[5]);
         res += input[ind];
     }
 
-    uint out_ind = FUNC_CALL(get_output_index)(batch, features, w, z, y, x);
+    uint out_ind = FUNC_CALL(get_output_index)(OPTIONAL_SHAPE_INFO_ARG batch, features, w, z, y, x);
     output[out_ind] = ACTIVATION(TO_OUTPUT_TYPE(res), ACTIVATION_PARAMS);
 }

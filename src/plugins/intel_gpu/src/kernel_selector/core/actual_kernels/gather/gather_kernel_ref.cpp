@@ -54,6 +54,7 @@ ParamsKey GatherKernelRef::GetSupportedKey() const {
     k.EnableTensorPitches();
     k.EnableBatching();
     k.EnableDifferentTypes();
+    k.EnableDynamicShapesSupport();
     return k;
 }
 
@@ -171,7 +172,7 @@ static std::string GetIndicesIdxOrder(const gather_params& params, size_t axis, 
     return GetOrderString(idx_order);
 }
 
-CommonDispatchData GatherKernelRef::SetDefault(const gather_params& params, const optional_params&) const {
+CommonDispatchData GatherKernelRef::SetDefault(const gather_params& params) const {
     CommonDispatchData dispatchData;
     const auto& output = params.outputs[0];
     auto in_layout = params.inputs[0].GetLayout();
@@ -247,14 +248,25 @@ KernelsData GatherKernelRef::GetKernelsData(const Params& params, const optional
     KernelData kd = KernelData::Default<gather_params>(params);
     gather_params& newParams = *static_cast<gather_params*>(kd.params.get());
 
-    auto dispatchData = SetDefault(newParams, options);
+    auto dispatchData = SetDefault(newParams);
     auto entry_point = GetEntryPoint(kernelName, newParams.layerID, params, options);
     auto cldnn_jit = GetJitConstants(newParams);
     auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
+    kd.update_kernels_func = [this](const Params& params, KernelData& kd) {
+        const auto& prim_params = static_cast<const gather_params&>(params);
+        auto dispatchData = SetDefault(prim_params);
+        OPENVINO_ASSERT(kd.kernels.size() == 1, "[GPU] Invalid kernels size for update dispatch data func");
+        kd.kernels[0].params.workGroups.global = dispatchData.gws;
+        kd.kernels[0].params.workGroups.local = dispatchData.lws;
+    };
+
     auto& kernel = kd.kernels[0];
 
-    FillCLKernelData(kernel, dispatchData, params.engineInfo, kernelName, jit, entry_point, "", false, false, 2, GetFusedPrimitiveInputsCount(params));
+    FillCLKernelData(kernel, dispatchData, params.engineInfo, kernelName, jit, entry_point, "", false, false, 2,
+                     GetFusedPrimitiveInputsCount(params),
+                     1,
+                     newParams.outputs[0].is_dynamic());
 
     return {kd};
 }

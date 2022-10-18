@@ -60,6 +60,15 @@ KernelsData MVNKernelBase::GetCommonKernelsData(const Params& params,
 
     KernelData kd = KernelData::Default<mvn_params>(params);
 
+    kd.update_kernels_func = [this](const Params& params, KernelData& kd) {
+        const auto& prim_params = static_cast<const mvn_params&>(params);
+        auto dispatchData = SetDefault(prim_params);
+        OPENVINO_ASSERT(kd.kernels.size() == 1, "[GPU] Invalid kernels size for update dispatch data func");
+        kd.kernels[0].params.workGroups.global = dispatchData.gws;
+        kd.kernels[0].params.workGroups.local = dispatchData.lws;
+    };
+
+
     auto finalKernelName = GetKernelName(orgParams);
     auto cldnn_jit = GetJitConstants(orgParams, dispatchData);
     auto entry_point = GetEntryPoint(finalKernelName, orgParams.layerID, params, options);
@@ -76,7 +85,9 @@ KernelsData MVNKernelBase::GetCommonKernelsData(const Params& params,
                      false,
                      false,
                      1,
-                     GetFusedPrimitiveInputsCount(params));
+                     GetFusedPrimitiveInputsCount(params),
+                     1,
+                     orgParams.outputs[0].is_dynamic());
 
     return {kd};
 }

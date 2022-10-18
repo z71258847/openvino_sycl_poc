@@ -7,6 +7,7 @@
 #include "pass_manager.h"
 #include "data_inst.h"
 #include "mutable_data_inst.h"
+#include "gemm_inst.h"
 #include "program_node.h"
 #include "intel_gpu/runtime/engine.hpp"
 #include "runtime/cldnn_itt.hpp"
@@ -34,7 +35,7 @@ void compile_graph::run(program& p) {
     for (size_t idx = 0; idx < proc_order.size(); idx++) {
         auto& node = *(std::next(proc_order.begin(), idx));
         if (!node->is_type<data>() && !(node->is_type<mutable_data>() && node->get_dependencies().empty()) &&
-            node->type()->does_an_implementation_exist(*node)) {
+            (!node->is_dynamic() || node->type()->does_dynamic_implementation_exist(*node))) {
             tasks.push_back([node, &exception] {
                 try {
                     node->selected_impl = node->type()->choose_impl(*node);

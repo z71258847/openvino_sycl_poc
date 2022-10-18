@@ -6,8 +6,13 @@
 #include "include/batch_headers/data_types.cl"
 
 
+#if !IS_DYNAMIC
 __attribute__((reqd_work_group_size(LWS, 1, 1)))
+#endif
 KERNEL (softmax_gpu_continuous_bfyx)(
+#if IS_DYNAMIC
+    const __global SHAPE_INFO_TYPE* shape_info,
+#endif
     const __global INPUT0_TYPE* input,
     __global OUTPUT_TYPE* output
 #if HAS_FUSED_OPS_DECLS

@@ -7,6 +7,9 @@
 
 
 KERNEL (mvn_gpu_ref_across_channels)(
+#if IS_DYNAMIC
+    const __global SHAPE_INFO_TYPE* shape_info,
+#endif
     const __global INPUT0_TYPE* input,
     __global OUTPUT_TYPE* restrict output
 #if HAS_FUSED_OPS_DECLS

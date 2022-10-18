@@ -9,7 +9,15 @@
 // TRANSPOSE_INPUT1 [1/0]      - whether to tranpose second input.
 // ACCUMULATOR_TYPE [DataType] - type used for intermediate results accumulation.
 
-inline uint FUNC(get_input0_index_nt)(uint b, uint f, uint w, uint z, uint y, uint x) {
+#ifdef IS_DYNAMIC
+#define OPTIONAL_SHAPE_INFO __global SHAPE_INFO_TYPE* shape_info,
+#define OPTIONAL_SHAPE_INFO_ARG shape_info,
+#else
+#define OPTIONAL_SHAPE_INFO
+#define OPTIONAL_SHAPE_INFO_ARG
+#endif
+
+inline uint FUNC(get_input0_index_nt)(OPTIONAL_SHAPE_INFO uint b, uint f, uint w, uint z, uint y, uint x) {
 #if INPUT0_SIMPLE
     return GET_DATA_INDEX_6D_SAFE(INPUT0, b, f, w, z, y, x);
 #else
@@ -17,15 +25,15 @@ inline uint FUNC(get_input0_index_nt)(uint b, uint f, uint w, uint z, uint y, ui
 #endif
 }
 
-inline uint FUNC(get_input0_index)(uint b, uint f, uint w, uint z, uint y, uint x) {
+inline uint FUNC(get_input0_index)(OPTIONAL_SHAPE_INFO uint b, uint f, uint w, uint z, uint y, uint x) {
 #if !TRANSPOSE_INPUT0
-    return FUNC_CALL(get_input0_index_nt)(b, f, w, z, y, x);
+    return FUNC_CALL(get_input0_index_nt)(OPTIONAL_SHAPE_INFO_ARG b, f, w, z, y, x);
 #else
-    return FUNC_CALL(get_input0_index_nt)(b, f, w, z, x, y);
+    return FUNC_CALL(get_input0_index_nt)(OPTIONAL_SHAPE_INFO_ARG b, f, w, z, x, y);
 #endif
 }
 
-inline uint FUNC(get_input1_index_nt)(uint b, uint f, uint w, uint z, uint y, uint x) {
+inline uint FUNC(get_input1_index_nt)(OPTIONAL_SHAPE_INFO uint b, uint f, uint w, uint z, uint y, uint x) {
 #if INPUT1_SIMPLE
     return GET_DATA_INDEX_6D_SAFE(INPUT1, b, f, w, z, y, x);
 #else
@@ -33,16 +41,16 @@ inline uint FUNC(get_input1_index_nt)(uint b, uint f, uint w, uint z, uint y, ui
 #endif
 }
 
-inline uint FUNC(get_input1_index)(uint b, uint f, uint w, uint z, uint y, uint x) {
+inline uint FUNC(get_input1_index)(OPTIONAL_SHAPE_INFO uint b, uint f, uint w, uint z, uint y, uint x) {
 #if !TRANSPOSE_INPUT1
-    return FUNC_CALL(get_input1_index_nt)(b, f, w, z, y, x);
+    return FUNC_CALL(get_input1_index_nt)(OPTIONAL_SHAPE_INFO_ARG b, f, w, z, y, x);
 #else
-    return FUNC_CALL(get_input1_index_nt)(b, f, w, z, x, y);
+    return FUNC_CALL(get_input1_index_nt)(OPTIONAL_SHAPE_INFO_ARG b, f, w, z, x, y);
 #endif
 }
 
 #ifdef INPUT2_TYPE
-inline uint FUNC(get_input2_index)(uint b, uint f, uint w, uint z, uint y, uint x) {
+inline uint FUNC(get_input2_index)(OPTIONAL_SHAPE_INFO uint b, uint f, uint w, uint z, uint y, uint x) {
 #if INPUT2_SIMPLE
     return GET_DATA_INDEX_6D_SAFE(INPUT2, b, f, w, z, y, x);
 #else
@@ -51,7 +59,7 @@ inline uint FUNC(get_input2_index)(uint b, uint f, uint w, uint z, uint y, uint 
 }
 #endif // INPUT2_TYPE
 
-inline uint FUNC(get_output_index)(uint b, uint f, uint w, uint z, uint y, uint x) {
+inline uint FUNC(get_output_index)(OPTIONAL_SHAPE_INFO uint b, uint f, uint w, uint z, uint y, uint x) {
 #if OUTPUT_SIMPLE
     return GET_DATA_INDEX_6D(OUTPUT, b, f, w, z, y, x);
 #else
@@ -60,6 +68,9 @@ inline uint FUNC(get_output_index)(uint b, uint f, uint w, uint z, uint y, uint 
 }
 
 KERNEL(gemm_ref)(
+#if IS_DYNAMIC
+    const __global SHAPE_INFO_TYPE* shape_info,
+#endif
     const __global INPUT0_TYPE* input0,
     const __global INPUT1_TYPE* input1,
 #ifdef INPUT2_TYPE
@@ -92,8 +103,8 @@ KERNEL(gemm_ref)(
     ACCUMULATOR_TYPE acc = ACCUMULATOR_VAL_ZERO;
 
     for (uint ki = 0; ki < K; ++ki) {
-        uint in0_idx = FUNC_CALL(get_input0_index)(b, f, w, z, y, ki);
-        uint in1_idx = FUNC_CALL(get_input1_index)(b, f, w, z, ki, x);
+        uint in0_idx = FUNC_CALL(get_input0_index)(OPTIONAL_SHAPE_INFO_ARG b, f, w, z, y, ki);
+        uint in1_idx = FUNC_CALL(get_input1_index)(OPTIONAL_SHAPE_INFO_ARG b, f, w, z, ki, x);
 
         ACCUMULATOR_TYPE val0 = TO_ACCUMULATOR_TYPE(input0[in0_idx]);
         ACCUMULATOR_TYPE val1 = TO_ACCUMULATOR_TYPE(input1[in1_idx]);
@@ -105,14 +116,14 @@ KERNEL(gemm_ref)(
 
 #ifdef INPUT2_TYPE
     {
-        uint in2_idx = FUNC_CALL(get_input2_index)(b, f, w, z, y, x);
+        uint in2_idx = FUNC_CALL(get_input2_index)(OPTIONAL_SHAPE_INFO_ARG b, f, w, z, y, x);
         ACCUMULATOR_TYPE val2 = TO_ACCUMULATOR_TYPE(input2[in2_idx]);
 
         acc += TO_ACCUMULATOR_TYPE(BETA) * val2;
     }
 #endif
 
-    const uint dst_index = FUNC_CALL(get_output_index)(b, f, w, z, y, x);
+    const uint dst_index = FUNC_CALL(get_output_index)(OPTIONAL_SHAPE_INFO_ARG b, f, w, z, y, x);
 
     ACTIVATION_TYPE dequantized = TO_ACTIVATION_TYPE(acc);
 

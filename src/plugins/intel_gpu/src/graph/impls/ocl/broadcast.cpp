@@ -26,7 +26,7 @@ struct broadcast_impl : typed_primitive_impl_ocl<broadcast> {
         auto kernel_params = get_params(impl_param);
         auto& kernel_data = this->_kernel_data;
 
-        (kernel_data.update_kernels_func)(kernel_params.first, kernel_data.kernels);
+        (kernel_data.update_kernels_func)(kernel_params.first, kernel_data);
     }
 
     static std::pair<kernel_selector::broadcast_params, kernel_selector::broadcast_optional_params> get_params(const kernel_impl_params& impl_param) {
@@ -57,8 +57,6 @@ struct broadcast_impl : typed_primitive_impl_ocl<broadcast> {
     }
 
     static primitive_impl* create(const broadcast_node& arg, const kernel_impl_params& impl_param) {
-        std::cerr << "create broadcast!\n";
-
         auto kernel_params = get_params(impl_param);
 
         auto& kernel_selector = kernel_selector::broadcast_kernel_selector::Instance();
@@ -183,8 +181,7 @@ attach_broadcast_impl::attach_broadcast_impl() {
         std::make_tuple(data_types::i64, format::bs_fs_yx_bsv32_fsv32),
     };
 
-    implementation_map<broadcast>::add(impl_types::ocl, broadcast_impl::create, shape_types::dynamic_shape, supported_keys);
-    implementation_map<broadcast>::add(impl_types::ocl, broadcast_impl::create, shape_types::static_shape, supported_keys);
+    implementation_map<broadcast>::add(impl_types::ocl, broadcast_impl::create, { shape_types::dynamic_shape, shape_types::static_shape}, supported_keys);
 }
 
 }  // namespace detail

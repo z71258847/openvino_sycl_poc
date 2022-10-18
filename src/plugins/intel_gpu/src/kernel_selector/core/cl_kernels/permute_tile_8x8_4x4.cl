@@ -10,6 +10,9 @@
 #define INPUT0_GET_TILED_INDEX(ORDER) INPUT0_GET_INDEX(ORDER)
 #define OUTPUT_GET_TILED_INDEX(ORDER) OUTPUT_GET_INDEX(ORDER)
 KERNEL (permute_tile_8x8_4x4)(
+    #if IS_DYNAMIC
+    const __global SHAPE_INFO_TYPE* shape_info,
+    #endif
     const __global INPUT0_TYPE* input,
     __global OUTPUT_TYPE* output
 #if HAS_FUSED_OPS_DECLS

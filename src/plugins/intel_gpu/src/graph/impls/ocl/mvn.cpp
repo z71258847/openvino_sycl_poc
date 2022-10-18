@@ -26,10 +26,11 @@ struct mvn_impl : typed_primitive_impl_ocl<mvn> {
     }
 
 public:
-    static primitive_impl* create(const mvn_node& arg, const kernel_impl_params& impl_param) {
-        const auto& prim = arg.get_primitive();
+
+    static std::pair<kernel_selector::mvn_params, kernel_selector::mvn_optional_params> get_params(const kernel_impl_params& impl_param) {
+        const auto& prim = impl_param.typed_desc<mvn>();
         auto mvn_params = get_default_params<kernel_selector::mvn_params>(impl_param);
-        auto mvn_optional_params = get_default_optional_params<kernel_selector::mvn_optional_params>(arg.get_program());
+        auto mvn_optional_params = get_default_optional_params<kernel_selector::mvn_optional_params>(impl_param.prog);
 
         mvn_params.mvnMode = prim->across_channels ? kernel_selector::mvn_mode::ACROSS_CHANNELS
                                                                   : kernel_selector::mvn_mode::WITHIN_CHANNELS;
@@ -39,8 +40,21 @@ public:
         mvn_params.mvnEpsMode = prim->eps_inside_sqrt ? kernel_selector::mvn_eps_mode::INSIDE_SQRT
                                                                      : kernel_selector::mvn_eps_mode::OUTSIDE_SQRT;
 
+
+        return {mvn_params, mvn_optional_params};
+    }
+
+    void update_dispatch_data(const kernel_impl_params& impl_param) override {
+        auto kernel_params = get_params(impl_param);
+        auto& kernel_data = this->_kernel_data;
+
+        (kernel_data.update_kernels_func)(kernel_params.first, kernel_data);
+    }
+
+    static primitive_impl* create(const mvn_node& arg, const kernel_impl_params& impl_param) {
+        auto kernel_params = get_params(impl_param);
         auto& kernel_selector = kernel_selector::mvn_kernel_selector::Instance();
-        auto best_kernels = kernel_selector.GetBestKernels(mvn_params, mvn_optional_params);
+        auto best_kernels = kernel_selector.GetBestKernels(kernel_params.first, kernel_params.second);
 
         CLDNN_ERROR_BOOL(arg.id(),
                          "Best_kernel.empty()",
@@ -56,7 +70,7 @@ public:
 namespace detail {
 
 attach_mvn_impl::attach_mvn_impl() {
-    implementation_map<mvn>::add(impl_types::ocl, mvn_impl::create, {
+    implementation_map<mvn>::add(impl_types::ocl, mvn_impl::create, {shape_types::static_shape, shape_types::dynamic_shape}, {
         std::make_tuple(data_types::f32, format::bfyx),
         std::make_tuple(data_types::f16, format::bfyx),
         std::make_tuple(data_types::u8, format::bfyx),

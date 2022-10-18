@@ -896,9 +896,6 @@ kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_t split
         kernel_selector::DataTensor::Channelndex(ks_layout, kernel_selector::Tensor::DataChannelName::FEATURE);
     vec[feature_index].v /= split;
 
-    // std::cerr << vec_to_str("ref", vec_ref);
-    // std::cerr << vec_to_str("new", vec);
-
     return kernel_selector::data_tensor(vec, to_data_type(l.data_type), ks_layout);
 }
 

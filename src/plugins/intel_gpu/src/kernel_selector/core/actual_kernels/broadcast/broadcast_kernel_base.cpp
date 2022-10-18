@@ -64,12 +64,12 @@ KernelsData BroadcastKernelBase::GetCommonKernelsData(const Params& params,
     auto dispatchData = SetDefault(prim_params);
     KernelData k_data = KernelData::Default<broadcast_params>(params);
 
-    k_data.update_kernels_func = [](const Params& params, std::vector<clKernelData>& kernels) {
+    k_data.update_kernels_func = [](const Params& params, KernelData& kd) {
         const auto& prim_params = static_cast<const broadcast_params&>(params);
         auto dispatchData = SetDefault(prim_params);
-        OPENVINO_ASSERT(kernels.size() == 1, "[GPU] Invalid kernels size for update dispatch data func");
-        kernels[0].params.workGroups.global = dispatchData.gws;
-        kernels[0].params.workGroups.local = dispatchData.lws;
+        OPENVINO_ASSERT(kd.kernels.size() == 1, "[GPU] Invalid kernels size for update dispatch data func");
+        kd.kernels[0].params.workGroups.global = dispatchData.gws;
+        kd.kernels[0].params.workGroups.local = dispatchData.lws;
     };
 
     auto cldnn_jit = GetJitConstants(prim_params);

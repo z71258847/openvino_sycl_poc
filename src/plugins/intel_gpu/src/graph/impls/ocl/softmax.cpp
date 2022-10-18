@@ -43,17 +43,30 @@ struct softmax_impl : typed_primitive_impl_ocl<softmax> {
         return make_unique<softmax_impl>(*this);
     }
 
-    static primitive_impl* create(const softmax_node& arg, const kernel_impl_params& impl_param) {
-        const auto primitive = arg.get_primitive();
-        auto sm_params = get_default_params<kernel_selector::softmax_params>(impl_param);
-        auto sm_optional_params =
-            get_default_optional_params<kernel_selector::softmax_optional_params>(arg.get_program());
+    static std::pair<kernel_selector::softmax_params, kernel_selector::softmax_optional_params> get_params(const kernel_impl_params& impl_param) {
+        const auto& primitive = impl_param.typed_desc<softmax>();
+        auto softmax_params = get_default_params<kernel_selector::softmax_params>(impl_param);
+        auto softmax_optional_params =
+            get_default_optional_params<kernel_selector::softmax_optional_params>(impl_param.prog);
 
         size_t rank = impl_param.output_layout.get_rank();
-        sm_params.dim = get_softmax_dim(primitive->dimension, rank);
+        softmax_params.dim = get_softmax_dim(primitive->dimension, rank);
 
+        return {softmax_params, softmax_optional_params};
+    }
+
+    void update_dispatch_data(const kernel_impl_params& impl_param) override {
+        auto kernel_params = get_params(impl_param);
+        auto& kernel_data = this->_kernel_data;
+
+        (kernel_data.update_kernels_func)(kernel_params.first, kernel_data);
+    }
+
+
+    static primitive_impl* create(const softmax_node& arg, const kernel_impl_params& impl_param) {
+        auto kernel_params = get_params(impl_param);
         auto& kernel_selector = kernel_selector::softmax_kernel_selector::Instance();
-        auto best_kernels = kernel_selector.GetBestKernels(sm_params, sm_optional_params);
+        auto best_kernels = kernel_selector.GetBestKernels(kernel_params.first, kernel_params.second);
 
         CLDNN_ERROR_BOOL(arg.id(),
                          "Best_kernel.empty()",
@@ -77,7 +90,7 @@ attach_softmax_impl::attach_softmax_impl() {
             format::bfzyx
     };
 
-    implementation_map<softmax>::add(impl_types::ocl, softmax_impl::create, types, formats);
+    implementation_map<softmax>::add(impl_types::ocl, softmax_impl::create, {shape_types::static_shape, shape_types::dynamic_shape}, types, formats);
 }
 
 }  // namespace detail

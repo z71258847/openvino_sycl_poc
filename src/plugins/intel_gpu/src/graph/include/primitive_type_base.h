@@ -52,7 +52,7 @@ struct primitive_type_base : primitive_type {
     bool does_an_implementation_exist(const cldnn::program_node& node, const kernel_impl_params& impl_param) const override {
         OPENVINO_ASSERT(node.type() == this, "[GPU] primitive_type_base::does_an_implementation_exist: primitive type mismatch");
 
-        return implementation_map<PType>::check(impl_param, node.get_preferred_impl_type(), get_shape_type(impl_param));
+        return implementation_map<PType>::check(impl_param, node.get_preferred_impl_type(), shape_types::static_shape);
     }
 
     bool does_possible_implementation_exist(const cldnn::program_node& node) const override {
@@ -62,6 +62,15 @@ struct primitive_type_base : primitive_type {
     bool does_possible_implementation_exist(const cldnn::program_node& node, const kernel_impl_params& impl_param) const override {
         OPENVINO_ASSERT(node.type() == this, "[GPU] primitive_type_base::does_possible_implementation_exist: primitive type mismatch");
         return implementation_map<PType>::check_io_eq(impl_param, node.get_preferred_impl_type(), shape_types::static_shape);
+    }
+
+    bool does_dynamic_implementation_exist(const cldnn::program_node& node) const override {
+        return does_dynamic_implementation_exist(node, *node.get_kernel_impl_params());
+    }
+
+    bool does_dynamic_implementation_exist(const cldnn::program_node& node, const kernel_impl_params& impl_param) const override {
+        OPENVINO_ASSERT(node.type() == this, "[GPU] primitive_type_base::does_possible_implementation_exist: primitive type mismatch");
+        return implementation_map<PType>::check(impl_param, node.get_preferred_impl_type(), shape_types::dynamic_shape);
     }
 
     cldnn::layout calc_output_layout(const cldnn::program_node& node, const kernel_impl_params& impl_param) const override {

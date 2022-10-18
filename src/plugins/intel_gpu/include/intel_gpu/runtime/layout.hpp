@@ -503,7 +503,7 @@ private:
 };
 
 inline ::std::ostream& operator<<(::std::ostream& os, const layout& p) {
-    return os << p.to_string();
+    return os << p.to_short_string();
 }
 
 /// @}

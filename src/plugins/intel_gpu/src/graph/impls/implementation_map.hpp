@@ -136,7 +136,7 @@ public:
     using factory_type = std::function<primitive_impl*(const typed_program_node<primitive_kind>&, const kernel_impl_params&)>;
     using map_type = singleton_map<std::pair<impl_types, shape_types>, std::pair<std::set<key_type>, factory_type>>;
 
-    static factory_type get(const kernel_impl_params& impl_params, impl_types preferred_impl_type, shape_types target_shape_type = shape_types::static_shape) {
+    static factory_type get(const kernel_impl_params& impl_params, impl_types preferred_impl_type, shape_types target_shape_type) {
         auto input_layout = !impl_params.input_layouts.empty() ? impl_params.input_layouts[0] : layout{ov::PartialShape{}, data_types::f32, format::any};
         auto key = key_builder()(input_layout);
         for (auto& kv : map_type::instance()) {
@@ -186,6 +186,11 @@ public:
         return false;
     }
 
+    static void add(impl_types impl_type, factory_type factory, std::vector<shape_types> supported_shape_types,
+                    const std::vector<data_types>& types, const std::vector<format::type>& formats) {
+        add(impl_type, factory, supported_shape_types, combine(types, formats));
+    }
+
     static void add(impl_types impl_type, factory_type factory,
                     const std::vector<data_types>& types, const std::vector<format::type>& formats) {
         add(impl_type, factory, combine(types, formats));
@@ -193,12 +198,13 @@ public:
 
     static void add(impl_types impl_type, factory_type factory, std::set<key_type> keys) {
         OPENVINO_ASSERT(impl_type != impl_types::any, "[GPU] Can't register impl with type any");
-        add(impl_type, factory, shape_types::static_shape, keys);
+        add(impl_type, factory, { shape_types::static_shape }, keys);
     }
 
-    static void add(impl_types impl_type, factory_type factory, shape_types shape_type, std::set<key_type> keys) {
+    static void add(impl_types impl_type, factory_type factory, std::vector<shape_types> supported_shape_types, std::set<key_type> keys) {
         OPENVINO_ASSERT(impl_type != impl_types::any, "[GPU] Can't register impl with type any");
-        map_type::instance().insert({{impl_type, shape_type}, {keys, factory}});
+        for (auto& shape_type : supported_shape_types)
+            map_type::instance().insert({{impl_type, shape_type}, {keys, factory}});
     }
 
 private:

@@ -12,9 +12,9 @@ namespace kernel_selector {
 
 softmax_kernel_selector::softmax_kernel_selector() {
     Attach<SoftmaxKernelRef>();
-    Attach<SoftmaxKernel_bf>();
-    Attach<SoftmaxKernel_fb>();
-    Attach<SoftmaxKerneItemsClassOptimized>();
+    // Attach<SoftmaxKernel_bf>();
+    // Attach<SoftmaxKernel_fb>();
+    // Attach<SoftmaxKerneItemsClassOptimized>();
 }
 
 KernelsData softmax_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const {

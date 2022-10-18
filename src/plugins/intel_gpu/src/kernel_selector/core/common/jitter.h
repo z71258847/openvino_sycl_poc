@@ -94,6 +94,7 @@ std::string toCodeString(double val);
 std::string toCodeString(size_t val);
 std::string toCodeString(uint8_t val);
 std::string toCodeString(int8_t val);
+std::string toCodeString(const Tensor::Dim& dim, size_t offset);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // JitConstant
@@ -345,7 +346,7 @@ public:
         }
     };
 
-    JitConstants MakeFusedTensorJitConstants(const FusedOpsConfiguration& conf) const;
+    JitConstants MakeFusedTensorJitConstants(const FusedOpsConfiguration& conf, size_t dynamic_in_out_tensors_count) const;
     JitConstants MakeInputDeclsJitConstants(const FusedOpsConfiguration& conf) const;
     JitConstants MakeLoadJitConstants(const FusedOpsConfiguration& conf, const DataTensor prim_output) const;
     JitConstants MakeOpJitConstants(const FusedOpsConfiguration& conf,
