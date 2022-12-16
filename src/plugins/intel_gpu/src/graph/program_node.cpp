@@ -247,8 +247,7 @@ bool program_node::is_detached(bool whole_branch) {
 
 layout program_node::calc_output_layout() const {
     GPU_DEBUG_GET_INSTANCE(debug_config);
-    bool allow_new_shape_infer =
-        get_program().get_options().get<build_option_type::allow_new_shape_infer>()->enabled();
+    bool allow_new_shape_infer = get_program().get_config().get_property(ov::intel_gpu::allow_new_shape_infer);
     if (allow_new_shape_infer) {
         auto out_layouts = type()->calc_output_layouts(*this, *get_kernel_impl_params());
         if (!out_layouts.empty()) {
@@ -268,8 +267,7 @@ layout program_node::calc_output_layout() const {
 }
 
 std::vector<layout> program_node::calc_output_layouts() const {
-    bool allow_new_shape_infer =
-        get_program().get_options().get<build_option_type::allow_new_shape_infer>()->enabled();
+    bool allow_new_shape_infer = get_program().get_config().get_property(ov::intel_gpu::allow_new_shape_infer);
     if (allow_new_shape_infer) {
         auto out_layouts = type()->calc_output_layouts(*this, *get_kernel_impl_params());
         if (!out_layouts.empty())
