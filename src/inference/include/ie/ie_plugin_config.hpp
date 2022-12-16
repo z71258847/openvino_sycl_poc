@@ -477,7 +477,7 @@ DECLARE_CONFIG_KEY(FORCE_TBB_TERMINATE);
 
 #include "hetero/hetero_plugin_config.hpp"
 #include "multi-device/multi_device_config.hpp"
+#include "gpu/gpu_config.hpp"
 
 // remove in 2022.1 major release
-#include "cldnn/cldnn_config.hpp"
 #include "gna/gna_config.hpp"
