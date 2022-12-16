@@ -180,8 +180,8 @@ class binary_convolution_test : public ::testing::TestWithParam<TestParams> {
 
 TEST_P(binary_convolution_test, conv) {
     auto& engine = get_test_engine();
-    cldnn::build_options options;
-    options.set_option(cldnn::build_option::optimize_data(true));
+    cldnn::ExecutionConfig config;
+    config.set_property(ov::intel_gpu::optimize_data(true));
     topology topology_bin;
 
     std::string weights_suffix = "_w_";
@@ -230,7 +230,7 @@ TEST_P(binary_convolution_test, conv) {
     if (p.is_caching_test) {
         membuf mem_buf;
         {
-            cldnn::network _network(engine, topology_bin, options);
+            cldnn::network _network(engine, topology_bin, config);
             std::ostream out_mem(&mem_buf);
             BinaryOutputBuffer ob = BinaryOutputBuffer(out_mem);
             _network.save(ob);
@@ -241,7 +241,7 @@ TEST_P(binary_convolution_test, conv) {
             network_bin = std::make_shared<cldnn::network>(ib, get_test_stream_ptr(), engine);
         }
     } else {
-        network_bin = std::make_shared<cldnn::network>(engine, topology_bin, options);
+        network_bin = std::make_shared<cldnn::network>(engine, topology_bin, config);
     }
 
     network_bin->set_input_data(input_name, input);
@@ -391,10 +391,10 @@ TEST(binary_convolution, basic_convolution_1x1_single_packed_channel) {
                                padding{ { 0,0,0,0 }, 0 })
     );
 
-    cldnn::build_options options;
-    options.set_option(cldnn::build_option::optimize_data(true));
+    cldnn::ExecutionConfig config;
+    config.set_property(ov::intel_gpu::optimize_data(true));
 
-    network network(engine, topology, options);
+    network network(engine, topology, config);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -474,10 +474,10 @@ TEST(binary_convolution, basic_convolution_1x1_single_packed_channel_fp16) {
                                padding{ { 0,0,0,0 }, 0 })
     );
 
-    cldnn::build_options options;
-    options.set_option(cldnn::build_option::optimize_data(true));
+    cldnn::ExecutionConfig config;
+    config.set_property(ov::intel_gpu::optimize_data(true));
 
-    network network(engine, topology, options);
+    network network(engine, topology, config);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
