@@ -180,7 +180,7 @@ class binary_convolution_test : public ::testing::TestWithParam<TestParams> {
 
 TEST_P(binary_convolution_test, conv) {
     auto& engine = get_test_engine();
-    cldnn::ExecutionConfig config;
+    ov::intel_gpu::ExecutionConfig config;
     config.set_property(ov::intel_gpu::optimize_data(true));
     topology topology_bin;
 
@@ -391,7 +391,7 @@ TEST(binary_convolution, basic_convolution_1x1_single_packed_channel) {
                                padding{ { 0,0,0,0 }, 0 })
     );
 
-    cldnn::ExecutionConfig config;
+    ov::intel_gpu::ExecutionConfig config;
     config.set_property(ov::intel_gpu::optimize_data(true));
 
     network network(engine, topology, config);
@@ -474,7 +474,7 @@ TEST(binary_convolution, basic_convolution_1x1_single_packed_channel_fp16) {
                                padding{ { 0,0,0,0 }, 0 })
     );
 
-    cldnn::ExecutionConfig config;
+    ov::intel_gpu::ExecutionConfig config;
     config.set_property(ov::intel_gpu::optimize_data(true));
 
     network network(engine, topology, config);

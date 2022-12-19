@@ -586,7 +586,7 @@ TYPED_TEST(deconvolution_basic, basic_wsiz2x2x2_in2x2x1x1_stride2_pad1) {
     //  f1: 17 - 13
 
     auto& engine = get_test_engine();
-    cldnn::ExecutionConfig config;
+    ov::intel_gpu::ExecutionConfig config;
     config.set_property(ov::intel_gpu::optimize_data(true));
 
     auto input = engine.allocate_memory({ data_types::f32, format::yxfb, { 1, 1, 2, 2 } });
@@ -778,7 +778,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2x2_in2x2x1x1_stride2_pad1_input_padd
     //  f1: 17 - 13
 
     auto& engine = get_test_engine();
-    cldnn::ExecutionConfig config;
+    ov::intel_gpu::ExecutionConfig config;
     config.set_property(ov::intel_gpu::optimize_data(true));
 
     auto input = engine.allocate_memory({ data_types::f32, format::yxfb,{ 1, 1, 2, 2 } });
@@ -909,7 +909,7 @@ TYPED_TEST(deconvolution_basic, basic_f16_wsiz2x2_in2x2x1x2_bfyx_yxfb_stride2_pa
     auto weights = engine.allocate_memory({ data_types::f32, format::oiyx,{ 1, 1, 2, 2 } });
     auto biases = engine.allocate_memory({ data_types::f32, format::bfyx,{ 1, 1, 1, 1 } });
 
-    cldnn::ExecutionConfig config;
+    ov::intel_gpu::ExecutionConfig config;
     config.set_property(ov::intel_gpu::optimize_data(true));
 
     set_values(input, { FLOAT16(8.f), FLOAT16(0.5f),
@@ -1741,7 +1741,7 @@ TYPED_TEST(deconvolution_basic, basic_f16_k9x9_s2x2_pad4x4) {
         reorder("out", input_info("deconv_act"), format::bfyx, data_types::f16)
     );
 
-    cldnn::ExecutionConfig config;
+    ov::intel_gpu::ExecutionConfig config;
     config.set_property(ov::intel_gpu::optimize_data(true));
     network network_act(engine, topology_act, config);
     network_act.set_input_data("input_act", input);
@@ -1799,8 +1799,8 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_b_fs_yx_fsv16_stride2_pad
             reorder("out", input_info("deconv"), format::bfyx, data_types::f32)
     );
 
-    cldnn::ExecutionConfig config;
-    implementation_desc impl = { format::b_fs_yx_fsv16, "" };
+    ov::intel_gpu::ExecutionConfig config;
+    ov::intel_gpu::ImplementationDesc impl = { format::b_fs_yx_fsv16, "" };
     config.set_property(ov::intel_gpu::optimize_data(true));
     config.set_property(ov::intel_gpu::force_implementations(ov::intel_gpu::ImplForcingMap{ {"deconv", impl} }));
 
@@ -1870,8 +1870,8 @@ TEST(deconvolution_f16_fw_gpu, basic_wsiz2x2_in2x2x1x2_b_fs_yx_fsv16_stride2_pad
             reorder("out", input_info("deconv"), format::bfyx, data_types::f16)
     );
 
-    cldnn::ExecutionConfig config;
-    implementation_desc impl = { format::b_fs_yx_fsv16, "" };
+    ov::intel_gpu::ExecutionConfig config;
+    ov::intel_gpu::ImplementationDesc impl = { format::b_fs_yx_fsv16, "" };
     config.set_property(ov::intel_gpu::optimize_data(true));
     config.set_property(ov::intel_gpu::force_implementations(ov::intel_gpu::ImplForcingMap{ {"deconv", impl} }));
 
@@ -1919,8 +1919,8 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in1x2x2x2_b_fs_yx_fsv16_stride2_pad
             reorder("out", input_info("deconv"), format::bfyx, data_types::f32)
     );
 
-    cldnn::ExecutionConfig config;
-    implementation_desc impl = { format::b_fs_yx_fsv16, "" };
+    ov::intel_gpu::ExecutionConfig config;
+    ov::intel_gpu::ImplementationDesc impl = { format::b_fs_yx_fsv16, "" };
     config.set_property(ov::intel_gpu::optimize_data(true));
     config.set_property(ov::intel_gpu::force_implementations(ov::intel_gpu::ImplForcingMap{ {"deconv", impl} }));
 
@@ -1967,8 +1967,8 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in1x2x2x2_b_fs_yx_fsv16_stride2_pad
             reorder("out", input_info("deconv"), format::bfyx, data_types::f32)
     );
 
-    cldnn::ExecutionConfig config;
-    implementation_desc impl = { format::b_fs_yx_fsv16, "" };
+    ov::intel_gpu::ExecutionConfig config;
+    ov::intel_gpu::ImplementationDesc impl = { format::b_fs_yx_fsv16, "" };
     config.set_property(ov::intel_gpu::optimize_data(true));
     config.set_property(ov::intel_gpu::force_implementations(ov::intel_gpu::ImplForcingMap{ {"deconv", impl} }));
 
@@ -2013,8 +2013,8 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_nopad_b_fs_yx_fsv16_dw) {
             reorder("out", input_info("deconv"), format::bfyx, data_types::f32)
     );
 
-    cldnn::ExecutionConfig config;
-    implementation_desc impl = { format::b_fs_yx_fsv16, "" };
+    ov::intel_gpu::ExecutionConfig config;
+    ov::intel_gpu::ImplementationDesc impl = { format::b_fs_yx_fsv16, "" };
     config.set_property(ov::intel_gpu::optimize_data(true));
     config.set_property(ov::intel_gpu::force_implementations(ov::intel_gpu::ImplForcingMap{ {"deconv", impl} }));
 
@@ -2067,8 +2067,8 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_pad1_b_fs_yx_fsv16_dw) {
             reorder("out", input_info("deconv"), format::bfyx, data_types::f32)
     );
 
-    cldnn::ExecutionConfig config;
-    implementation_desc impl = { format::b_fs_yx_fsv16, "" };
+    ov::intel_gpu::ExecutionConfig config;
+    ov::intel_gpu::ImplementationDesc impl = { format::b_fs_yx_fsv16, "" };
     config.set_property(ov::intel_gpu::optimize_data(true));
     config.set_property(ov::intel_gpu::force_implementations(ov::intel_gpu::ImplForcingMap{ {"deconv", impl} }));
 
@@ -2109,8 +2109,8 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_stride2_nopad_b_fs_yx_fsv
         reorder("out", input_info("deconv"), format::bfyx, data_types::f32)
     );
 
-    cldnn::ExecutionConfig config;
-    implementation_desc impl = { format::b_fs_yx_fsv16, "" };
+    ov::intel_gpu::ExecutionConfig config;
+    ov::intel_gpu::ImplementationDesc impl = { format::b_fs_yx_fsv16, "" };
     config.set_property(ov::intel_gpu::optimize_data(true));
     config.set_property(ov::intel_gpu::force_implementations(ov::intel_gpu::ImplForcingMap{ {"deconv", impl} }));
 
@@ -2165,8 +2165,8 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_stride4_pad2_b_fs_yx_fsv1
             reorder("out", input_info("deconv"), format::bfyx, data_types::f32)
     );
 
-    cldnn::ExecutionConfig config;
-    implementation_desc impl = { format::b_fs_yx_fsv16, "" };
+    ov::intel_gpu::ExecutionConfig config;
+    ov::intel_gpu::ImplementationDesc impl = { format::b_fs_yx_fsv16, "" };
     config.set_property(ov::intel_gpu::optimize_data(true));
     config.set_property(ov::intel_gpu::force_implementations(ov::intel_gpu::ImplForcingMap{ {"deconv", impl} }));
 
@@ -2221,8 +2221,8 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_stride4_pad2_b_fs_yx_fsv1
             reorder("out", input_info("deconv"), format::bfyx, data_types::f32)
     );
 
-    cldnn::ExecutionConfig config;
-    implementation_desc impl = { format::b_fs_yx_fsv16, "" };
+    ov::intel_gpu::ExecutionConfig config;
+    ov::intel_gpu::ImplementationDesc impl = { format::b_fs_yx_fsv16, "" };
     config.set_property(ov::intel_gpu::optimize_data(true));
     config.set_property(ov::intel_gpu::force_implementations(ov::intel_gpu::ImplForcingMap{ {"deconv", impl} }));
 
@@ -2306,8 +2306,8 @@ TEST(deconvolution_f32_fw_gpu, bs_fs_zyx_bsv16_fsv16_wsiz2x2x2_in1x1x2x2x2_strid
             reorder("out", input_info("deconv"), format::bfzyx, data_types::f32)
     );
 
-    cldnn::ExecutionConfig config;
-    implementation_desc impl = { format::bs_fs_zyx_bsv16_fsv16, "" };
+    ov::intel_gpu::ExecutionConfig config;
+    ov::intel_gpu::ImplementationDesc impl = { format::bs_fs_zyx_bsv16_fsv16, "" };
     config.set_property(ov::intel_gpu::optimize_data(true));
     config.set_property(ov::intel_gpu::force_implementations(ov::intel_gpu::ImplForcingMap{ {"deconv", impl} }));
 
@@ -2359,7 +2359,7 @@ void test_deconvolution_f16_fw_gpu_basic_wsiz2x2_in1x2x2x2_fs_b_yx_fsv32_stride1
             reorder("out", input_info("deconv"), format::bfyx, data_types::f32)
     );
 
-    cldnn::ExecutionConfig config;
+    ov::intel_gpu::ExecutionConfig config;
     config.set_property(ov::intel_gpu::optimize_data(true));
 
     cldnn::network::ptr network;
@@ -2423,7 +2423,7 @@ struct deconvolution_random_test_params {
     ov::CoordinateDiff pad;
     bool with_bias;
     data_types output_type;
-    cldnn::implementation_desc deconv_desc;
+    ov::intel_gpu::ImplementationDesc deconv_desc;
 
     static std::string print_params(const testing::TestParamInfo<deconvolution_random_test_params>& param_info) {
         auto& param = param_info.param;
@@ -2733,7 +2733,7 @@ protected:
         }
     }
 
-    cldnn::ExecutionConfig config;
+    ov::intel_gpu::ExecutionConfig config;
 
 private:
     template <typename InputT, typename WeightsT, typename OutputT>
@@ -2792,21 +2792,21 @@ public:
         std::vector<int> batches = { 1, 2 };
         for (auto b : batches) {
             // 1x1
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 15, 7, 7}, wei_dt, format::oiyx, {15, 15, 1, 1}, {1, 1}, {0, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 15, 7, 7}, wei_dt, format::oiyx, {15, 15, 1, 1}, {2, 2}, {0, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 15, 7, 7}, wei_dt, format::oiyx, {15, 15, 1, 1}, {1, 1}, {0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 15, 7, 7}, wei_dt, format::oiyx, {15, 15, 1, 1}, {2, 2}, {0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""} });
             // 3x3
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 15, 7, 7}, wei_dt, format::oiyx, {15, 15, 3, 3}, {1, 1}, {1, 1}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 15, 7, 7}, wei_dt, format::oiyx, {15, 15, 3, 3}, {2, 2}, {1, 1}, true, out_dt, implementation_desc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 15, 7, 7}, wei_dt, format::oiyx, {15, 15, 3, 3}, {1, 1}, {1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 15, 7, 7}, wei_dt, format::oiyx, {15, 15, 3, 3}, {2, 2}, {1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
             // Grouped
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 8, 7, 7}, wei_dt, format::goiyx, tensor(group(2), batch(16), feature(4), spatial(1, 1)), {1, 1}, {0, 0}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 8, 7, 7}, wei_dt, format::goiyx, tensor(group(2), batch(16), feature(4), spatial(1, 1)), {2, 2}, {0, 0}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 8, 7, 7}, wei_dt, format::goiyx, tensor(group(2), batch(16), feature(4), spatial(3, 3)), {1, 1}, {1, 1}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 8, 7, 7}, wei_dt, format::goiyx, tensor(group(2), batch(16), feature(4), spatial(3, 3)), {2, 2}, {1, 1}, true, out_dt, implementation_desc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 8, 7, 7}, wei_dt, format::goiyx, tensor(group(2), batch(16), feature(4), spatial(1, 1)), {1, 1}, {0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 8, 7, 7}, wei_dt, format::goiyx, tensor(group(2), batch(16), feature(4), spatial(1, 1)), {2, 2}, {0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 8, 7, 7}, wei_dt, format::goiyx, tensor(group(2), batch(16), feature(4), spatial(3, 3)), {1, 1}, {1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 8, 7, 7}, wei_dt, format::goiyx, tensor(group(2), batch(16), feature(4), spatial(3, 3)), {2, 2}, {1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
             // Depthwise
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 16, 7, 7}, wei_dt, format::goiyx, tensor(group(16), spatial(1, 1)), {1, 1}, {0, 0}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 16, 7, 7}, wei_dt, format::goiyx, tensor(group(16), spatial(1, 1)), {2, 2}, {0, 0}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 16, 7, 7}, wei_dt, format::goiyx, tensor(group(16), spatial(3, 3)), {1, 1}, {1, 1}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 16, 7, 7}, wei_dt, format::goiyx, tensor(group(16), spatial(3, 3)), {2, 2}, {1, 1}, true, out_dt, implementation_desc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 16, 7, 7}, wei_dt, format::goiyx, tensor(group(16), spatial(1, 1)), {1, 1}, {0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 16, 7, 7}, wei_dt, format::goiyx, tensor(group(16), spatial(1, 1)), {2, 2}, {0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 16, 7, 7}, wei_dt, format::goiyx, tensor(group(16), spatial(3, 3)), {1, 1}, {1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 16, 7, 7}, wei_dt, format::goiyx, tensor(group(16), spatial(3, 3)), {2, 2}, {1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
         }
         return *this;
     }
@@ -2815,21 +2815,21 @@ public:
         std::vector<int> batches = { 1, 2, 16, 32 };
         for (auto b : batches) {
             // 1x1
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7, 7}, wei_dt, format::oizyx, {15, 15, 1, 1, 1}, {1, 1, 1}, {0, 0, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7, 7}, wei_dt, format::oizyx, {15, 15, 1, 1, 1}, {2, 2, 2}, {0, 0, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7, 7}, wei_dt, format::oizyx, {15, 15, 1, 1, 1}, {1, 1, 1}, {0, 0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 15, 7, 7, 7}, wei_dt, format::oizyx, {15, 15, 1, 1, 1}, {2, 2, 2}, {0, 0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""} });
             // 3x3
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 15, 7, 7, 7}, wei_dt, format::oizyx, {15, 15, 3, 3, 3}, {1, 1, 1}, {1, 1, 1}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 15, 7, 7, 7}, wei_dt, format::oizyx, {15, 15, 3, 3, 3}, {2, 2, 2}, {1, 1, 1}, true, out_dt, implementation_desc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 15, 7, 7, 7}, wei_dt, format::oizyx, {15, 15, 3, 3, 3}, {1, 1, 1}, {1, 1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 15, 7, 7, 7}, wei_dt, format::oizyx, {15, 15, 3, 3, 3}, {2, 2, 2}, {1, 1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
             // Grouped
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 8, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(2), batch(16), feature(4), spatial(1, 1, 1)), {1, 1, 1}, {0, 0, 0}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 8, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(2), batch(16), feature(4), spatial(1, 1, 1)), {2, 2, 2}, {0, 0, 0}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 8, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(2), batch(16), feature(4), spatial(3, 3, 3)), {1, 1, 1}, {1, 1, 1}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 8, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(2), batch(16), feature(4), spatial(3, 3, 3)), {2, 2, 2}, {1, 1, 1}, true, out_dt, implementation_desc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 8, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(2), batch(16), feature(4), spatial(1, 1, 1)), {1, 1, 1}, {0, 0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 8, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(2), batch(16), feature(4), spatial(1, 1, 1)), {2, 2, 2}, {0, 0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 8, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(2), batch(16), feature(4), spatial(3, 3, 3)), {1, 1, 1}, {1, 1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 8, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(2), batch(16), feature(4), spatial(3, 3, 3)), {2, 2, 2}, {1, 1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
             // Depthwise
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 16, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(16), spatial(1, 1, 1)), {1, 1, 1}, {0, 0, 0}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 16, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(16), spatial(1, 1, 1)), {2, 2, 2}, {0, 0, 0}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 16, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(16), spatial(3, 3, 3)), {1, 1, 1}, {1, 1, 1}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 16, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(16), spatial(3, 3, 3)), {2, 2, 2}, {1, 1, 1}, true, out_dt, implementation_desc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 16, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(16), spatial(1, 1, 1)), {1, 1, 1}, {0, 0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 16, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(16), spatial(1, 1, 1)), {2, 2, 2}, {0, 0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 16, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(16), spatial(3, 3, 3)), {1, 1, 1}, {1, 1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 16, 7, 7, 7}, wei_dt, format::goizyx, tensor(group(16), spatial(3, 3, 3)), {2, 2, 2}, {1, 1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
         }
         return *this;
     }
@@ -2838,19 +2838,19 @@ public:
         std::vector<int> batches = { 1, 2, 16 };
         for (auto b : batches) {
             // 1x1
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 1, 1}, {1, 1}, {0, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 1, 1}, {2, 2}, {0, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 1, 1}, {1, 1}, {0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 1, 1}, {2, 2}, {0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""} });
             // 3x3
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 3, 3}, {1, 1}, {1, 1}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 3, 3}, {2, 2}, {1, 1}, true, out_dt, implementation_desc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 3, 3}, {1, 1}, {1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 3, 3}, {2, 2}, {1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
             // Asymmetric weights
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 3, 2}, {1, 1}, {1, 0}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 3, 2}, {2, 2}, {1, 0}, true, out_dt, implementation_desc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 3, 2}, {1, 1}, {1, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 31, 19, 17}, wei_dt, format::oiyx, {41, 31, 3, 2}, {2, 2}, {1, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
             // Uneven groups
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 27, 19, 17}, wei_dt, format::goiyx, tensor(group(3), batch(7), feature(9), spatial(1, 1)), {1, 1}, {0, 0}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 27, 19, 17}, wei_dt, format::goiyx, tensor(group(3), batch(7), feature(9), spatial(1, 1)), {2, 2}, {0, 0}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 27, 19, 17}, wei_dt, format::goiyx, tensor(group(3), batch(7), feature(9), spatial(3, 3)), {1, 1}, {1, 1}, true, out_dt, implementation_desc{out_fmt, ""}});
-            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 27, 19, 17}, wei_dt, format::goiyx, tensor(group(3), batch(7), feature(9), spatial(3, 3)), {2, 2}, {1, 1}, true, out_dt, implementation_desc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 27, 19, 17}, wei_dt, format::goiyx, tensor(group(3), batch(7), feature(9), spatial(1, 1)), {1, 1}, {0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 27, 19, 17}, wei_dt, format::goiyx, tensor(group(3), batch(7), feature(9), spatial(1, 1)), {2, 2}, {0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 27, 19, 17}, wei_dt, format::goiyx, tensor(group(3), batch(7), feature(9), spatial(3, 3)), {1, 1}, {1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
+            push_back(deconvolution_random_test_params{in_dt, in_fmt, {b, 27, 19, 17}, wei_dt, format::goiyx, tensor(group(3), batch(7), feature(9), spatial(3, 3)), {2, 2}, {1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""}});
         }
         return *this;
     }
@@ -2859,19 +2859,19 @@ public:
         std::vector<int> batches = { 1, 2, 16 };
         for (auto b : batches) {
             // 1x1
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 1, 1, 1}, {1, 1, 1}, {0, 0, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 1, 1, 1}, {2, 2, 2}, {0, 0, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 1, 1, 1}, {1, 1, 1}, {0, 0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 1, 1, 1}, {2, 2, 2}, {0, 0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""} });
             // 3x3
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 3, 3, 3}, {1, 1, 1}, {1, 1, 1}, true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 3, 3, 3}, {2, 2, 2}, {1, 1, 1}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 3, 3, 3}, {1, 1, 1}, {1, 1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 3, 3, 3}, {2, 2, 2}, {1, 1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""} });
             // Asymmetric weights
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 3, 2, 4}, {1, 1, 1}, {2, 1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 3, 2, 4}, {2, 2, 2}, {2, 1, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 3, 2, 4}, {1, 1, 1}, {2, 1, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 31, 19, 17, 11}, wei_dt, format::oizyx, {41, 31, 3, 2, 4}, {2, 2, 2}, {2, 1, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""} });
             // Uneven groups
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17, 11}, wei_dt, format::goizyx, tensor(group(3), batch(7), feature(9), spatial(1, 1, 1)), {1, 1, 1}, {0, 0, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17, 11}, wei_dt, format::goizyx, tensor(group(3), batch(7), feature(9), spatial(1, 1, 1)), {2, 2, 2}, {0, 0, 0}, true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17, 11}, wei_dt, format::goizyx, tensor(group(3), batch(7), feature(9), spatial(3, 3, 3)), {1, 1, 1}, {1, 1, 1}, true, out_dt, implementation_desc{out_fmt, ""} });
-            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17, 11}, wei_dt, format::goizyx, tensor(group(3), batch(7), feature(9), spatial(3, 3, 3)), {2, 2, 2}, {1, 1, 1}, true, out_dt, implementation_desc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17, 11}, wei_dt, format::goizyx, tensor(group(3), batch(7), feature(9), spatial(1, 1, 1)), {1, 1, 1}, {0, 0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17, 11}, wei_dt, format::goizyx, tensor(group(3), batch(7), feature(9), spatial(1, 1, 1)), {2, 2, 2}, {0, 0, 0}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17, 11}, wei_dt, format::goizyx, tensor(group(3), batch(7), feature(9), spatial(3, 3, 3)), {1, 1, 1}, {1, 1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""} });
+            push_back(deconvolution_random_test_params{ in_dt, in_fmt, {b, 27, 19, 17, 11}, wei_dt, format::goizyx, tensor(group(3), batch(7), feature(9), spatial(3, 3, 3)), {2, 2, 2}, {1, 1, 1}, true, out_dt, ov::intel_gpu::ImplementationDesc{out_fmt, ""} });
         }
         return *this;
     }
@@ -2988,7 +2988,7 @@ TEST(deconvolution_f32_fw_gpu_onednn, basic_wsiz2x2_in2x2x1x1_stride2_nopad) {
         deconvolution("deconv", input_info("input"), { "weights" }, { "biases" }, { 2,2 })
     );
 
-    implementation_desc conv_impl = { format::yxfb, "", impl_types::onednn };
+    ov::intel_gpu::ImplementationDesc conv_impl = { format::yxfb, "", impl_types::onednn };
 
     ExecutionConfig cfg{ov::intel_gpu::queue_type(QueueTypes::in_order),
                         ov::intel_gpu::force_implementations(ov::intel_gpu::ImplForcingMap{ {"deconv", conv_impl} })};
