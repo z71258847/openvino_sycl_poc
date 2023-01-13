@@ -13,25 +13,26 @@
 #include "intel_gpu/runtime/stream.hpp"
 #include "intel_gpu/runtime/debug_configuration.hpp"
 #include "intel_gpu/runtime/half.hpp"
+#include "intel_gpu/runtime/itt.hpp"
 
 #include "intel_gpu/graph/program.hpp"
 #include "intel_gpu/graph/network.hpp"
 #include "intel_gpu/graph/serialization/map_serializer.hpp"
-#include "assign_inst.h"
-#include "read_value_inst.h"
-#include "reshape_inst.h"
 
-#include "to_string_utils.h"
 #include "primitive_inst.h"
 #include "input_layout_inst.h"
 #include "mutable_data_inst.h"
 #include "condition_inst.h"
 #include "loop_inst.h"
-#include "kernel_selector_helper.h"
+#include "assign_inst.h"
+#include "read_value_inst.h"
+#include "reshape_inst.h"
 #include "program_helpers.h"
-#include "intel_gpu/runtime/itt.hpp"
 #include "kernels_cache.hpp"
 #include "compilation_context.hpp"
+
+// TODO: Remove once we have an abstraction for kernels_cache
+#include "kernel_base.h"
 
 #include <algorithm>
 #include <string>
@@ -155,10 +156,10 @@ void dump(memory::ptr mem, stream& stream, std::ofstream& file_stream) {
     tmp_size.batch[0] = batch_size;
     if (tmp_size == size) {
         file_stream << "shape: " << size.to_string() << " ";
-        file_stream << "(count: " << size.count() << ", original format: " << cldnn::fmt_to_str(mem->get_layout().format) << ")" << std::endl;
+        file_stream << "(count: " << size.count() << ", original format: " << mem->get_layout().format.to_string() << ")" << std::endl;
     } else {
         file_stream << "shape: " << tmp_size.to_string() << " ";
-        file_stream << "(count: " << tmp_size.count() << ", original format: " << cldnn::fmt_to_str(mem->get_layout().format)
+        file_stream << "(count: " << tmp_size.count() << ", original format: " << mem->get_layout().format.to_string()
             << ", original shape: " << size.to_string() << ")" << std::endl;
     }
 
