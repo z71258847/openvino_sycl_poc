@@ -28,7 +28,6 @@
 #include "depth_to_space_inst.h"
 #include "region_yolo_inst.h"
 #include "prior_box_inst.h"
-#include "to_string_utils.h"
 #include <vector>
 #include <memory>
 #include <utility>
@@ -1892,7 +1891,7 @@ void layout_optimizer::select_preferred_formats_for_onednn(program_node& node, d
                     node.set_preferred_output_fmt(usr, dst_fmt);
             }
 
-            GPU_DEBUG_LOG << "select_preferred_formats:" << node.id() << ": " << fmt_to_str(src_fmt) << " --> " << fmt_to_str(dst_fmt)
+            GPU_DEBUG_LOG << "select_preferred_formats:" << node.id() << ": " << src_fmt.to_string() << " --> " << dst_fmt.to_string()
                           << " For index : " << idx << std::endl;
         }
     }
