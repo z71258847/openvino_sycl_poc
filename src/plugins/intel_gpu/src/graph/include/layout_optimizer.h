@@ -20,8 +20,8 @@
 #include "non_max_suppression_inst.h"
 #include "region_yolo_inst.h"
 
-#include "kernel_selector_common.h"
-#include "kernel_selector_helper.h"
+// TODO: Remove once we have an abstraction for weights_reorder_params
+#include "impls/ocl/kernel_selector_helper.h"
 
 #include <vector>
 #include <memory>
