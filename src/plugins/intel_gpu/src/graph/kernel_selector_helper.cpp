@@ -30,6 +30,9 @@
 #include "intel_gpu/primitives/embedding_bag.hpp"
 #include "intel_gpu/primitives/extract_image_patches.hpp"
 
+#include "runtime/kernels_cache.hpp"
+#include "kernel_base.h"
+
 #include <string>
 #include <vector>
 
@@ -44,6 +47,55 @@ kernel_selector::dev_type get_device_type(cldnn::device_type type) {
             return kernel_selector::dev_type::integrated_gpu;
     }
 }
+
+bool query_local_block_io_supported(engine& e, const ExecutionConfig& config) {
+    auto device = e.get_device();
+    auto device_info = device->get_info();
+    if (!device_info.supports_local_block_io)
+        return false;
+
+    static std::map<device::ptr, bool> cache;
+    if (cache.find(device) != cache.end()) {
+        return cache.at(device);
+    }
+
+    std::shared_ptr<kernel_selector::KernelString> kernel_string = std::make_shared<kernel_selector::KernelString>();
+    std::string kernel_code =
+        "__attribute__((intel_reqd_sub_group_size(8)))"
+        "__attribute__((reqd_work_group_size(8, 1, 1)))"
+        "void kernel is_local_block_io_supported(global uchar* dst) {"
+        "    uint lid = get_sub_group_local_id();"
+        "    uchar val = (uchar)lid * 2;"
+        "    __local uchar tmp_slm[8];"
+        "    intel_sub_group_block_write_uc2(tmp_slm, (uchar2)(val));"
+        "    barrier(CLK_LOCAL_MEM_FENCE);"
+        "    uchar2 read = intel_sub_group_block_read_uc2(tmp_slm);"
+        "    dst[lid] = read.s0 + 1;"
+        "}";
+
+    kernel_string->str = kernel_code;
+    kernel_string->options = "-Dcl_intel_subgroup_local_block_io -DLOCAL_BLOCK_IO_SUPPORTED=1";
+    kernel_string->entry_point = "is_local_block_io_supported";
+    kernel_string->batch_compilation = true;
+
+    try {
+        auto _kernels_cache_device_query = std::unique_ptr<kernels_cache>(new kernels_cache(e, config, 0, nullptr,
+                                                                            kernel_selector::KernelBase::get_db().get_batch_header_str()));
+        auto id = _kernels_cache_device_query->set_kernel_source(kernel_string, false);
+        _kernels_cache_device_query->build_all();
+
+        auto kernel = _kernels_cache_device_query->get_kernel(id);
+        bool is_valid = _kernels_cache_device_query->validate_simple_kernel_execution(kernel);
+        cache[device] = is_valid;
+
+        _kernels_cache_device_query->remove_kernel(id);
+    } catch (...) {
+        cache[device] = false;
+    }
+
+    return cache.at(device);
+}
+
 }  // namespace
 
 kernel_selector::data_type to_data_type(data_types dt) {
@@ -1059,7 +1111,9 @@ bool use_legacy_fused_ops(const kernel_impl_params& param_info) {
 
 void set_params(const kernel_impl_params& param_info, kernel_selector::params& params) {
     const auto& program = param_info.prog;
-    const auto& device_info = program->get_engine().get_device_info();
+    auto& engine = program->get_engine();
+    const auto& config = program->get_config();
+    const auto& device_info = engine.get_device_info();
 
     params.uniqueID = std::to_string(param_info.unique_id);
     params.engineInfo.supports_fp16 = device_info.supports_fp16;
@@ -1077,7 +1131,7 @@ void set_params(const kernel_impl_params& param_info, kernel_selector::params& p
     params.engineInfo.enable_sub_groups_emulation = true;
     params.engineInfo.bOptHintsSupport = false;
 
-    params.engineInfo.bLocalBlockIOSupport = device_info.supports_local_block_io && program->is_local_block_io_supported();
+    params.engineInfo.bLocalBlockIOSupport = device_info.supports_local_block_io && query_local_block_io_supported(engine, config);
     params.engineInfo.deviceType = get_device_type(device_info.dev_type);
     params.engineInfo.maxWorkGroupSize = device_info.max_work_group_size;
     params.engineInfo.maxLocalMemSize = device_info.max_local_mem_size;
@@ -1090,7 +1144,7 @@ void set_params(const kernel_impl_params& param_info, kernel_selector::params& p
     params.engineInfo.supportedSimdSizes = device_info.supported_simd_sizes;
     params.engineInfo.vendor_id = device_info.vendor_id;
 
-    auto impl_forcing = program->get_config().get_property(ov::intel_gpu::force_implementations);
+    auto impl_forcing = config.get_property(ov::intel_gpu::force_implementations);
 
     if (impl_forcing.count(param_info.desc->id) != 0) {
         params.forceImplementation = impl_forcing.at(param_info.desc->id).kernel_name;

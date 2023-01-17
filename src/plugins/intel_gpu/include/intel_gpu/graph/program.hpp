@@ -248,8 +248,6 @@ public:
     std::pair<int64_t/*const alloc*/, int64_t/*general alloc*/> get_estimated_device_mem_usage();
 
     void remove_kernel(kernel_id id);
-    bool is_local_block_io_supported() const;
-    void query_local_block_io_supported();
     void calc_nodes_hash();
 
 private:
@@ -265,7 +263,6 @@ private:
     nodes_ordering processing_order;
     std::unique_ptr<pass_manager> pm;
     bool is_body_program;
-    int8_t is_subgroup_local_block_io_supported;
 
     std::map<primitive_id, std::shared_ptr<program_node>> nodes_map;
     std::list<primitive_id> optimized_out;
