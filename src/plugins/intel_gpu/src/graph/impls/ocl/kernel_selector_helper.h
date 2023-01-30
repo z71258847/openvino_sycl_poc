@@ -142,9 +142,6 @@ inline params_t get_default_params(const kernel_impl_params& param_info) {
             kernel_selector::fused_operation_desc desc;
             desc.op_params = convert_fuse_params(fused_prim.f_param);
 
-            OPENVINO_ASSERT(desc.op_params != nullptr, "[GPU] Invalid fused operation (", param_info.desc->id , ") of type ", param_info.desc->type_string());
-
-
             desc.dep_idx_start = fused_prim.dep_start_idx;
             desc.dep_size = fused_prim.deps.size();
             desc.op_id = op_id++;
