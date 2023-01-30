@@ -128,6 +128,7 @@ inline params_t get_default_params(const kernel_impl_params& param_info) {
     const auto& input_layout = param_info.get_input_layout(0);
     const auto& output_layout = param_info.get_output_layout(0);
 
+    params.is_dynamic = param_info.is_dynamic;
     params.inputs[0] = convert_data_tensor(input_layout);
     params.outputs[0] = convert_data_tensor(output_layout);
     params.layerID = param_info.desc->id;
