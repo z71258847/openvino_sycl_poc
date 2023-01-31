@@ -11,6 +11,7 @@
 #include "data_inst.h"
 #include "eltwise_inst.h"
 #include "reduce_inst.h"
+#include "fully_connected_inst.h"
 #include "pass_manager.h"
 #include "to_string_utils.h"
 

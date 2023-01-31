@@ -1225,7 +1225,6 @@ void set_optional_params(const program& program, kernel_selector::optional_param
 }
 
 void kernel_impl_params::save(BinaryOutputBuffer& ob) const {
-    ob << has_runtime_layouts;
     ob << unique_id;
     ob << input_layouts;
     ob << output_layouts;
@@ -1283,7 +1282,6 @@ void kernel_impl_params::save(BinaryOutputBuffer& ob) const {
 void kernel_impl_params::load(BinaryInputBuffer& ib) {
     prog = nullptr;
     desc = nullptr;
-    ib >> has_runtime_layouts;
     ib >> unique_id;
     ib >> input_layouts;
     ib >> output_layouts;

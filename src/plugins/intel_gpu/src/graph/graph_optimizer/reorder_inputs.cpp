@@ -13,6 +13,7 @@
 #include "to_string_utils.h"
 #include "pooling_inst.h"
 #include "reshape_inst.h"
+#include "fully_connected_inst.h"
 
 #include <vector>
 #include <memory>
