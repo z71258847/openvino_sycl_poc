@@ -525,7 +525,7 @@ void program::build_program(bool is_internal) {
 }
 
 void program::init_graph() {
-    OV_ITT_SCOPED_TASK(ov::intel_gpu::itt::domains::intel_gpu_plugin, "ProgramImpl::InitGraph");
+    OV_ITT_SCOPED_TASK(ov::intel_gpu::itt::domains::intel_gpu_plugin, "Program::init_graph");
     apply_opt_pass<graph_initializations>();
 
     apply_opt_pass<calculate_prior_boxes>();
@@ -536,7 +536,7 @@ void program::init_graph() {
 void program::run_graph_compilation() { apply_opt_pass<compile_graph>(); }
 
 void program::pre_optimize_graph(bool is_internal) {
-    OV_ITT_SCOPED_TASK(ov::intel_gpu::itt::domains::intel_gpu_plugin, "ProgramImpl::PreOptimizeGraph");
+    OV_ITT_SCOPED_TASK(ov::intel_gpu::itt::domains::intel_gpu_plugin, "Program::pre_optimize_graph");
 
     // trim to outputs
     apply_opt_pass<trim_to_outputs>();  // ToDo remove hidden dependencies from trimm pass
@@ -616,7 +616,7 @@ void program::pre_optimize_graph(bool is_internal) {
 }
 
 void program::post_optimize_graph(bool is_internal) {
-    OV_ITT_SCOPED_TASK(ov::intel_gpu::itt::domains::intel_gpu_plugin, "ProgramImpl::PostOptimizeGraph");
+    OV_ITT_SCOPED_TASK(ov::intel_gpu::itt::domains::intel_gpu_plugin, "Program::post_optimize_graph");
     // input reorder for fully connected if necessary
     apply_opt_pass<post_input_reorder>();
 
@@ -679,7 +679,7 @@ void program::mark_if_data_flow(program_node& node) {
 
 void program::transfer_memory_to_device() {
     GPU_DEBUG_DEFINE_MEM_LOGGER("transfer_memory_to_device");
-    OV_ITT_SCOPED_TASK(ov::intel_gpu::itt::domains::intel_gpu_plugin, "ProgramImpl::TransferMemory");
+    OV_ITT_SCOPED_TASK(ov::intel_gpu::itt::domains::intel_gpu_plugin, "Program::transfer_memory_to_device");
     if (!get_engine().supports_allocation(allocation_type::usm_device))
         return;
 

@@ -25,7 +25,6 @@ struct program;
 
 
 struct kernel_impl_params {
-    bool has_runtime_layouts = false;
     const program *prog;
     std::shared_ptr<const primitive> desc;
     size_t unique_id;
@@ -49,7 +48,7 @@ struct kernel_impl_params {
 
     memory::ptr reordered_weights = nullptr;
 
-    kernel_impl_params() {}
+    kernel_impl_params() : prog(nullptr) {}
 
     kernel_impl_params(program& _prog,
                        std::shared_ptr<const primitive> _desc,
@@ -57,8 +56,7 @@ struct kernel_impl_params {
                        const std::vector<layout>& _in_layouts,
                        const std::vector<layout>& _out_layouts,
                        const std::vector<cldnn::fused_primitive_desc>& _fused_descs)
-                       : has_runtime_layouts(true)
-                       , prog(&_prog)
+                       : prog(&_prog)
                        , desc(_desc)
                        , unique_id(_uid)
                        , input_layouts(_in_layouts)

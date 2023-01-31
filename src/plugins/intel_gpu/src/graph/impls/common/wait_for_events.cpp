@@ -31,7 +31,8 @@ public:
 
     void init_kernels(const kernels_cache&) override {}
     void set_arguments(primitive_inst& /*instance*/) override {}
-    void set_arguments(kernel_arguments_data_idx& /*instance*/) override {}
+    void set_arguments(primitive_inst& /*instance*/, kernel_arguments_data& /*args*/) override {}
+    void set_arguments(kernel_arguments_data_idx& /*args_idx*/) override {}
     kernel_arguments_data get_arguments(const primitive_inst& /*instance*/) const override {
         kernel_arguments_data args;
         return args;
