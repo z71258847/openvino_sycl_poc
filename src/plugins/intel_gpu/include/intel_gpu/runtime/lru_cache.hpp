@@ -165,5 +165,4 @@ private:
 };
 
 using ImplementationsCache = cldnn::LruCache<size_t, std::shared_ptr<primitive_impl>>;
-using KernelsCache = cldnn::LruCache<size_t, cldnn::kernel::ptr>;
 }  // namespace cldnn

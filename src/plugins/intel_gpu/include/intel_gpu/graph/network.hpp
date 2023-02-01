@@ -232,9 +232,6 @@ public:
     /// Return implentations_cache
     ImplementationsCache& get_implementations_cache() const { return *_impls_cache; }
 
-    /// Return in_mem_kernels_cache
-    KernelsCache& get_in_mem_kernels_cache() const { return *_in_mem_kernels_cache; }
-
     ICompilationContext& get_compilation_context() const { return *_compilation_context; }
     std::mutex& get_impl_cache_mutex() const { return _in_mem_cache_mutex; }
 
@@ -282,8 +279,6 @@ private:
     std::unique_ptr<kernels_cache> _kernels_cache;
     // Move from cldnn::program to cldnn::network for multi-threads issue.
     std::unique_ptr<ImplementationsCache> _impls_cache;
-    std::unique_ptr<KernelsCache> _in_mem_kernels_cache;
     const size_t _impls_cache_capacity = 10000;
-    const size_t _in_mem_kernels_cache_capacity = 10000;
 };
 }  // namespace cldnn
