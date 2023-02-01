@@ -117,6 +117,12 @@ public:
         auto kernel_params = get_kernel_params(impl_param);
         (_kernel_data.update_dispatch_data_func)(kernel_params.first, _kernel_data);
     }
+
+    format get_preferred_input_fmt(size_t idx = 0) override {
+        OPENVINO_ASSERT(idx == 0, "[GPU] Unexpected input idx for fully_connected_impl::get_preferred_input_fmt");
+        auto fc_params = std::static_pointer_cast<kernel_selector::fully_connected_params>(_kernel_data.params);
+        return from_data_layout(fc_params->inputs[idx].GetLayout());
+    }
 };
 
 namespace detail {

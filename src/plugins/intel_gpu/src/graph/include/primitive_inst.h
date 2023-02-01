@@ -71,6 +71,8 @@ struct primitive_impl {
     virtual void save(cldnn::BinaryOutputBuffer& ob) const {}
     virtual void load(cldnn::BinaryInputBuffer& ib) {}
 
+    virtual format get_preferred_input_fmt(size_t idx = 0) { return format::any; }
+
     // If this flag is set as false, the memory allocated for this primitive is not allowed to be reused
     bool can_reuse_memory = true;
 
