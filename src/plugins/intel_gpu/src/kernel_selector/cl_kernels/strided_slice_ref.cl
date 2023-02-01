@@ -212,7 +212,8 @@ inline void FUNC(get_slice_begin)(const __global BEGIN_TYPE* begin,
 }
 #endif // BEGIN_TYPE
 
-KERNEL(strided_slice_ref)(const __global INPUT0_TYPE* input,
+KERNEL(strided_slice_ref)(OPTIONAL_SHAPE_INFO_ARG
+                          const __global INPUT0_TYPE* input,
 #ifdef BEGIN_TYPE
                           const __global BEGIN_TYPE* begin,
 #endif

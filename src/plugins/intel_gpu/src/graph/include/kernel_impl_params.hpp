@@ -48,6 +48,8 @@ struct kernel_impl_params {
 
     memory::ptr reordered_weights = nullptr;
 
+    bool is_dynamic = false;
+
     kernel_impl_params() : prog(nullptr) {}
 
     kernel_impl_params(program& _prog,

@@ -53,10 +53,10 @@ struct strided_slice_impl : typed_primitive_impl_ocl<strided_slice> {
     }
 
 public:
-    static std::unique_ptr<primitive_impl> create(const strided_slice_node& arg, const kernel_impl_params& impl_param) {
+    static kernel_params_t get_kernel_params(const kernel_impl_params& impl_param) {
         const auto& prim = impl_param.typed_desc<strided_slice>();
         auto params = get_default_params<kernel_selector::strided_slice_params>(impl_param);
-        auto op_params = get_default_optional_params<kernel_selector::strided_slice_optional_params>(impl_param.get_program());
+        auto optional_params = get_default_optional_params<kernel_selector::strided_slice_optional_params>(impl_param.get_program());
         const size_t dims_num = params.inputs[0].Dimentions();
 
         std::vector<int32_t> begin(prim->begin.begin(), prim->begin.end());
@@ -179,17 +179,19 @@ public:
             }
         }
 
-        auto& kernel_selector = kernel_selector::strided_slice_kernel_selector::Instance();
-        auto best_kernel = kernel_selector.get_best_kernel(params, op_params);
+        return {params, optional_params};
+    }
 
-        return make_unique<strided_slice_impl>(best_kernel);
+    void update_dispatch_data(const kernel_impl_params& impl_param) override {
+        auto kernel_params = get_kernel_params(impl_param);
+        (_kernel_data.update_dispatch_data_func)(kernel_params.first, _kernel_data);
     }
 };
 
 namespace detail {
 
 attach_strided_slice_impl::attach_strided_slice_impl() {
-    implementation_map<strided_slice>::add(impl_types::ocl, strided_slice_impl::create, {
+    implementation_map<strided_slice>::add(impl_types::ocl, typed_primitive_impl_ocl<strided_slice>::create<strided_slice_impl>, {
         std::make_tuple(data_types::f32, format::bfyx),
         std::make_tuple(data_types::f16, format::bfyx),
         std::make_tuple(data_types::i32, format::bfyx),
@@ -204,6 +206,26 @@ attach_strided_slice_impl::attach_strided_slice_impl() {
         std::make_tuple(data_types::i8, format::bfzyx),
         std::make_tuple(data_types::u8, format::bfzyx),
     });
+
+    auto dyn_types = {
+        data_types::f32,
+        data_types::f16,
+        data_types::i8,
+        data_types::u8,
+        data_types::i32,
+        data_types::i64
+    };
+
+    auto dyn_formats = {
+        format::bfyx,
+        format::bfzyx
+    };
+
+    implementation_map<strided_slice>::add(impl_types::ocl,
+                                           shape_types::dynamic_shape,
+                                           typed_primitive_impl_ocl<strided_slice>::create<strided_slice_impl>,
+                                           dyn_types,
+                                           dyn_formats);
 }
 
 }  // namespace detail
