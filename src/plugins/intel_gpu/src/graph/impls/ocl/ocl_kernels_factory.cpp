@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "ocl_kernel.hpp"
-#include "ocl_engine.hpp"
+#include "ocl/ocl_kernel.hpp"
+#include "ocl/ocl_engine.hpp"
 #include "ocl_kernels_factory.hpp"
 
 #include <memory>

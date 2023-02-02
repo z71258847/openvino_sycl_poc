@@ -3,7 +3,7 @@
 //
 
 #include "kernels_factory.hpp"
-#include "ocl/ocl_kernels_factory.hpp"
+#include "ocl_kernels_factory.hpp"
 
 namespace cldnn {
 namespace kernels_factory {
