@@ -20,6 +20,7 @@
 #include "implementation_map.hpp"
 
 #include "intel_gpu/plugin/common_utils.hpp"
+#include "intel_gpu/graph/kernels_cache.hpp"
 #include "intel_gpu/graph/network.hpp"
 #include "intel_gpu/graph/serialization/set_serializer.hpp"
 #include "intel_gpu/runtime/engine.hpp"
@@ -336,7 +337,7 @@ bool primitive_inst::update_impl() {
         if (!has_cached_impl) {
             if (_dynamic_impl) {
                 auto& compilation_context = get_network().get_compilation_context();
-                compilation_context.push_task(impl_key, [this, updated_params, impl_key](kernels_cache& kc) {
+                compilation_context.push_task(impl_key, [this, updated_params, impl_key](KernelsCache& kc) {
                     auto& cache = get_network().get_implementations_cache();
                     {
                         std::lock_guard<std::mutex> lock(get_network().get_impl_cache_mutex());
@@ -347,11 +348,8 @@ bool primitive_inst::update_impl() {
                     }
 
                     auto impl = _node->type()->choose_impl(*_node, updated_params);
-                    auto kernel_ids = kc.add_kernels_source(impl->get_kernels_source());
-                    impl->set_kernel_ids(kernel_ids);
-                    kc.compile();
-                    impl->init_kernels(kc);
-                    kc.reset();
+                    kc.init_primitive_impl(*impl);
+
 
                     std::lock_guard<std::mutex> lock(get_network().get_impl_cache_mutex());
                     cache.add(impl_key, impl->clone());
@@ -364,11 +362,7 @@ bool primitive_inst::update_impl() {
             } else {
                 _impl = _node->type()->choose_impl(*_node, updated_params);
                 auto& kernels_cache = get_network().get_kernels_cache();
-                auto kernel_ids = kernels_cache.add_kernels_source(_impl->get_kernels_source());
-                _impl->set_kernel_ids(kernel_ids);
-                kernels_cache.compile();
-                _impl->init_kernels(kernels_cache);
-                kernels_cache.reset();
+                kernels_cache.init_primitive_impl(*_impl);
                 std::lock_guard<std::mutex> lock(get_network().get_impl_cache_mutex());
                 cache.add(impl_key, _impl->clone());
 
@@ -714,11 +708,7 @@ event::ptr primitive_inst::update_weights() {
             auto factory = WeightsReordersFactory::get(impl_types::ocl, shape_types::static_shape);
             auto& kernels_cache = get_network().get_kernels_cache();
             auto reorder_impl = factory(kernels_cache, reorder_impl_params);
-            auto kernel_ids = kernels_cache.add_kernels_source(reorder_impl->get_kernels_source());
-            reorder_impl->set_kernel_ids(kernel_ids);
-            kernels_cache.compile();
-            reorder_impl->init_kernels(kernels_cache);
-            kernels_cache.reset();
+            kernels_cache.init_primitive_impl(*reorder_impl);
 
             inst.set_impl(reorder_impl->clone());
 

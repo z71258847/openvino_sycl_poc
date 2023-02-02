@@ -30,7 +30,7 @@
 #include "intel_gpu/primitives/embedding_bag.hpp"
 #include "intel_gpu/primitives/extract_image_patches.hpp"
 
-#include "runtime/kernels_cache.hpp"
+#include "kernels_cache.hpp"
 #include "kernel_base.h"
 
 #include "activation_inst.h"
@@ -93,10 +93,9 @@ bool query_local_block_io_supported(engine& e, const ExecutionConfig& config) {
     kernel_string->batch_compilation = true;
 
     try {
-        auto _kernels_cache_device_query = std::unique_ptr<kernels_cache>(new kernels_cache(e, config, 0, nullptr,
-                                                                            kernel_selector::KernelBase::get_db().get_batch_header_str()));
+        auto _kernels_cache_device_query = std::unique_ptr<kernels_cache_ocl>(new kernels_cache_ocl(e, config, 0));
         auto id = _kernels_cache_device_query->set_kernel_source(kernel_string, false);
-        _kernels_cache_device_query->build_all();
+        _kernels_cache_device_query->compile_sequential();
 
         auto kernel = _kernels_cache_device_query->get_kernel(id);
         bool is_valid = _kernels_cache_device_query->validate_simple_kernel_execution(kernel);

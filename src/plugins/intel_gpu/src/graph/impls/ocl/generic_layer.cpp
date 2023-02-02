@@ -35,14 +35,15 @@ struct generic_layer_impl : typed_primitive_impl<generic_layer> {
         _kernels.push_back(std::move(other._kernels.front()->clone()));
     }
 
-    generic_layer_impl(kernels_cache& cache, const kernel_impl_params& params)
+    generic_layer_impl(KernelsCache& cache, const kernel_impl_params& params)
         : _cl_kernel_data()
         , _kernels() {
         auto reorder_params = params.typed_desc<generic_layer>()->params;
         auto casted_params = std::dynamic_pointer_cast<WeightsReorderParamsOCL>(reorder_params);
         OPENVINO_ASSERT(casted_params, "[GPU] Invalid weights reorder parameters type for ", params.desc->id, " node");
         _cl_kernel_data = *casted_params->cl_kernel;
-        _kernel_id = cache.set_kernel_source(_cl_kernel_data.code.kernelString, false);
+        auto& casted = downcast<kernels_cache_ocl>(cache);
+        _kernel_id = casted.set_kernel_source(_cl_kernel_data.code.kernelString, false);
     }
 
     void save(BinaryOutputBuffer& ob) const override {
@@ -55,8 +56,9 @@ struct generic_layer_impl : typed_primitive_impl<generic_layer> {
         ib >> _kernel_id;
     }
 
-    void init_kernels(const kernels_cache& kernels_cache) override {
-        _kernels.push_back(std::move(kernels_cache.get_kernel(_kernel_id)));
+    void init_kernels(const KernelsCache& kernels_cache) override {
+        auto& casted = downcast<const kernels_cache_ocl>(kernels_cache);
+        _kernels.push_back(std::move(casted.get_kernel(_kernel_id)));
     }
 
     void set_arguments_impl(generic_layer_inst& instance) override {
@@ -88,7 +90,7 @@ struct generic_layer_impl : typed_primitive_impl<generic_layer> {
         return stream.enqueue_kernel(*_kernels.front(), _cl_kernel_data.params, args, events, true);
     }
 
-    static std::unique_ptr<primitive_impl> create(kernels_cache& cache, const kernel_impl_params& params) {
+    static std::unique_ptr<primitive_impl> create(KernelsCache& cache, const kernel_impl_params& params) {
         return make_unique<generic_layer_impl>(cache, params);
     }
 };

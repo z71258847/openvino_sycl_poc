@@ -68,9 +68,6 @@
 #include "reverse_inst.h"
 #include "to_string_utils.h"
 
-// TODO: Remove once we have interface for kernels cache
-#include "runtime/kernels_cache.hpp"
-
 // TODO: implement self-registration for impls
 #include "impls/ocl/register.hpp"
 #include "impls/cpu/register.hpp"
@@ -120,8 +117,7 @@ program::program(engine& engine_ref,
 
     pm = std::unique_ptr<pass_manager>(new pass_manager(*this));
     prepare_nodes(topology);
-    _kernels_cache = std::unique_ptr<kernels_cache>(new kernels_cache(_engine, _config, prog_id, _task_executor,
-                                                                      kernel_selector::KernelBase::get_db().get_batch_header_str()));
+    _kernels_cache = KernelsCache::create(_engine, _config, prog_id);
     program_node::reset_unique_id();
 
     if (no_optimizations) {
@@ -145,10 +141,8 @@ program::program(engine& engine_ref,
     init_primitives();
     set_options();
 
-    _task_executor = make_task_executor(_config);
+    _kernels_cache = KernelsCache::create(_engine, _config, prog_id);
 
-    _kernels_cache = std::unique_ptr<kernels_cache>(new kernels_cache(_engine, _config, prog_id, _task_executor,
-                                                                      kernel_selector::KernelBase::get_db().get_batch_header_str()));
     pm = std::unique_ptr<pass_manager>(new pass_manager(*this));
     prepare_nodes(nodes);
     build_program(is_internal);
@@ -215,7 +209,7 @@ std::shared_ptr<InferenceEngine::CPUStreamsExecutor> program::make_task_executor
 
 void program::compile() {
     GPU_DEBUG_DEFINE_MEM_LOGGER("compile");
-    _kernels_cache->build_all();
+    _kernels_cache->compile_parallel(_task_executor);
 }
 
 void program::init_kernels() {
@@ -228,15 +222,7 @@ void program::init_kernels() {
     }
 }
 
-kernel_id program::add_kernel(const std::shared_ptr<kernel_string>& kernelSring) {
-    return _kernels_cache->set_kernel_source(kernelSring, false);
-}
-
-kernel::ptr program::get_kernel(kernel_id id) {
-    return _kernels_cache->get_kernel(id);
-}
-
-kernels_cache& program::get_kernels_cache() const {
+KernelsCache& program::get_kernels_cache() const {
     return *_kernels_cache;
 }
 
@@ -1654,8 +1640,4 @@ std::pair<int64_t, int64_t> program::get_estimated_device_mem_usage() {
     }
 
     return std::make_pair(const_sum, get_engine().get_used_device_memory(allocation_type::usm_device));
-}
-
-void program::remove_kernel(kernel_id id) {
-    _kernels_cache->remove_kernel(id);
 }

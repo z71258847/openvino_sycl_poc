@@ -8,6 +8,7 @@
 #include "intel_gpu/runtime/stream.hpp"
 #include "intel_gpu/runtime/lru_cache.hpp"
 #include "intel_gpu/runtime/execution_config.hpp"
+#include "intel_gpu/graph/kernels_cache.hpp"
 
 #include <list>
 #include <string>
@@ -18,15 +19,12 @@
 #include <set>
 
 namespace cldnn {
-
 struct topology;
 struct program_node;
 class layout_optimizer;
 class pass_manager;
 class base_pass;
 class program_wrapper;
-class kernels_cache;
-
 
 struct program {
     using ptr = std::shared_ptr<program>;
@@ -240,22 +238,18 @@ public:
     static void init_primitives();
     void compile();
     void init_kernels();
-    kernel_id add_kernel(const std::shared_ptr<kernel_string>& kernel_sring);
-    kernel::ptr get_kernel(kernel_id id);
-    kernels_cache& get_kernels_cache() const;
+    KernelsCache& get_kernels_cache() const;
 
     // returns {-1, -1} if it failed to estimate by allocating given batch size
     std::pair<int64_t/*const alloc*/, int64_t/*general alloc*/> get_estimated_device_mem_usage();
 
-    void remove_kernel(kernel_id id);
     void calc_nodes_hash();
 
 private:
     uint32_t prog_id = 0;
     engine& _engine;
     stream::ptr _stream;
-    // TODO: Consider moving it to engine
-    std::unique_ptr<kernels_cache> _kernels_cache;
+    std::unique_ptr<KernelsCache> _kernels_cache;
     ExecutionConfig _config;
     std::shared_ptr<InferenceEngine::CPUStreamsExecutor> _task_executor = nullptr;
     std::list<program_node*> inputs;

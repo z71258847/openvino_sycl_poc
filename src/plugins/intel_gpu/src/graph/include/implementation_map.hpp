@@ -4,8 +4,13 @@
 
 #pragma once
 
+#include "intel_gpu/graph/kernels_cache.hpp"
 #include "intel_gpu/primitives/implementation_desc.hpp"
+#include "intel_gpu/runtime/execution_config.hpp"
+#include "intel_gpu/runtime/engine.hpp"
 #include "kernel_impl_params.hpp"
+
+#include <threading/ie_cpu_streams_executor.hpp>
 
 #include <functional>
 #include <map>
@@ -133,7 +138,7 @@ private:
 };
 
 struct WeightsReordersFactory {
-    using factory_type = std::function<std::unique_ptr<primitive_impl>(kernels_cache&, const kernel_impl_params&)>;
+    using factory_type = std::function<std::unique_ptr<primitive_impl>(KernelsCache&, const kernel_impl_params&)>;
     using map_type = singleton_map<std::pair<impl_types, shape_types>, factory_type>;
     static void add(impl_types impl_type, shape_types shape_type, factory_type factory) {
         OPENVINO_ASSERT(impl_type != impl_types::any, "[GPU] Can't register WeightsReordersFactory with type any");
@@ -155,4 +160,26 @@ struct WeightsReordersFactory {
                                " impl_type: ", preferred_impl_type, ", shape_type: ", target_shape_type);
     }
 };
+
+struct KernelsCacheFactory {
+    using factory_type = std::function<std::unique_ptr<KernelsCache>(engine&, const ExecutionConfig&, uint32_t)>;
+    using map_type = singleton_map<impl_types, factory_type>;
+    static void add(impl_types impl_type, factory_type factory) {
+        OPENVINO_ASSERT(impl_type != impl_types::any, "[GPU] Can't register WeightsReordersFactory with type any");
+        map_type::instance().insert({impl_type, factory});
+    }
+
+    static factory_type get(impl_types preferred_impl_type) {
+        for (auto& kv : map_type::instance()) {
+            impl_types impl_type = kv.first;
+            if ((preferred_impl_type & impl_type) != impl_type)
+                continue;
+
+            return kv.second;
+        }
+        OPENVINO_ASSERT(false, "[GPU] KernelsCacheFactory doesn't have any implementation for impl_type: ", preferred_impl_type);
+    }
+};
+
+
 }  // namespace cldnn

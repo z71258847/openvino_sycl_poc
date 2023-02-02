@@ -13,6 +13,7 @@
 #include "intel_gpu/runtime/event.hpp"
 #include "intel_gpu/runtime/stream.hpp"
 #include "intel_gpu/runtime/lru_cache.hpp"
+#include "intel_gpu/graph/kernels_cache.hpp"
 
 #include <map>
 #include <vector>
@@ -227,7 +228,7 @@ public:
     VariableState& get_variable_memory(const std::string &variable_id);
 
     /// Return kernels_cache
-    kernels_cache& get_kernels_cache() const { return *_kernels_cache; }
+    KernelsCache& get_kernels_cache() const { return *_kernels_cache; }
 
     /// Return implentations_cache
     ImplementationsCache& get_implementations_cache() const { return *_impls_cache; }
@@ -276,7 +277,7 @@ private:
     void add_default_output_chains();
     output_chains_map::iterator add_output_chain(std::shared_ptr<primitive_inst>& p_inst);
 
-    std::unique_ptr<kernels_cache> _kernels_cache;
+    std::unique_ptr<KernelsCache> _kernels_cache;
     // Move from cldnn::program to cldnn::network for multi-threads issue.
     std::unique_ptr<ImplementationsCache> _impls_cache;
     const size_t _impls_cache_capacity = 10000;

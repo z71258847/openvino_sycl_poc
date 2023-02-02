@@ -15,6 +15,8 @@
 #include "intel_gpu/runtime/itt.hpp"
 #include "openvino/util/file_util.hpp"
 
+#include "kernel_base.h"
+
 #include <algorithm>
 #include <cassert>
 #include <sstream>
@@ -55,9 +57,9 @@ std::string reorder_options(const std::string& org_options) {
 
 namespace cldnn {
 
-std::mutex kernels_cache::_mutex;
+std::mutex kernels_cache_ocl::_mutex;
 
-std::string kernels_cache::get_cache_path() const {
+std::string kernels_cache_ocl::get_cache_path() const {
     auto path = _config.get_property(ov::cache_dir);
     if (path.empty()) {
         return {};
@@ -69,7 +71,7 @@ std::string kernels_cache::get_cache_path() const {
     return path;
 }
 
-bool kernels_cache::is_cache_enabled() const {
+bool kernels_cache_ocl::is_cache_enabled() const {
     if (const char* env_p = std::getenv("OV_GPU_CACHE_MODEL")) {
         if (env_p[0] == '1') {
             return false;
@@ -79,7 +81,7 @@ bool kernels_cache::is_cache_enabled() const {
     return !_config.get_property(ov::cache_dir).empty();
 }
 
-size_t kernels_cache::get_max_kernels_per_batch() const {
+size_t kernels_cache_ocl::get_max_kernels_per_batch() const {
     GPU_DEBUG_GET_INSTANCE(debug_config);
     GPU_DEBUG_IF(debug_config->max_kernels_per_batch >= 1) {
         return static_cast<size_t>(debug_config->max_kernels_per_batch);
@@ -88,9 +90,11 @@ size_t kernels_cache::get_max_kernels_per_batch() const {
 }
 
 
-void kernels_cache::get_program_source(const kernels_code& kernels_source_code, std::vector<kernels_cache::batch_program>* all_batches) const {
+void kernels_cache_ocl::get_program_source(const kernels_code& kernels_source_code, std::vector<kernels_cache_ocl::batch_program>* all_batches) const {
     OV_ITT_SCOPED_TASK(ov::intel_gpu::itt::domains::intel_gpu_plugin, "KernelsCache::BuildAll::GetProgramSource");
     std::map<std::string, std::tuple<int32_t, std::vector<batch_program>>> program_buckets;
+
+    auto batch_header_str = kernel_selector::KernelBase::get_db().get_batch_header_str();
 
     for (const auto& code : kernels_source_code) {
         std::string full_code = code.kernel_strings->jit + code.kernel_strings->str + code.kernel_strings->undefs;
@@ -156,18 +160,12 @@ void kernels_cache::get_program_source(const kernels_code& kernels_source_code, 
     }
 }
 
-kernels_cache::kernels_cache(engine& engine,
-                             const ExecutionConfig& config,
-                             uint32_t prog_id,
-                             InferenceEngine::CPUStreamsExecutor::Ptr task_executor,
-                             const std::vector<std::string>& batch_header_str)
+kernels_cache_ocl::kernels_cache_ocl(engine& engine, const ExecutionConfig& config, uint32_t prog_id)
     : _engine(engine)
-    , _task_executor(task_executor)
     , _config(config)
-    , _prog_id(prog_id)
-    , batch_header_str(std::move(batch_header_str)) { }
+    , _prog_id(prog_id) { }
 
-kernel_id kernels_cache::set_kernel_source(
+kernel_id kernels_cache_ocl::set_kernel_source(
     const std::shared_ptr<kernel_string>& kernel_string,
     bool dump_custom_program) {
     auto kernel_ids = add_kernels_source({kernel_string}, dump_custom_program);
@@ -191,7 +189,7 @@ static std::vector<unsigned char> getProgramBinaries(cl::Program program) {
 }
 
 // TODO: This build_batch method should be backend specific
-void kernels_cache::build_batch(const engine& build_engine, const batch_program& batch) {
+void kernels_cache_ocl::build_batch(const engine& build_engine, const batch_program& batch) {
     OV_ITT_SCOPED_TASK(ov::intel_gpu::itt::domains::intel_gpu_plugin, "KernelsCache::build_batch");
 
     auto& cl_build_engine = dynamic_cast<const ocl::ocl_engine&>(build_engine);
@@ -330,9 +328,9 @@ void kernels_cache::build_batch(const engine& build_engine, const batch_program&
     }
 }
 
-kernel::ptr kernels_cache::get_kernel(kernel_id id) const {
+kernel::ptr kernels_cache_ocl::get_kernel(kernel_id id) const {
     if (_pending_compilation)
-        throw std::runtime_error("Kernel cache is not compiled, call build_all() first!");
+        throw std::runtime_error("Kernel cache is not compiled, call compile_parallel() first!");
 
     auto res = _kernels.find(id);
     if (_kernels.end() == res)
@@ -340,7 +338,7 @@ kernel::ptr kernels_cache::get_kernel(kernel_id id) const {
     return res->second;
 }
 
-bool kernels_cache::validate_simple_kernel_execution(kernel::ptr krl) {
+bool kernels_cache_ocl::validate_simple_kernel_execution(kernel::ptr krl) {
     auto casted = downcast<ocl::ocl_kernel>(krl.get());
     auto kernel = casted->get_handle();
     try {
@@ -374,7 +372,69 @@ bool kernels_cache::validate_simple_kernel_execution(kernel::ptr krl) {
     }
 }
 
-void kernels_cache::build_all() {
+void kernels_cache_ocl::reset() {
+    _kernels.clear();
+    _kernels_code.clear();
+    _pending_compilation = false;
+}
+
+std::vector<kernel_id> kernels_cache_ocl::add_kernels_source(std::vector<std::shared_ptr<kernel_string>> kernel_sources, bool dump_custom_program) {
+    std::vector<kernel_id> kernel_ids;
+    kernel_ids.reserve(kernel_sources.size());
+    for (size_t i = 0; i < kernel_sources.size(); ++i) {
+        std::lock_guard<std::mutex> lock(_mutex);
+        auto kernel_string = kernel_sources[i];
+        // we need unique id in order to avoid conflict across topologies.
+        const auto kernel_num = _kernels.size() + (_kernel_idx++);
+        kernel_id id = kernel_string->entry_point + "_" + std::to_string(kernel_num);
+
+        auto res = _kernels_code.emplace(kernel_string, id, dump_custom_program);
+
+        assert(_kernels.find(id) == _kernels.end());
+        if (res.second) {
+            _pending_compilation = true;
+        }
+        kernel_ids.emplace_back(id);
+    }
+    return kernel_ids;
+}
+
+void kernels_cache_ocl::add_kernels(const std::vector<std::string>& kernel_ids, const std::vector<kernel::ptr>& kernels) {
+    OPENVINO_ASSERT(kernel_ids.size() == kernels.size(), "[GPU] The sizes of kernel_ids and kernels are different.");
+
+    for (size_t i = 0; i < kernel_ids.size(); i++) {
+        const auto& kmap = std::make_pair(kernel_ids[i], kernels[i]);
+        _kernels.insert(kmap);
+    }
+}
+
+void kernels_cache_ocl::compile_sequential() {
+    OV_ITT_SCOPED_TASK(ov::intel_gpu::itt::domains::intel_gpu_plugin, "KernelsCache::BuildAll");
+
+    ocl::ocl_engine& _build_engine = downcast<ocl::ocl_engine>(_engine);
+
+    // create batches
+    std::vector<batch_program> batches;
+    get_program_source(_kernels_code, &batches);
+
+    // build batches
+    for (size_t idx = 0; idx < batches.size(); idx++) {
+        build_batch(_build_engine, batches[idx]);
+    }
+
+    _kernels_code.clear();
+    _pending_compilation = false;
+#if defined(__unix__) && !defined(__ANDROID__)
+    //  NOTE: In linux, without malloc_trim, an amount of the memory used by compilation is not being returned to system thought they are freed.
+    //  (It is at least 500 MB when we perform parallel compilation)
+    //  It is observed that freeing the memory manually with malloc_trim saves significant amount of the memory.
+    //  Also, this is not happening in Windows.
+    //  So, added malloc_trim for linux build until we figure out a better solution.
+        malloc_trim(0);
+#endif
+}
+
+void kernels_cache_ocl::compile_parallel(InferenceEngine::CPUStreamsExecutor::Ptr task_executor) {
     OV_ITT_SCOPED_TASK(ov::intel_gpu::itt::domains::intel_gpu_plugin, "KernelsCache::BuildAll");
     if (!_pending_compilation)
         return;
@@ -386,7 +446,7 @@ void kernels_cache::build_all() {
         get_program_source(_kernels_code, &batches);
     }
 
-    if (_task_executor) {
+    if (task_executor) {
         std::exception_ptr exception;
         std::vector<InferenceEngine::Task> tasks;
         for (size_t idx = 0; idx < batches.size(); idx++) {
@@ -399,7 +459,7 @@ void kernels_cache::build_all() {
                 }
             });
         }
-        _task_executor->runAndWait(tasks);
+        task_executor->runAndWait(tasks);
         tasks.clear();
 
         if (exception) {
@@ -426,71 +486,7 @@ void kernels_cache::build_all() {
     }
 }
 
-void kernels_cache::reset() {
-    _kernels.clear();
-    _kernels_code.clear();
-    _pending_compilation = false;
-}
-
-std::vector<kernel_id> kernels_cache::add_kernels_source(std::vector<std::shared_ptr<kernel_string>> kernel_sources, bool dump_custom_program) {
-    std::vector<kernel_id> kernel_ids;
-    kernel_ids.reserve(kernel_sources.size());
-    for (size_t i = 0; i < kernel_sources.size(); ++i) {
-        std::lock_guard<std::mutex> lock(_mutex);
-        auto kernel_string = kernel_sources[i];
-        // we need unique id in order to avoid conflict across topologies.
-        const auto kernel_num = _kernels.size() + (_kernel_idx++);
-        kernel_id id = kernel_string->entry_point + "_" + std::to_string(kernel_num);
-
-        auto res = _kernels_code.emplace(kernel_string, id, dump_custom_program);
-
-        assert(_kernels.find(id) == _kernels.end());
-        if (res.second) {
-            _pending_compilation = true;
-        }
-        kernel_ids.emplace_back(id);
-    }
-    return kernel_ids;
-}
-
-void kernels_cache::add_kernels(const std::vector<std::string>& kernel_ids, const std::vector<kernel::ptr>& kernels) {
-    OPENVINO_ASSERT(kernel_ids.size() == kernels.size(), "[GPU] The sizes of kernel_ids and kernels are different.");
-
-    for (size_t i = 0; i < kernel_ids.size(); i++) {
-        const auto& kmap = std::make_pair(kernel_ids[i], kernels[i]);
-        _kernels.insert(kmap);
-    }
-}
-
-void kernels_cache::compile() {
-    OV_ITT_SCOPED_TASK(ov::intel_gpu::itt::domains::intel_gpu_plugin, "KernelsCache::BuildAll");
-
-    std::unique_ptr<ocl::ocl_engine> _build_engine = nullptr;
-    if (_engine.type() == engine_types::ocl) {
-        _build_engine = std::unique_ptr<ocl::ocl_engine>(new ocl::ocl_engine(_engine.get_device(), runtime_types::ocl));
-    }
-
-    // create batches
-    std::vector<batch_program> batches;
-    get_program_source(_kernels_code, &batches);
-
-    // build batches
-    for (size_t idx = 0; idx < batches.size(); idx++) {
-        build_batch(*_build_engine, batches[idx]);
-    }
-
-    _kernels_code.clear();
-    _pending_compilation = false;
-#if defined(__unix__) && !defined(__ANDROID__)
-    //  NOTE: In linux, without malloc_trim, an amount of the memory used by compilation is not being returned to system thought they are freed.
-    //  (It is at least 500 MB when we perform parallel compilation)
-    //  It is observed that freeing the memory manually with malloc_trim saves significant amount of the memory.
-    //  Also, this is not happening in Windows.
-    //  So, added malloc_trim for linux build until we figure out a better solution.
-        malloc_trim(0);
-#endif
-}
-void kernels_cache::save(BinaryOutputBuffer& ob) const {
+void kernels_cache_ocl::save(BinaryOutputBuffer& ob) const {
     OPENVINO_ASSERT(_engine.type() == engine_types::ocl, "[GPU] Not supported engine type");
 
     std::map<std::string, std::string> entry_point_to_id;
@@ -543,7 +539,7 @@ void kernels_cache::save(BinaryOutputBuffer& ob) const {
     ob << precompiled_kernels;
 }
 
-void kernels_cache::load(BinaryInputBuffer& ib) {
+void kernels_cache_ocl::load(BinaryInputBuffer& ib) {
     OPENVINO_ASSERT(_engine.type() == engine_types::ocl, "[GPU] Not supported engine type");
 
     std::unique_ptr<ocl::ocl_engine> build_engine =

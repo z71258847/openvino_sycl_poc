@@ -50,11 +50,13 @@ struct custom_gpu_primitive_impl : typed_primitive_impl<custom_gpu_primitive> {
                              std::shared_ptr<kernel_selector::cl_kernel_data>& cl_kernel)
         : cl_kernel(cl_kernel)
         , _kernels() {
-        _kernel_id = arg.get_program().add_kernel(cl_kernel->code.kernelString);
+        auto& cache = downcast<kernels_cache_ocl>(arg.get_program().get_kernels_cache());
+        _kernel_id = cache.set_kernel_source(cl_kernel->code.kernelString, false);
     }
 
-    void init_kernels(const kernels_cache& kernels_cache) override {
-        _kernels.emplace_back(std::move(kernels_cache.get_kernel(_kernel_id)));
+    void init_kernels(const KernelsCache& kernels_cache) override {
+        auto& casted = downcast<const kernels_cache_ocl>(kernels_cache);
+        _kernels.emplace_back(std::move(casted.get_kernel(_kernel_id)));
     }
 
     void set_arguments_impl(custom_gpu_primitive_inst& instance) override {

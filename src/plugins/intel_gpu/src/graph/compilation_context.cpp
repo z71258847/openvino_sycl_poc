@@ -4,7 +4,6 @@
 
 #include "compilation_context.hpp"
 #include "threading/ie_thread_safe_containers.hpp"
-#include "kernel_selector/kernel_base.h"
 
 namespace cldnn {
 class CompilationTaskQueue {
@@ -47,7 +46,7 @@ private:
 class CompilationContext : public ICompilationContext {
 public:
     CompilationContext(cldnn::engine& engine, const ExecutionConfig& config, size_t program_id) {
-        _kernels_cache = cldnn::make_unique<kernels_cache>(engine, config, program_id, nullptr, kernel_selector::KernelBase::get_db().get_batch_header_str());
+        _kernels_cache = KernelsCache::create(engine, config, program_id);
         _worker = std::thread([this](){
             while (!_stop_compilation) {
                 CompilationContext::Task task;
@@ -77,7 +76,7 @@ public:
     ~CompilationContext() noexcept { cancel(); }
 
 private:
-    std::unique_ptr<kernels_cache> _kernels_cache;
+    std::unique_ptr<KernelsCache> _kernels_cache;
     std::thread _worker;
     std::atomic_bool _stop_compilation{false};
 

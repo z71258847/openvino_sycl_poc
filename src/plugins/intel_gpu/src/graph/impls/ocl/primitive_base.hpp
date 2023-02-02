@@ -17,6 +17,7 @@
 #include "kernel_selector_helper.h"
 #include "register.hpp"
 #include "implementation_map.hpp"
+#include "kernels_cache.hpp"
 
 #include <vector>
 #include <list>
@@ -91,6 +92,12 @@ struct typed_primitive_impl_ocl : public typed_primitive_impl<PType> {
         ib >> _kernel_data.kernels;
         ib >> _kernel_ids;
         ib >> _kernel_args;
+    }
+
+    void add_to_cache(KernelsCache& cache) override {
+        auto& cased = downcast<kernels_cache_ocl>(cache);
+        auto kernel_ids = cased.add_kernels_source(get_kernels_source());
+        set_kernel_ids(kernel_ids);
     }
 
     template<typename ImplType>
@@ -169,15 +176,16 @@ protected:
         return stream.enqueue_marker(events, is_output);
     }
 
-    void init_kernels(const kernels_cache& kernels_cache) override {
+    void init_kernels(const KernelsCache& kernels_cache) override {
         if (is_cpu()) {
             return;
         }
+        auto& casted = downcast<const kernels_cache_ocl>(kernels_cache);
         _kernels.clear();
 
         _kernels.reserve(_kernel_ids.size());
         for (size_t k = 0; k < _kernel_ids.size(); ++k) {
-            _kernels.emplace_back(std::move(kernels_cache.get_kernel(_kernel_ids[k])));
+            _kernels.emplace_back(std::move(casted.get_kernel(_kernel_ids[k])));
         }
     }
 

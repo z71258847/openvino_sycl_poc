@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 #include "register.hpp"
+#include "kernels_cache.hpp"
+#include "implementation_map.hpp"
 
 namespace cldnn {
 namespace ocl {
@@ -94,6 +96,8 @@ void register_implementations() {
     REGISTER_OCL(count_nonzero);
     REGISTER_OCL(gather_nonzero);
     REGISTER_OCL(eye);
+
+    cldnn::KernelsCacheFactory::add(impl_types::ocl, kernels_cache_ocl::create);
 }
 
 }  // namespace ocl

@@ -8,6 +8,7 @@
 #include "intel_gpu/runtime/engine.hpp"
 #include "intel_gpu/runtime/kernel.hpp"
 #include "intel_gpu/runtime/execution_config.hpp"
+#include "intel_gpu/graph/kernels_cache.hpp"
 
 #include <map>
 #include <mutex>
@@ -22,7 +23,7 @@
 #include "ocl/ocl_engine.hpp"
 
 namespace cldnn {
-class kernels_cache {
+class kernels_cache_ocl : public KernelsCache {
 public:
     using source_code = std::vector<std::string>;
     struct batch_program {
@@ -84,7 +85,6 @@ private:
     size_t _kernel_idx = 0;
     std::atomic<bool> _pending_compilation{false};
     std::map<const std::string, kernel::ptr> _kernels;
-    std::vector<std::string> batch_header_str;
 
     void get_program_source(const kernels_code& kernels_source_code, std::vector<batch_program>*) const;
     void build_batch(const engine& build_engine, const batch_program& batch);
@@ -94,31 +94,27 @@ private:
     size_t get_max_kernels_per_batch() const;
 
 public:
-    explicit kernels_cache(engine& engine,
-                           const ExecutionConfig& config,
-                           uint32_t prog_id,
-                           InferenceEngine::CPUStreamsExecutor::Ptr task_executor = nullptr,
-                           const std::vector<std::string>& batch_header_str = {});
-    kernel_id set_kernel_source(const std::shared_ptr<kernel_string>& kernel_string,
-                                bool dump_custom_program);
+    explicit kernels_cache_ocl(engine& engine, const ExecutionConfig& config, uint32_t prog_id);
+    kernel_id set_kernel_source(const std::shared_ptr<kernel_string>& kernel_string, bool dump_custom_program);
     kernel::ptr get_kernel(kernel_id id) const;
-    void set_batch_header_str(const std::vector<std::string> &batch_headers) {
-        batch_header_str = std::move(batch_headers);
-    }
 
     bool validate_simple_kernel_execution(kernel::ptr kernel);
 
-    // forces compilation of all pending kernels/programs
-    void build_all();
-    void reset();
     void remove_kernel(kernel_id id) {
         _kernels.erase(id);
     }
     std::vector<kernel_id> add_kernels_source(std::vector<std::shared_ptr<kernel_string>> kernel_sources, bool dump_custom_program = false);
     void add_kernels(const std::vector<std::string>& kernel_ids, const std::vector<kernel::ptr>& kernels);
-    void compile();
     void save(BinaryOutputBuffer& ob) const;
     void load(BinaryInputBuffer& ib);
+
+    void compile_parallel(InferenceEngine::CPUStreamsExecutor::Ptr task_executor) override;
+    void compile_sequential() override;
+    void reset() override;
+
+    static std::unique_ptr<KernelsCache> create(engine& engine, const ExecutionConfig& config, uint32_t prog_id) {
+        return cldnn::make_unique<kernels_cache_ocl>(engine, config, prog_id);
+    }
 };
 
 }  // namespace cldnn

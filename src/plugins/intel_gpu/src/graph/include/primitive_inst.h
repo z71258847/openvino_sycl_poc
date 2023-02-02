@@ -19,7 +19,7 @@
 #include "intel_gpu/graph/serialization/string_serializer.hpp"
 #include "intel_gpu/graph/serialization/layout_serializer.hpp"
 #include "intel_gpu/graph/serialization/vector_serializer.hpp"
-#include "runtime/kernels_cache.hpp"
+#include "intel_gpu/graph/kernels_cache.hpp"
 
 #include <memory>
 #include <vector>
@@ -58,11 +58,12 @@ struct primitive_impl {
 
     // class typed_primitive_gpu_impl override this with return false;
     virtual bool is_cpu() const { return true; }
-    virtual void init_kernels(const kernels_cache&) = 0;
+    virtual void init_kernels(const KernelsCache&) = 0;
     virtual std::unique_ptr<primitive_impl> clone() const = 0;
     virtual std::vector<std::string> get_kernel_ids() const {
         return {};
     }
+    virtual void add_to_cache(KernelsCache& cache) { }
     virtual std::vector<std::shared_ptr<cldnn::kernel_string>> get_kernels_source() { return {}; }
     virtual void reset_kernels_source() {}
     virtual void set_kernels(std::vector<kernel::ptr>) {}
@@ -163,7 +164,7 @@ public:
     memory::ptr shape_info_memory_ptr() const { return _shape_info_memory; }
 
     event::ptr execute(const std::vector<event::ptr>& events);
-    void init_kernels(const kernels_cache& kernels_cache) {
+    void init_kernels(const KernelsCache& kernels_cache) {
         _impl->init_kernels(kernels_cache);
     }
     void set_arguments();

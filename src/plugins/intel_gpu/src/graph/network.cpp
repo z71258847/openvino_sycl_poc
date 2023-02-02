@@ -14,6 +14,7 @@
 #include "intel_gpu/runtime/debug_configuration.hpp"
 #include "intel_gpu/runtime/half.hpp"
 #include "intel_gpu/runtime/itt.hpp"
+#include "intel_gpu/graph/kernels_cache.hpp"
 
 #include "intel_gpu/graph/program.hpp"
 #include "intel_gpu/graph/network.hpp"
@@ -28,11 +29,7 @@
 #include "read_value_inst.h"
 #include "reshape_inst.h"
 #include "program_helpers.h"
-#include "kernels_cache.hpp"
 #include "compilation_context.hpp"
-
-// TODO: Remove once we have an abstraction for kernels_cache
-#include "kernel_base.h"
 
 #include <algorithm>
 #include <string>
@@ -307,11 +304,9 @@ network::network(program::ptr program, const ExecutionConfig& config, stream::pt
 
     if (is_dynamic()) {
         GPU_DEBUG_DEFINE_MEM_LOGGER("dynamic_network_initialization");
-        _kernels_cache = std::unique_ptr<kernels_cache>(new kernels_cache(program->get_engine(),
-                                                                          program->get_config(),
-                                                                          program->get_id(),
-                                                                          program->get_task_executor(),
-                                                                          kernel_selector::KernelBase::get_db().get_batch_header_str()));
+        _kernels_cache = KernelsCache::create(program->get_engine(),
+                                              program->get_config(),
+                                              program->get_id());
         _impls_cache = std::unique_ptr<ImplementationsCache>(new ImplementationsCache(_impls_cache_capacity));
         _compilation_context = std::move(ICompilationContext::create(program->get_engine(), program->get_config(), program->get_id()));
     }
@@ -350,8 +345,8 @@ network::network(cldnn::BinaryInputBuffer& ib, const ExecutionConfig& config, st
     , _reset_arguments(true) {
     net_id = get_unique_net_id();
 
-    kernels_cache kernels_cache(get_engine(), config, 0, nullptr, {""});
-    ib >> kernels_cache;
+    // kernels_cache kernels_cache(get_engine(), config, 0, nullptr, {""});
+    // ib >> kernels_cache;
 
     int num_data_nodes;
     ib >> num_data_nodes;
@@ -384,7 +379,7 @@ network::network(cldnn::BinaryInputBuffer& ib, const ExecutionConfig& config, st
     for (const auto& p_inst : _exec_order) {
         ib >> *p_inst;
         _primitives[p_inst->id()] = p_inst;
-        p_inst->init_kernels(kernels_cache);
+        // p_inst->init_kernels(kernels_cache);
     }
 
     for (auto& item : _primitives) {
@@ -460,12 +455,12 @@ network::~network() {
 //     [ executable primitive_inst ]
 //     [ memory reuse information ]
 void network::save(cldnn::BinaryOutputBuffer& ob) {
-    kernels_cache kernels_cache(get_engine(), _config, 0, nullptr, {""});
-    for (const auto& p_inst : _exec_order) {
-        if (p_inst->get_impl() != nullptr)
-            kernels_cache.add_kernels(p_inst->get_impl()->get_kernel_ids(), p_inst->get_impl()->get_kernels());
-    }
-    ob << kernels_cache;
+    // kernels_cache kernels_cache(get_engine(), _config, 0, nullptr, {""});
+    // for (const auto& p_inst : _exec_order) {
+    //     if (p_inst->get_impl() != nullptr)
+    //         kernels_cache.add_kernels(p_inst->get_impl()->get_kernel_ids(), p_inst->get_impl()->get_kernels());
+    // }
+    // ob << kernels_cache;
 
     int num_data_nodes = 0;
     for (const auto& p_inst : _primitives) {
