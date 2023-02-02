@@ -42,7 +42,7 @@ struct generic_layer : public primitive_base<generic_layer> {
 
     size_t hash() const override {
         size_t seed = primitive::hash();
-        seed = hash_combine(seed, id);
+        seed = hash_combine(seed, params->hash());
         return seed;
     }
 

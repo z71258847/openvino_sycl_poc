@@ -690,9 +690,10 @@ event::ptr primitive_inst::update_weights() {
         auto original_layout = original_weights_memory->get_layout();
         layout expected_layout = weights_params->get_output_layout();
 
-        auto hash = weights_params->hash();
         auto& cache = get_network().get_implementations_cache();
         generic_layer_inst inst(get_network());
+        auto prim = std::make_shared<generic_layer>("weights_reorder", "", weights_params);
+        auto hash = prim->hash();
 
         if (cache.has(hash)) {
             GPU_DEBUG_TRACE_DETAIL << id() << ": reorder weights (cached) from " << original_layout.to_short_string()
@@ -703,8 +704,6 @@ event::ptr primitive_inst::update_weights() {
         } else {
             GPU_DEBUG_TRACE_DETAIL << id() << ": reorder weights from " << original_layout.to_short_string()
                                    << " to " << expected_layout.to_short_string() << std::endl;
-
-            auto prim = std::make_shared<generic_layer>("weights_reorder", "", weights_params);
 
             kernel_impl_params reorder_impl_params;
             reorder_impl_params.desc = prim;
