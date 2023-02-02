@@ -345,8 +345,8 @@ network::network(cldnn::BinaryInputBuffer& ib, const ExecutionConfig& config, st
     , _reset_arguments(true) {
     net_id = get_unique_net_id();
 
-    // kernels_cache kernels_cache(get_engine(), config, 0, nullptr, {""});
-    // ib >> kernels_cache;
+    auto kernels_cache = KernelsCache::create(get_engine(), config, 0);
+    ib >> *kernels_cache;
 
     int num_data_nodes;
     ib >> num_data_nodes;
@@ -379,7 +379,7 @@ network::network(cldnn::BinaryInputBuffer& ib, const ExecutionConfig& config, st
     for (const auto& p_inst : _exec_order) {
         ib >> *p_inst;
         _primitives[p_inst->id()] = p_inst;
-        // p_inst->init_kernels(kernels_cache);
+        p_inst->init_kernels(*kernels_cache);
     }
 
     for (auto& item : _primitives) {
@@ -455,12 +455,12 @@ network::~network() {
 //     [ executable primitive_inst ]
 //     [ memory reuse information ]
 void network::save(cldnn::BinaryOutputBuffer& ob) {
-    // kernels_cache kernels_cache(get_engine(), _config, 0, nullptr, {""});
-    // for (const auto& p_inst : _exec_order) {
-    //     if (p_inst->get_impl() != nullptr)
-    //         kernels_cache.add_kernels(p_inst->get_impl()->get_kernel_ids(), p_inst->get_impl()->get_kernels());
-    // }
-    // ob << kernels_cache;
+    auto kernels_cache = KernelsCache::create(get_engine(), _config, 0);
+    for (const auto& p_inst : _exec_order) {
+        if (auto impl = p_inst->get_impl())
+            impl->add_to_cache(*kernels_cache);
+    }
+    ob << *kernels_cache;
 
     int num_data_nodes = 0;
     for (const auto& p_inst : _primitives) {

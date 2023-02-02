@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "intel_gpu/graph/serialization/binary_buffer.hpp"
 #include "intel_gpu/runtime/engine.hpp"
 #include "intel_gpu/runtime/kernel.hpp"
 #include "intel_gpu/runtime/execution_config.hpp"
@@ -105,8 +104,9 @@ public:
     }
     std::vector<kernel_id> add_kernels_source(std::vector<std::shared_ptr<kernel_string>> kernel_sources, bool dump_custom_program = false);
     void add_kernels(const std::vector<std::string>& kernel_ids, const std::vector<kernel::ptr>& kernels);
-    void save(BinaryOutputBuffer& ob) const;
-    void load(BinaryInputBuffer& ib);
+
+    void save(BinaryOutputBuffer& ob) const override;
+    void load(BinaryInputBuffer& ib) override;
 
     void compile_parallel(InferenceEngine::CPUStreamsExecutor::Ptr task_executor) override;
     void compile_sequential() override;

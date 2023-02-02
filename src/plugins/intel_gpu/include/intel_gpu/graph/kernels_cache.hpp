@@ -5,8 +5,9 @@
 #pragma once
 
 #include "intel_gpu/runtime/engine.hpp"
+#include "intel_gpu/graph/serialization/binary_buffer.hpp"
 
-#include <map>
+#include <memory>
 
 namespace cldnn {
 struct primitive_impl;
@@ -25,6 +26,9 @@ public:
     static std::unique_ptr<KernelsCache> create(cldnn::engine& engine,
                                                 const ExecutionConfig& config,
                                                 uint32_t prog_id);
+
+    virtual void save(cldnn::BinaryOutputBuffer& ob) const = 0;
+    virtual void load(cldnn::BinaryInputBuffer& ib) = 0;
 };
 }  // namespace intel_gpu
 }  // namespace ov

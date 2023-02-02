@@ -95,9 +95,12 @@ struct typed_primitive_impl_ocl : public typed_primitive_impl<PType> {
     }
 
     void add_to_cache(KernelsCache& cache) override {
-        auto& cased = downcast<kernels_cache_ocl>(cache);
-        auto kernel_ids = cased.add_kernels_source(get_kernels_source());
-        set_kernel_ids(kernel_ids);
+        auto& casted = downcast<kernels_cache_ocl>(cache);
+        if (_kernels.empty()) {
+            _kernel_ids = casted.add_kernels_source(get_kernels_source(), false);
+        } else {
+             casted.add_kernels(_kernel_ids, _kernels);
+        }
     }
 
     template<typename ImplType>
@@ -186,6 +189,10 @@ protected:
         _kernels.reserve(_kernel_ids.size());
         for (size_t k = 0; k < _kernel_ids.size(); ++k) {
             _kernels.emplace_back(std::move(casted.get_kernel(_kernel_ids[k])));
+        }
+
+        for (size_t i = 0; i < _kernel_data.kernels.size(); ++i) {
+            _kernel_data.kernels[i].code.kernelString.reset();
         }
     }
 
@@ -329,12 +336,6 @@ protected:
             kernel_strings.push_back(_kernel_data.kernels[i].code.kernelString);
         }
         return kernel_strings;
-    }
-
-    void reset_kernels_source() override {
-        for (size_t i = 0; i < _kernel_data.kernels.size(); ++i) {
-            _kernel_data.kernels[i].code.kernelString.reset();
-        }
     }
 };
 

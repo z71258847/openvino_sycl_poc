@@ -217,7 +217,6 @@ void program::init_kernels() {
     for (auto& n : get_processing_order()) {
         if (n->get_selected_impl()) {
             n->get_selected_impl()->init_kernels(*_kernels_cache);
-            n->get_selected_impl()->reset_kernels_source();
         }
     }
 }
