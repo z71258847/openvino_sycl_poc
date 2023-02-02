@@ -10,10 +10,6 @@
 
 #include <ie_system_conf.h>
 
-// TODO: Remove it once all deps to kernel selector are removed from program
-#include "kernel_base.h"
-
-#include "auto_tuner.h"
 #include "layout_optimizer.h"
 #include "pass_manager.h"
 #include "primitive_type.h"

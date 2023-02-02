@@ -11,7 +11,6 @@
 #include "intel_gpu/runtime/tensor.hpp"
 #include "intel_gpu/primitives/primitive.hpp"
 
-#include "tensor_type.h"
 #include "fused_primitive_desc.h"
 
 #include <cstdint>
