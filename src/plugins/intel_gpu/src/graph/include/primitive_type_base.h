@@ -6,6 +6,7 @@
 
 #include "intel_gpu/runtime/engine.hpp"
 #include "intel_gpu/runtime/layout.hpp"
+#include "intel_gpu/runtime/debug_configuration.hpp"
 
 #include "meta_utils.h"
 #include "primitive_type.h"
@@ -94,7 +95,21 @@ struct primitive_type_base : primitive_type {
     std::vector<cldnn::layout> calc_output_layouts(const cldnn::program_node& node, const kernel_impl_params& impl_param) const override {
         OPENVINO_ASSERT(node.type() == this, "primitive_type_base::calc_output_layouts: primitive type mismatch");
 
-        return typed_primitive_inst<PType>::template calc_output_layouts<ov::PartialShape>(node, impl_param);
+        GPU_DEBUG_GET_INSTANCE(debug_config);
+        GPU_DEBUG_IF(debug_config->verbose >= 4) {
+            for (auto& t : impl_param.input_layouts) {
+                std::cerr << impl_param.desc->id << " input tensor: " << t.to_short_string() << std::endl;
+            }
+        }
+        auto res = typed_primitive_inst<PType>::template calc_output_layouts<ov::PartialShape>(node, impl_param);
+
+        GPU_DEBUG_IF(debug_config->verbose >= 4) {
+            for (auto& t : res) {
+                std::cerr << impl_param.desc->id << " output tensor: " << t.to_short_string() << std::endl;
+            }
+        }
+
+        return res;
     }
     kernel_impl_params get_fake_aligned_params(kernel_impl_params const& orig_impl_param) const override {
         return typed_primitive_inst<PType>::get_fake_aligned_params(orig_impl_param);
