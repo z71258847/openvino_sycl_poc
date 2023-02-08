@@ -14,6 +14,7 @@
 #include "intel_gpu/runtime/stream.hpp"
 #include "intel_gpu/runtime/lru_cache.hpp"
 #include "intel_gpu/graph/kernels_cache.hpp"
+#include "intel_gpu/graph/kernel_impl_params.hpp"
 
 #include <map>
 #include <vector>
@@ -231,6 +232,13 @@ public:
     KernelsCache& get_kernels_cache() const { return *_kernels_cache; }
 
     /// Return implentations_cache
+    struct ImplHasher {
+        size_t operator()(const kernel_impl_params &k) const {
+            return k.hash();
+        }
+    };
+
+    using ImplementationsCache = cldnn::LruCache<kernel_impl_params, std::shared_ptr<primitive_impl>, ImplHasher>;
     ImplementationsCache& get_implementations_cache() const { return *_impls_cache; }
 
     ICompilationContext& get_compilation_context() const { return *_compilation_context; }

@@ -101,16 +101,24 @@ std::pair<std::shared_ptr<reorder>, bool> reorder_factory::get_reorder(primitive
 std::pair<std::shared_ptr<primitive>, bool> reorder_factory::get_weights_reorder(primitive_id input_id,
                                                                                  const layout& old_layout,
                                                                                  std::shared_ptr<WeightsReorderParams> reorder_params) {
-    auto hash = reorder_params->hash();
-    if (_cached_weights_reorders.has(hash)) {
-        return std::make_pair(_cached_weights_reorders.get(hash), true);
+    auto prim = std::make_shared<generic_layer>("weights_reorder", "", reorder_params);
+    auto hash = prim->hash();
+
+    kernel_impl_params reorder_impl_params;
+    reorder_impl_params.desc = prim;
+    reorder_impl_params.unique_id = hash;
+    reorder_impl_params.input_layouts.push_back(old_layout);
+    reorder_impl_params.output_layouts.push_back(reorder_params->get_output_layout());
+
+    if (_cached_weights_reorders.has(reorder_impl_params)) {
+        return std::make_pair(_cached_weights_reorders.get(reorder_impl_params), true);
     } else {
         auto count = _cached_weights_reorders.size();
         std::stringstream ss;
         ss << input_id << "_generic_layer_" << count;
 
         auto reorder = std::make_shared<cldnn::generic_layer>(ss.str(), input_id, reorder_params);
-        _cached_weights_reorders.add(hash, reorder);
+        _cached_weights_reorders.add(reorder_impl_params, reorder);
         return std::make_pair(reorder, false);
     }
 }

@@ -321,14 +321,13 @@ bool primitive_inst::update_impl() {
     if (!_node->is_type<data>() && !(_node->is_type<mutable_data>() && _node->get_dependencies().empty())) {
         // Update param if fake_alignment is available
         auto updated_params = _node->type()->get_fake_aligned_params(*_impl_params);
-        auto impl_key = get_impl_key(updated_params);
         auto& cache = get_network().get_implementations_cache();
         bool has_cached_impl = false;
         {
             std::lock_guard<std::mutex> lock(get_network().get_impl_cache_mutex());
-            has_cached_impl = cache.has(impl_key);
+            has_cached_impl = cache.has(updated_params);
             if (has_cached_impl) {
-                _impl = cache.get(impl_key)->clone();
+                _impl = cache.get(updated_params)->clone();
                 GPU_DEBUG_PROFILED_STAGE_CACHE_HIT(true);
                 GPU_DEBUG_TRACE_DETAIL << id() << ": get impl from cache " << _impl->get_kernel_name() << std::endl;
             // impl is not replaced
@@ -339,13 +338,14 @@ bool primitive_inst::update_impl() {
         if (!has_cached_impl) {
             if (_dynamic_impl) {
                 auto& compilation_context = get_network().get_compilation_context();
+                auto impl_key = updated_params.hash();
                 compilation_context.push_task(impl_key, [this, updated_params, impl_key](KernelsCache& kc) {
                     auto& cache = get_network().get_implementations_cache();
                     {
                         std::lock_guard<std::mutex> lock(get_network().get_impl_cache_mutex());
                         // Check existense in the cache one more time as several iterations of model execution could happens and multiple compilation
                         // tasks created for same shapes
-                        if (cache.has(impl_key))
+                        if (cache.has(updated_params))
                             return;
                     }
 
@@ -354,7 +354,7 @@ bool primitive_inst::update_impl() {
 
 
                     std::lock_guard<std::mutex> lock(get_network().get_impl_cache_mutex());
-                    cache.add(impl_key, impl->clone());
+                    cache.add(updated_params, impl->clone());
                 });
 
                 _impl = _dynamic_impl->clone();
@@ -366,7 +366,7 @@ bool primitive_inst::update_impl() {
                 auto& kernels_cache = get_network().get_kernels_cache();
                 kernels_cache.init_primitive_impl(*_impl);
                 std::lock_guard<std::mutex> lock(get_network().get_impl_cache_mutex());
-                cache.add(impl_key, _impl->clone());
+                cache.add(updated_params, _impl->clone());
 
                 auto new_impl_str = _impl != nullptr ? _impl->get_kernel_name() : "nullptr";
                 GPU_DEBUG_TRACE_DETAIL << id() << ": update impl from " << prev_impl_str << " to " << new_impl_str << std::endl;
@@ -691,21 +691,21 @@ event::ptr primitive_inst::update_weights() {
         auto prim = std::make_shared<generic_layer>("weights_reorder", "", weights_params);
         auto hash = prim->hash();
 
-        if (cache.has(hash)) {
+        kernel_impl_params reorder_impl_params;
+        reorder_impl_params.desc = prim;
+        reorder_impl_params.unique_id = hash;
+        reorder_impl_params.input_layouts.push_back(original_layout);
+        reorder_impl_params.output_layouts.push_back(expected_layout);
+
+        if (cache.has(reorder_impl_params)) {
             GPU_DEBUG_TRACE_DETAIL << id() << ": reorder weights (cached) from " << original_layout.to_short_string()
                                    << " to " << expected_layout.to_short_string() << std::endl;
             GPU_DEBUG_PROFILED_STAGE_CACHE_HIT(true);
 
-            inst.set_impl(cache.get(hash)->clone());
+            inst.set_impl(cache.get(reorder_impl_params)->clone());
         } else {
             GPU_DEBUG_TRACE_DETAIL << id() << ": reorder weights from " << original_layout.to_short_string()
                                    << " to " << expected_layout.to_short_string() << std::endl;
-
-            kernel_impl_params reorder_impl_params;
-            reorder_impl_params.desc = prim;
-            reorder_impl_params.unique_id = hash;
-            reorder_impl_params.input_layouts.push_back(original_layout);
-            reorder_impl_params.output_layouts.push_back(expected_layout);
 
             auto factory = WeightsReordersFactory::get(impl_types::ocl, shape_types::static_shape);
             auto& kernels_cache = get_network().get_kernels_cache();
@@ -714,7 +714,7 @@ event::ptr primitive_inst::update_weights() {
 
             inst.set_impl(reorder_impl->clone());
 
-            cache.add(hash, reorder_impl->clone());
+            cache.add(reorder_impl_params, reorder_impl->clone());
         }
 
         auto& engine = _network.get_engine();
@@ -1288,20 +1288,8 @@ void primitive_inst::load(cldnn::BinaryInputBuffer& ib) {
     }
 }
 
-size_t primitive_inst::get_impl_key(const kernel_impl_params& params) const {
-    size_t seed = _node->get_hash();
-    const size_t prime_number = 2654435761; // magic number to avoid hash collision.
-    for (auto& in : params.input_layouts) {
-        seed = hash_combine(seed, in.hash() * prime_number);
-    }
-    for (auto& out : params.output_layouts) {
-        seed = hash_combine(seed, out.hash() * prime_number);
-    }
-    return seed;
-}
-
 size_t primitive_inst::get_impl_key() const {
     auto updated_params = _node->type()->get_fake_aligned_params(*_impl_params);
-    return get_impl_key(updated_params);
+    return updated_params.hash();
 }
 }  // namespace cldnn

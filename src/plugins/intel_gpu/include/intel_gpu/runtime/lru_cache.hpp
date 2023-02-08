@@ -16,7 +16,7 @@ namespace cldnn {
 struct primitive_impl;
 
 /// @brief LRU cache which remove the least recently used data when cache is full.
-template<typename Key, typename Value>
+template<typename Key, typename Value, typename KeyHasher = std::hash<Key>>
 class LruCache {
 public:
     using data_type = std::pair<Key, Value>;
@@ -139,7 +139,7 @@ private:
     using lru_data_list_iter = typename lru_data_list_type::iterator;
 
     std::list<data_type> _lru_data_list;
-    std::unordered_map<Key, lru_data_list_iter> _key_map;
+    std::unordered_map<Key, lru_data_list_iter, KeyHasher> _key_map;
     const size_t _capacity;
 
     /**
@@ -164,5 +164,4 @@ private:
     }
 };
 
-using ImplementationsCache = cldnn::LruCache<size_t, std::shared_ptr<primitive_impl>>;
 }  // namespace cldnn

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "kernel_impl_params.hpp"
+#include "intel_gpu/graph/kernel_impl_params.hpp"
 
 #include "intel_gpu/graph/program.hpp"
 

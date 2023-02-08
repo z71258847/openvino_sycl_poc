@@ -16,9 +16,9 @@
 
 #include "kernel_selector_params.h"
 #include "kernel_selector_common.h"
-#include "kernel_impl_params.hpp"
+#include "intel_gpu/graph/kernel_impl_params.hpp"
 #include "tensor_type.h"
-#include "fused_primitive_desc.h"
+#include "intel_gpu/graph/fused_primitive_desc.hpp"
 
 #include <cstdint>
 #include <string>

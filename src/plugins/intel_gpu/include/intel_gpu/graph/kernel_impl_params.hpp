@@ -11,7 +11,7 @@
 #include "intel_gpu/runtime/tensor.hpp"
 #include "intel_gpu/primitives/primitive.hpp"
 
-#include "fused_primitive_desc.h"
+#include "fused_primitive_desc.hpp"
 
 #include <cstdint>
 #include <string>
@@ -102,6 +102,33 @@ struct kernel_impl_params {
     const program& get_program() const {
         OPENVINO_ASSERT(prog != nullptr, "[GPU] Program pointer in kernel_impl_params in not initialized");
         return *prog;
+    }
+
+    size_t hash() const {
+        size_t seed = desc->hash();
+        const size_t prime_number = 2654435761; // magic number to avoid hash collision.
+        for (auto& in : input_layouts) {
+            seed = hash_combine(seed, in.hash() * prime_number);
+        }
+        for (auto& out : output_layouts) {
+            seed = hash_combine(seed, out.hash() * prime_number);
+        }
+        return seed;
+    }
+
+    bool operator==(const kernel_impl_params& rhs) const {
+        bool res = *desc == *rhs.desc;
+        res &= rhs.input_layouts.size() == input_layouts.size();
+        res &= rhs.output_layouts.size() == output_layouts.size();
+        for (size_t i = 0; i < input_layouts.size(); i++) {
+            res &= input_layouts[i] == rhs.input_layouts[i];
+        }
+
+        for (size_t i = 0; i < output_layouts.size(); i++) {
+            res &= output_layouts[i] == rhs.output_layouts[i];
+        }
+
+        return res;
     }
 };
 

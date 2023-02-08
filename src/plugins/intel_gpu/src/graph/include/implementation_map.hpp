@@ -8,7 +8,7 @@
 #include "intel_gpu/primitives/implementation_desc.hpp"
 #include "intel_gpu/runtime/execution_config.hpp"
 #include "intel_gpu/runtime/engine.hpp"
-#include "kernel_impl_params.hpp"
+#include "intel_gpu/graph/kernel_impl_params.hpp"
 
 #include <threading/ie_cpu_streams_executor.hpp>
 

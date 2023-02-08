@@ -5,13 +5,11 @@
 #pragma once
 
 #include "intel_gpu/primitives/primitive.hpp"
-#include "intel_gpu/primitives/activation.hpp"
 #include "intel_gpu/primitives/implementation_desc.hpp"
 #include "intel_gpu/graph/program.hpp"
-
-#include "fused_primitive_desc.h"
-#include "kernel_impl_params.hpp"
-#include "meta_utils.h"
+#include "intel_gpu/graph/fused_primitive_desc.hpp"
+#include "intel_gpu/graph/kernel_impl_params.hpp"
+#include "intel_gpu/runtime/utils.hpp"
 
 #include <set>
 #include <array>

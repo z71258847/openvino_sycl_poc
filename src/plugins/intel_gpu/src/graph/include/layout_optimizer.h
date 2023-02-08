@@ -73,7 +73,14 @@ private:
     };
 
     std::map<cache_key, std::shared_ptr<reorder>> _cached_reorders;
-    LruCache<size_t, std::shared_ptr<generic_layer>> _cached_weights_reorders{0};
+
+    struct ImplHasher {
+        size_t operator()(const kernel_impl_params &k) const {
+            return k.hash();
+        }
+    };
+
+    LruCache<kernel_impl_params, std::shared_ptr<generic_layer>, ImplHasher> _cached_weights_reorders{0};
 };
 
 class layout_optimizer {

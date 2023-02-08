@@ -35,6 +35,15 @@ struct shape_of : public primitive_base<shape_of> {
         : primitive_base(id, {input}, {output_padding}, {optional_data_type{output_data_type}})
         , output_rank(0) {}
 
+    bool operator==(const primitive& rhs) const override {
+        if (!compare_common_params(rhs))
+            return false;
+
+        auto rhs_casted = downcast<const shape_of>(rhs);
+
+        return output_rank == rhs_casted.output_rank;
+    }
+
     size_t output_rank;
 };
 }  // namespace cldnn
