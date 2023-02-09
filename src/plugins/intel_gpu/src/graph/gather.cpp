@@ -96,6 +96,17 @@ std::vector<layout> gather_inst::calc_output_layouts(gather_node const& /*node*/
 
 template std::vector<layout> gather_inst::calc_output_layouts<ov::PartialShape>(gather_node const& node, const kernel_impl_params& impl_param);
 
+std::vector<size_t> gather_inst::extend_output_shape_to_6d(kernel_impl_params const& orig_impl_param, int32_t output_idx) {
+    ov::PartialShape ps = orig_impl_param.get_output_layout(output_idx).get_partial_shape();
+
+    if (ps.size() < 4) {
+        ps.insert(ps.begin(), 4 - ps.size(), ov::Dimension(1));
+    }
+
+    layout l(ps, data_types::i32, format::get_default_format(ps.size()));
+    return l.transform(format::bfwzyx).to_shape();
+}
+
 std::string gather_inst::to_string(gather_node const& node) {
     auto desc = node.get_primitive();
     auto node_info = node.desc_to_json();

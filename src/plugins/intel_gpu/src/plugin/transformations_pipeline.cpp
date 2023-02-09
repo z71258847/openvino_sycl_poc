@@ -419,11 +419,13 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
         pass_config->disable<ov::pass::ReduceL2Decomposition>();
         pass_config->disable<ov::pass::SoftPlusDecomposition>();
         pass_config->disable<ov::pass::LogSoftmaxDecomposition>();
-        pass_config->disable<ov::pass::ConvertBroadcast3>();
+        // pass_config->disable<ov::pass::ConvertBroadcast3>();
         pass_config->disable<ov::pass::WeightsDequantizeToFakeQuantize>();
         pass_config->disable<ov::pass::SimplifyCTCGreedyDecoderSeqLen>();
         pass_config->disable<ov::pass::ConvertSoftMax8ToSoftMax1>();
-        pass_config->enable<ov::pass::ConvertGather8ToGather7>();
+        // pass_config->enable<ov::pass::ConvertGather8ToGather7>();
+        pass_config->disable<ov::pass::ConvertGather7ToGather1>();
+        pass_config->disable<ov::pass::ConvertGather8ToGather7>();
 
         pass_config->enable<ov::pass::ConvertInterpolate1ToInterpolate4>();
 

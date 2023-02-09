@@ -41,6 +41,24 @@ public:
             params.inputs.push_back(convert_data_tensor(impl_param.input_layouts[i]));
         }
 
+        for (size_t i = 0; i < inputs_count; i++) {
+            auto l = impl_param.input_layouts[i];
+            auto ps = l.get_partial_shape();
+            if (ps.size() < 4) {
+                ps.insert(ps.begin(), 4 - ps.size(), ov::Dimension(1));
+                l.set_partial_shape(ps);
+                params.inputs[i] = convert_data_tensor(l);
+            }
+        }
+
+        auto l = impl_param.output_layouts[0];
+        auto ps = l.get_partial_shape();
+        if (ps.size() < 4) {
+            ps.insert(ps.begin(), 4 - ps.size(), ov::Dimension(1));
+            l.set_partial_shape(ps);
+            params.outputs[0] = convert_data_tensor(l);
+        }
+
         params.operations.push_back({{kernel_selector::eltwise_params::InputType::Buffer(0), kernel_selector::eltwise_params::InputType::Buffer(1)},
                                      convert_to_eltwise_mode(primitive->mode)});
 

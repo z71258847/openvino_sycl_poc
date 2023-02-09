@@ -32,6 +32,7 @@ public:
     static std::vector<layout> calc_output_layouts(gather_node const& /*node*/, const kernel_impl_params& impl_param);
     static layout calc_output_layout(gather_node const& node, kernel_impl_params const& impl_param);
     static std::string to_string(gather_node const& node);
+    static std::vector<size_t> extend_output_shape_to_6d(kernel_impl_params const& orig_impl_param, int32_t output_idx);
 
     typed_primitive_inst(network& network, gather_node const& desc);
 };
