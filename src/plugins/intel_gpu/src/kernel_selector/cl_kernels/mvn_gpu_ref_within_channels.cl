@@ -66,7 +66,7 @@ KERNEL (mvn_gpu_ref_within_channels)(
                 input_idx = INPUT0_GET_INDEX(b, f, z, y, x);
                 output_idx = OUTPUT_GET_INDEX(b, f, z, y, x);
 #   endif
-                    ACTIVATION_TYPE result = TO_ACTIVATION_TYPE(input[input_idx]) - TO_ACTIVATION_TYPE(mean);
+                    ACTIVATION_TYPE result = TO_ACTIVATION_TYPE(convert_float(input[input_idx]) - mean);
 #   if HAS_FUSED_OPS
                     FUSED_OPS;
                     output[output_idx] = FUSED_OPS_RESULT;
@@ -76,7 +76,7 @@ KERNEL (mvn_gpu_ref_within_channels)(
             }
         }
 #elif INPUT0_SIMPLE && OUTPUT_SIMPLE
-                    ACTIVATION_TYPE result = TO_ACTIVATION_TYPE(input[input_idx]) - TO_ACTIVATION_TYPE(mean);
+                    ACTIVATION_TYPE result = TO_ACTIVATION_TYPE(convert_float(input[input_idx]) - mean);
 #   if HAS_FUSED_OPS
                     FUSED_OPS;
                     output[output_idx] = FUSED_OPS_RESULT;
@@ -148,7 +148,7 @@ KERNEL (mvn_gpu_ref_within_channels)(
                 input_idx = INPUT0_GET_INDEX(b, f, z, y, x);
                 output_idx = OUTPUT_GET_INDEX(b, f, z, y, x);
 #   endif
-                    ACTIVATION_TYPE result = (TO_ACTIVATION_TYPE(input[input_idx]) - TO_ACTIVATION_TYPE(mean)) * TO_ACTIVATION_TYPE(variance);
+                    ACTIVATION_TYPE result = TO_ACTIVATION_TYPE((convert_float(input[input_idx]) - mean) * variance);
 #   if HAS_FUSED_OPS
                     FUSED_OPS;
                     output[output_idx] = FUSED_OPS_RESULT;
@@ -158,7 +158,7 @@ KERNEL (mvn_gpu_ref_within_channels)(
             }
         }
 #elif INPUT0_SIMPLE && OUTPUT_SIMPLE
-                    ACTIVATION_TYPE result = (TO_ACTIVATION_TYPE(input[input_idx]) - TO_ACTIVATION_TYPE(mean)) * TO_ACTIVATION_TYPE(variance);
+                    ACTIVATION_TYPE result = TO_ACTIVATION_TYPE((convert_float(input[input_idx]) - mean) * variance);
 #   if HAS_FUSED_OPS
                     FUSED_OPS;
                     output[output_idx] = FUSED_OPS_RESULT;

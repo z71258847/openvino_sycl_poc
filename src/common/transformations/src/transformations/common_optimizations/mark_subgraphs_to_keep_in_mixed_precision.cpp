@@ -348,7 +348,7 @@ bool MarkSugraphsToKeepInMixedPrecision::run_on_model(const shared_ptr<ov::Model
 
     // Mark nodes in ShapeOf subgraphs to keep in FP32
     REGISTER_PASS(manager, MarkPrecisionSensitiveShapeOfSubgraphs)
-    REGISTER_PASS(manager, MarkNormalizationOps)
+    // REGISTER_PASS(manager, MarkNormalizationOps)
     manager.run_passes(m);
 
     for (auto& node : m->get_ops()) {
