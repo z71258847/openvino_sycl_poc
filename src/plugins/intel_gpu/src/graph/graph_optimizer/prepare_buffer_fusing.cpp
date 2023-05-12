@@ -174,7 +174,7 @@ bool concat_in_place_optimization::match(concatenation_node& node) {
 
     auto lower_padd_in_axis = node.get_output_layout().data_padding.lower_size().sizes(def_fmt)[concat_axis];
     lower_padd_in_axis = std::max(lower_padd_in_axis,
-                                  node.get_dependency(0).get_output_layout().data_padding.lower_size().sizes(def_fmt)[concat_axis]);
+                                  node.get_input_layout(0).data_padding.lower_size().sizes(def_fmt)[concat_axis]);
 
     // check if concatenation in place can be applied for inputs set
     idx = 0;
@@ -394,7 +394,7 @@ void prepare_buffer_fusing::run(program& p) {
                 const auto& crop_layout = node.get_output_layout();
                 auto format = crop_layout.format;
                 auto crop_prim = node.get_primitive();
-                auto input_layout = node.get_dependency(0).get_output_layout();
+                auto input_layout = node.get_input_layout(0);
                 const auto& crop_size = crop_layout.get_tensor();
                 const auto& out_padd = crop_layout.data_padding;
                 auto opt_lower_pad = crop_prim->offsets.feature[0];
