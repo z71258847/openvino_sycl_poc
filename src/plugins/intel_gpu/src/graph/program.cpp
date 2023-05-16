@@ -1323,9 +1323,7 @@ void program::set_layout_optimizer_attributes(layout_optimizer& lo) {
 
 
     // first pass to set layout optimization_attributes for topology
-    bool can_use_fsv16 = true;
     bool can_use_bs_fs_yx_bsv16_fsv16 = true;
-    bool is_quantized_int8_model = false;
     size_t total_asym_quantized_conv_layers = 0;
     size_t total_dw_conv_layers = 0;
     size_t total_dw_splitted_conv_layers = 0;
@@ -1370,81 +1368,6 @@ void program::set_layout_optimizer_attributes(layout_optimizer& lo) {
                 opt_deconv_layers_b_fs_zyx_fsv16 += 1;
             else if (lo.is_format_supported(prim.as<deconvolution>(), format::b_fs_yx_fsv16))
                 opt_deconv_layers_b_fs_yx_fsv16 += 1;
-        }
-
-        // list of layers that do not support yxfb or perform worse than bfyx
-        if (prim.type() == cldnn::detection_output::type_id() || prim.type() == cldnn::proposal::type_id() ||
-            prim.type() == cldnn::roi_pooling::type_id() || prim.type() == cldnn::deconvolution::type_id() ||
-            prim.type() == cldnn::resample::type_id() || prim.type() == cldnn::reorg_yolo::type_id())
-            lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::bfyx_only_layer, 1);
-
-        if (prim.is_in_data_flow() &&
-            prim.type() != cldnn::convolution::type_id() &&
-            prim.type() != cldnn::deconvolution::type_id() &&
-            prim.type() != cldnn::activation::type_id() &&
-            prim.type() != cldnn::pooling::type_id() &&
-            prim.type() != cldnn::eltwise::type_id() &&
-            prim.type() != cldnn::permute::type_id() &&
-            prim.type() != cldnn::reshape::type_id() &&
-            prim.type() != cldnn::detection_output::type_id() &&
-            prim.type() != cldnn::binary_convolution::type_id() &&
-            prim.type() != cldnn::quantize::type_id() &&
-            prim.type() != cldnn::custom_gpu_primitive::type_id() &&
-            prim.type() != cldnn::concatenation::type_id() &&
-            prim.type() != cldnn::fully_connected::type_id() &&
-            prim.type() != cldnn::reorder::type_id() &&
-            prim.type() != cldnn::input_layout::type_id() &&
-            prim.type() != cldnn::softmax::type_id() &&
-            prim.type() != cldnn::prior_box::type_id() &&
-            prim.type() != cldnn::border::type_id() &&
-            prim.type() != cldnn::resample::type_id() &&
-            prim.type() != cldnn::crop::type_id() &&
-            prim.type() != cldnn::depth_to_space::type_id() &&
-            prim.type() != cldnn::shuffle_channels::type_id() &&
-            (prim.type() != cldnn::mvn::type_id()
-             || (prim.as<mvn>().input().get_output_layout().data_type != data_types::u8 &&
-                 prim.as<mvn>().input().get_output_layout().data_type != data_types::i8)
-             || prim.as<mvn>().get_primitive()->across_channels()) &&
-            prim.type() != cldnn::arg_max_min::type_id() &&
-            prim.type() != cldnn::dft::type_id() &&
-            prim.type() != cldnn::grid_sample::type_id() &&
-            prim.type() != cldnn::mutable_data::type_id() &&
-            prim.type() != cldnn::reduce::type_id() &&
-            prim.type() != cldnn::strided_slice::type_id() &&
-            prim.type() != cldnn::region_yolo::type_id() &&
-            prim.type() != cldnn::normalize::type_id() &&
-            prim.type() != cldnn::mvn::type_id() &&
-            prim.type() != cldnn::gather::type_id() &&
-            prim.type() != cldnn::scatter_nd_update::type_id() &&
-            prim.type() != cldnn::broadcast::type_id() &&
-            prim.type() != cldnn::ctc_loss::type_id() &&
-            prim.type() != cldnn::non_max_suppression::type_id() &&
-            prim.type() != cldnn::roi_align::type_id() &&
-            prim.type() != cldnn::matrix_nms::type_id() &&
-            prim.type() != cldnn::adaptive_pooling::type_id() &&
-            prim.type() != cldnn::bucketize::type_id() &&
-            prim.type() != cldnn::roll::type_id() &&
-            prim.type() != cldnn::multiclass_nms::type_id() &&
-            prim.type() != cldnn::prior_box::type_id() &&
-            prim.type() != cldnn::roi_pooling::type_id() &&
-            prim.type() != cldnn::resample::type_id() &&
-            prim.type() != cldnn::eye::type_id() &&
-            prim.type() != cldnn::generate_proposals::type_id() &&
-            prim.type() != cldnn::reverse::type_id() &&
-            prim.type() != cldnn::reorg_yolo::type_id() &&
-            prim.type() != cldnn::gemm::type_id() &&
-            prim.type() != cldnn::tile::type_id() &&
-            prim.type() != cldnn::scatter_elements_update::type_id() &&
-            prim.type() != cldnn::gather_tree::type_id() &&
-            prim.type() != cldnn::experimental_detectron_detection_output::type_id() &&
-            prim.type() != cldnn::convert_color::type_id() &&
-            prim.type() != cldnn::experimental_detectron_generate_proposals_single_image::type_id()) {
-            can_use_fsv16 = false;
-        }
-
-        if (prim.type() == cldnn::quantize::type_id() &&
-            (prim.get_output_layout().data_type == data_types::i8 || prim.get_output_layout().data_type == data_types::u8)) {
-            is_quantized_int8_model = true;
         }
 
         if (prim.type() == cldnn::crop::type_id()) {
@@ -1507,9 +1430,7 @@ void program::set_layout_optimizer_attributes(layout_optimizer& lo) {
     const float cond_denom = total_conv_layers > 0 ? 1.0f / static_cast<float>(total_conv_layers) : 1.0f;
     size_t num_of_conv_b_fs_yx_fsv16 = lo.get_optimized_conv_count({format::b_fs_yx_fsv16, false});
 
-    bool should_use_b_fs_yx_fsv16_conv = is_quantized_int8_model ||
-                                         (can_use_fsv16 &&
-                                          total_conv_layers > 11 &&
+    bool should_use_b_fs_yx_fsv16_conv = (total_conv_layers > 11 &&
                                           (num_of_conv_b_fs_yx_fsv16 * cond_denom > 0.5f || opt_deconv_layers_b_fs_yx_fsv16 >= 1) &&
                                           num_of_conv_b_fs_yx_fsv16 * 2 > total_crop_layers);
 
