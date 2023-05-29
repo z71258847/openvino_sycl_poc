@@ -1647,7 +1647,7 @@ TEST_P(OVRemoteTensorBatched_Test, NV12toGray) {
     auto p = PrePostProcessor(fn_ptr_remote);
     p.input().tensor().set_element_type(ov::element::u8)
                       .set_layout("NHWC")
-                      .set_memory_type(ov::intel_gpu::memory_type::surface);
+                      .set_memory_type(ov::intel_gpu::memory_type::surface | ov::intel_gpu::memory_type::host);
     p.input().model().set_layout("NCHW");
     auto function = p.build();
 

@@ -156,7 +156,9 @@ static void CreateParameterOp(Program& p, const std::shared_ptr<ngraph::op::v0::
         if (node->output(0).get_rt_info().count(ov::preprocess::TensorInfoMemoryType::get_type_info_static())) {
             std::string mem_type = node->output(0).get_rt_info().at(ov::preprocess::TensorInfoMemoryType::get_type_info_static())
                                                                 .as<ov::preprocess::TensorInfoMemoryType>().value;
+            std::cerr << mem_type << std::endl;
             if (mem_type.find(GPU_CONFIG_KEY(SURFACE)) != std::string::npos) {
+                std::cerr << "mem_type!!!!!!" << std::endl;
                 surface_input_found = true;
             }
         }
