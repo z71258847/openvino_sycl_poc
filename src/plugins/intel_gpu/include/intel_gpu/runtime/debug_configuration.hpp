@@ -3,7 +3,7 @@
 //
 
 #pragma once
-#include <string>
+#include <string.h>
 #include <mutex>
 #include <vector>
 #include <set>

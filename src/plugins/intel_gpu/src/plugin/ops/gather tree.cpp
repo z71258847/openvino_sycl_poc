@@ -5,7 +5,7 @@
 #include "intel_gpu/plugin/program.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
-#include "ngraph/op/gather_tree.hpp"
+#include "openvino/op/gather_tree.hpp"
 
 #include "intel_gpu/primitives/gather_tree.hpp"
 #include "intel_gpu/primitives/reorder.hpp"
@@ -13,7 +13,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateGatherTreeOp(Program& p, const std::shared_ptr<ngraph::op::v1::GatherTree>& op) {
+static void CreateGatherTreeOp(Program& p, const std::shared_ptr<ov::op::v1::GatherTree>& op) {
     validate_inputs_count(op, {4});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);

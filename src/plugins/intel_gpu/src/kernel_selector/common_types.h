@@ -124,6 +124,7 @@ enum class WeightsType {
     F16,
     F32,
     INT8,
+    INT32,
     UINT8,
 };
 

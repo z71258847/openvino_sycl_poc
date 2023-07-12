@@ -3,6 +3,7 @@
 //
 
 #include "openvino/proxy/infer_request.hpp"
+#include "openvino/proxy/plugin.hpp"
 
 #include <memory>
 #include <openvino/runtime/iremote_tensor.hpp>
@@ -57,7 +58,7 @@ ov::SoPtr<ov::ITensor> ov::proxy::InferRequest::get_tensor(const ov::Output<cons
 }
 
 void ov::proxy::InferRequest::set_tensor(const ov::Output<const ov::Node>& port, const ov::SoPtr<ov::ITensor>& tensor) {
-    m_infer_request->set_tensor(port, tensor);
+    m_infer_request->set_tensor(port, ov::proxy::get_hardware_tensor(tensor, true));
 }
 
 std::vector<ov::SoPtr<ov::ITensor>> ov::proxy::InferRequest::get_tensors(const ov::Output<const ov::Node>& port) const {
@@ -75,7 +76,11 @@ std::vector<ov::SoPtr<ov::ITensor>> ov::proxy::InferRequest::get_tensors(const o
 
 void ov::proxy::InferRequest::set_tensors(const ov::Output<const ov::Node>& port,
                                           const std::vector<ov::SoPtr<ov::ITensor>>& tensors) {
-    return m_infer_request->set_tensors(port, tensors);
+    std::vector<ov::SoPtr<ov::ITensor>> hw_tensors;
+    for (auto& tensor : tensors) {
+        hw_tensors.push_back(ov::proxy::get_hardware_tensor(tensor, true));
+    }
+    return m_infer_request->set_tensors(port, hw_tensors);
 }
 
 std::vector<ov::SoPtr<ov::IVariableState>> ov::proxy::InferRequest::query_state() const {

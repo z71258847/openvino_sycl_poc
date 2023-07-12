@@ -7,9 +7,9 @@
 #include <algorithm>
 #include <cassert>
 #include <memory>
-#include <ngraph/opsets/opset10.hpp>
-#include <ngraph/pattern/op/wrap_type.hpp>
-#include <ngraph/rt_info.hpp>
+#include "openvino/opsets/opset10.hpp"
+#include "openvino/pass/pattern/op/wrap_type.hpp"
+#include "openvino/core/rt_info.hpp"
 #include <vector>
 
 namespace ov {
@@ -17,17 +17,17 @@ namespace intel_gpu {
 
 DecomposeReduceForFalseKeepDims::DecomposeReduceForFalseKeepDims() {
     // Get one MatcherPass for all modes
-    auto reduce_pattern = ngraph::pattern::wrap_type<ngraph::opset10::ReduceSum,
-                                                     ngraph::opset10::ReduceMean,
-                                                     ngraph::opset10::ReduceProd,
-                                                     ngraph::opset10::ReduceMin,
-                                                     ngraph::opset10::ReduceMax>(
-        {ngraph::pattern::any_input(ngraph::pattern::has_static_shape()),
-         ngraph::pattern::wrap_type<ngraph::opset10::Constant>()},
-        ngraph::pattern::has_static_shape());
+    auto reduce_pattern = ov::pass::pattern::wrap_type<ov::opset10::ReduceSum,
+                                                       ov::opset10::ReduceMean,
+                                                       ov::opset10::ReduceProd,
+                                                       ov::opset10::ReduceMin,
+                                                       ov::opset10::ReduceMax>(
+        {ov::pass::pattern::any_input(ov::pass::pattern::has_static_shape()),
+         ov::pass::pattern::wrap_type<ov::opset10::Constant>()},
+        ov::pass::pattern::has_static_shape());
 
     // register callback
-    ov::matcher_pass_callback callback = [=](ngraph::pattern::Matcher& m) {
+    ov::matcher_pass_callback callback = [=](ov::pass::pattern::Matcher& m) {
         const auto& pattern_map = m.get_pattern_value_map();
         auto reduce =
             as_type_ptr<op::util::ArithmeticReductionKeepDims>(pattern_map.at(reduce_pattern).get_node_shared_ptr());
@@ -45,23 +45,23 @@ DecomposeReduceForFalseKeepDims::DecomposeReduceForFalseKeepDims() {
         if (!reduce->get_keep_dims() &&
             need_transformation_for_reordered_axes(axes_vector, input_rank, (input_rank - 2)) &&
             input_shape.size() < 6) {
-            ngraph::NodeVector new_ops;
+            ov::NodeVector new_ops;
 
             // Reduce
             auto reduce_const =
-                ngraph::opset10::Constant::create(ngraph::element::i64, ngraph::Shape{axes_vector.size()}, axes_vector);
+                ov::opset10::Constant::create(ov::element::i64, ov::Shape{axes_vector.size()}, axes_vector);
 
             // Add each reduce mode supported by oneDNN
-            if (ngraph::is_type<ngraph::opset10::ReduceSum>(reduce))
-                input = std::make_shared<ngraph::opset10::ReduceSum>(input, reduce_const, true);
-            else if (ngraph::is_type<ngraph::opset10::ReduceMean>(reduce))
-                input = std::make_shared<ngraph::opset10::ReduceMean>(input, reduce_const, true);
-            else if (ngraph::is_type<ngraph::opset10::ReduceMin>(reduce))
-                input = std::make_shared<ngraph::opset10::ReduceMin>(input, reduce_const, true);
-            else if (ngraph::is_type<ngraph::opset10::ReduceMax>(reduce))
-                input = std::make_shared<ngraph::opset10::ReduceMax>(input, reduce_const, true);
-            else if (ngraph::is_type<ngraph::opset10::ReduceProd>(reduce))
-                input = std::make_shared<ngraph::opset10::ReduceProd>(input, reduce_const, true);
+            if (ov::is_type<ov::opset10::ReduceSum>(reduce))
+                input = std::make_shared<ov::opset10::ReduceSum>(input, reduce_const, true);
+            else if (ov::is_type<ov::opset10::ReduceMean>(reduce))
+                input = std::make_shared<ov::opset10::ReduceMean>(input, reduce_const, true);
+            else if (ov::is_type<ov::opset10::ReduceMin>(reduce))
+                input = std::make_shared<ov::opset10::ReduceMin>(input, reduce_const, true);
+            else if (ov::is_type<ov::opset10::ReduceMax>(reduce))
+                input = std::make_shared<ov::opset10::ReduceMax>(input, reduce_const, true);
+            else if (ov::is_type<ov::opset10::ReduceProd>(reduce))
+                input = std::make_shared<ov::opset10::ReduceProd>(input, reduce_const, true);
             else
                 return false;
 
@@ -69,21 +69,21 @@ DecomposeReduceForFalseKeepDims::DecomposeReduceForFalseKeepDims() {
             new_ops.push_back(input.get_node_shared_ptr());
 
             // Reshape
-            auto reshape_shape = ngraph::Shape((input_rank - axes_vector.size()), 1);
+            auto reshape_shape = ov::Shape((input_rank - axes_vector.size()), 1);
             // Expected that a feature axis is only un-reduced unless a new case for this decomposition is added.
             assert(reshape_shape.size() == 1);
             reshape_shape[0] = reduce_shape[0];
-            input = std::make_shared<ngraph::opset10::Reshape>(
+            input = std::make_shared<ov::opset10::Reshape>(
                 input,
-                ngraph::opset10::Constant::create(ngraph::element::i64,
-                                                  ngraph::Shape{reshape_shape.size()},
-                                                  reshape_shape),
+                ov::opset10::Constant::create(ov::element::i64,
+                                              ov::Shape{reshape_shape.size()},
+                                              reshape_shape),
                 false);
 
             input.get_node_shared_ptr()->set_friendly_name(reduce->get_friendly_name() + "_reshape_false_keepdims");
             new_ops.push_back(input.get_node_shared_ptr());
 
-            ngraph::copy_runtime_info(reduce, new_ops);
+            ov::copy_runtime_info(reduce, new_ops);
             reduce->output(0).replace(input);
             return true;
         }
@@ -91,7 +91,7 @@ DecomposeReduceForFalseKeepDims::DecomposeReduceForFalseKeepDims() {
         return false;
     };
 
-    auto m = std::make_shared<ngraph::pattern::Matcher>(reduce_pattern, "DecomposeReduceForFalseKeepDims");
+    auto m = std::make_shared<ov::pass::pattern::Matcher>(reduce_pattern, "DecomposeReduceForFalseKeepDims");
     register_matcher(m, callback);
 }
 

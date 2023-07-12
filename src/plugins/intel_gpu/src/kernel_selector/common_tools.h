@@ -40,6 +40,7 @@ inline uint32_t BytesPerElement(WeightsType wt) {
         case WeightsType::F16:
             return 2;
         case WeightsType::F32:
+        case WeightsType::INT32:
         case WeightsType::BINARY:
             return 4;
         default:

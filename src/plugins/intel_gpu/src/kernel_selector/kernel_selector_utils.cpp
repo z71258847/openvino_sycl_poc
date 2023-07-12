@@ -20,6 +20,8 @@ static WeightsType DataTypeToWeightsType(Datatype t) {
             return WeightsType::UINT8;
         case Datatype::INT8:
             return WeightsType::INT8;
+        case Datatype::INT32:
+            return WeightsType::INT32;
         case Datatype::F16:
             return WeightsType::F16;
         case Datatype::F32:

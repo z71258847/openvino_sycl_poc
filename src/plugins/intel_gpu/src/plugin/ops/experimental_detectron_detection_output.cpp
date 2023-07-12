@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "ngraph/op/experimental_detectron_detection_output.hpp"
+#include "openvino/op/experimental_detectron_detection_output.hpp"
 
 #include "intel_gpu/plugin/common_utils.hpp"
 #include "intel_gpu/plugin/program.hpp"
@@ -14,7 +14,7 @@ namespace intel_gpu {
 
 static void CreateExperimentalDetectronDetectionOutputOp(
     Program& p,
-    const std::shared_ptr<ngraph::op::v6::ExperimentalDetectronDetectionOutput>& op) {
+    const std::shared_ptr<ov::op::v6::ExperimentalDetectronDetectionOutput>& op) {
     validate_inputs_count(op, {4});
 
     if (op->get_output_size() != 3) {

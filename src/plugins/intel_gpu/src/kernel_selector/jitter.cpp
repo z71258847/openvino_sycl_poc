@@ -123,6 +123,8 @@ std::string toCLType(WeightsType wType) {
             return "half";
         case WeightsType::F32:
             return GetTypeName<float>();
+        case WeightsType::INT32:
+            return GetTypeName<int32_t>();
         default:
             return "";
     }
@@ -1498,6 +1500,8 @@ JitConstants MakeTypeJitConstants(WeightsType weightsType, const std::string& ma
             return MakeTypeJitConstants(Datatype::F16, macroName);
         case WeightsType::F32:
             return MakeTypeJitConstants(Datatype::F32, macroName);
+        case WeightsType::INT32:
+            return MakeTypeJitConstants(Datatype::INT32, macroName);
         case WeightsType::INT8:
             return MakeTypeJitConstants(Datatype::INT8, macroName);
         case WeightsType::UINT8:

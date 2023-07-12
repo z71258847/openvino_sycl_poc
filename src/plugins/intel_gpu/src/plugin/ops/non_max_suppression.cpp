@@ -5,8 +5,7 @@
 #include "intel_gpu/plugin/program.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
-#include "ngraph/op/non_max_suppression.hpp"
-#include <ngraph/opsets/opset3.hpp>
+#include "openvino/op/non_max_suppression.hpp"
 #include <ov_ops/nms_ie_internal.hpp>
 
 #include "intel_gpu/primitives/reorder.hpp"
@@ -55,8 +54,8 @@ static void CreateNonMaxSuppressionIEInternalOp(Program& p, const std::shared_pt
         for (size_t i = 0; i < num_outputs; i++) {
             auto type = op->get_output_element_type(i);
             // GPU primitive supports only i32 as output data type
-            if (type == ngraph::element::i64) {
-                type = ngraph::element::i32;
+            if (type == ov::element::i64) {
+                type = ov::element::i32;
             }
             output_data_types.push_back(cldnn::element_type_to_data_type(type));
         }
@@ -94,8 +93,8 @@ static void CreateNonMaxSuppressionIEInternalOp(Program& p, const std::shared_pt
         switch (num_outputs) {
             case 3: {
                 auto mutable_precision_second = op->get_output_element_type(2);
-                if (mutable_precision_second == ngraph::element::i64) {
-                    mutable_precision_second = ngraph::element::i32;
+                if (mutable_precision_second == ov::element::i64) {
+                    mutable_precision_second = ov::element::i32;
                 }
                 cldnn::layout mutableLayoutSecond = cldnn::layout(
                     cldnn::element_type_to_data_type(mutable_precision_second),

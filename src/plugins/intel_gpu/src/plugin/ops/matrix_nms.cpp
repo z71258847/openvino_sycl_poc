@@ -30,7 +30,7 @@ void CreateNmsStaticShapeIE8Op(Program& p, const std::shared_ptr<ov::op::interna
     std::vector<cldnn::memory::ptr> shared_memory;
 
     auto outputIndices = op->get_output_shape(0)[0];
-    cldnn::layout mutableLayoutFirst = cldnn::layout(cldnn::element_type_to_data_type(ngraph::element::i32),
+    cldnn::layout mutableLayoutFirst = cldnn::layout(cldnn::element_type_to_data_type(ov::element::i32),
                                                      cldnn::format::bfyx,
                                                      cldnn::tensor(static_cast<int32_t>(outputIndices), 1, 1, 1));
 
@@ -42,7 +42,7 @@ void CreateNmsStaticShapeIE8Op(Program& p, const std::shared_ptr<ov::op::interna
     inputs.push_back(cldnn::input_info(matrix_nms_mutable_id_w_first));
 
     auto batches_num = op->get_output_shape(2)[0];
-    cldnn::layout mutableLayoutSecond = cldnn::layout(cldnn::element_type_to_data_type(ngraph::element::i32),
+    cldnn::layout mutableLayoutSecond = cldnn::layout(cldnn::element_type_to_data_type(ov::element::i32),
                                                       cldnn::format::bfyx,
                                                       cldnn::tensor(static_cast<int32_t>(batches_num), 1, 1, 1));
 

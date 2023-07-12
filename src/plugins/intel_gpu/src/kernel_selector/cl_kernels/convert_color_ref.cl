@@ -19,22 +19,22 @@ KERNEL(convert_color_ref)(const __global INPUT0_TYPE* input1,
     const uint y = get_global_id(1);
     const uint x = get_global_id(2);
 
-    float Y = input1[GET_DATA_INDEX(INPUT0, b, 0, y, x)];
+    float Y = input1[GET_DATA_INDEX(INPUT0, b, y, x, 0)];
 
 #if INPUTS_COUNT == 3
-    float U = input2[GET_DATA_INDEX(INPUT1, b, 0, y / 2, x / 2)];
-    float V = input3[GET_DATA_INDEX(INPUT2, b, 0, y / 2, x / 2)];
+    float U = input2[GET_DATA_INDEX(INPUT1, b, y / 2, x / 2, 0)];
+    float V = input3[GET_DATA_INDEX(INPUT2, b, y / 2, x / 2, 0)];
 #elif INPUTS_COUNT == 2
-    float U = input2[GET_DATA_INDEX(INPUT1, b, 0, y / 2, x / 2)];
-    float V = input2[GET_DATA_INDEX(INPUT1, b, 1, y / 2, x / 2)];
+    float U = input2[GET_DATA_INDEX(INPUT1, b, y / 2, x / 2, 0)];
+    float V = input2[GET_DATA_INDEX(INPUT1, b, y / 2, x / 2, 1)];
 #else // Single plane
-    uint input_uv_offset = INPUT0_SIZE_X * INPUT0_SIZE_Y / 3 * 2;
+    uint input_uv_offset = INPUT0_FEATURE_NUM * INPUT0_SIZE_Y / 3 * 2;
 #ifdef CONVERT_FROM_NV12
-    float U = input1[GET_DATA_INDEX(INPUT0, b, 0, y / 2, (x / 2) * 2) + input_uv_offset];
-    float V = input1[GET_DATA_INDEX(INPUT0, b, 1, y / 2, (x / 2) * 2) + input_uv_offset];
+    float U = input1[GET_DATA_INDEX(INPUT0, b, y / 2, (x / 2) * 2, 0) + input_uv_offset];
+    float V = input1[GET_DATA_INDEX(INPUT0, b, y / 2, (x / 2) * 2, 1) + input_uv_offset];
 #else
-    float U = input1[GET_DATA_INDEX(INPUT0, b, 0, 0, x / 2 + (y / 2)*(INPUT0_Y_PITCH / 2)) + input_uv_offset];
-    float V = input1[GET_DATA_INDEX(INPUT0, b, 0, 0, x / 2 + (y / 2)*(INPUT0_Y_PITCH / 2)) + 5 * input_uv_offset / 4];
+    float U = input1[GET_DATA_INDEX(INPUT0, b, 0, x / 2 + (y / 2)*(INPUT0_FEATURE_PITCH / 2), 0) + input_uv_offset];
+    float V = input1[GET_DATA_INDEX(INPUT0, b, 0, x / 2 + (y / 2)*(INPUT0_FEATURE_PITCH / 2), 0) + 5 * input_uv_offset / 4];
 #endif
 #endif
 
@@ -53,13 +53,13 @@ KERNEL(convert_color_ref)(const __global INPUT0_TYPE* input1,
 #endif
 
 #ifdef CONVERT_TO_RGB
-    output[OUTPUT_GET_INDEX(b, 0, y, x)] = ACTIVATION(TO_OUTPUT_TYPE(R), ACTIVATION_PARAMS);
-    output[OUTPUT_GET_INDEX(b, 1, y, x)] = ACTIVATION(TO_OUTPUT_TYPE(G), ACTIVATION_PARAMS);
-    output[OUTPUT_GET_INDEX(b, 2, y, x)] = ACTIVATION(TO_OUTPUT_TYPE(B), ACTIVATION_PARAMS);
+    output[OUTPUT_GET_INDEX(b, y, x, 0)] = ACTIVATION(TO_OUTPUT_TYPE(R), ACTIVATION_PARAMS);
+    output[OUTPUT_GET_INDEX(b, y, x, 1)] = ACTIVATION(TO_OUTPUT_TYPE(G), ACTIVATION_PARAMS);
+    output[OUTPUT_GET_INDEX(b, y, x, 2)] = ACTIVATION(TO_OUTPUT_TYPE(B), ACTIVATION_PARAMS);
 #else // BGR
-    output[OUTPUT_GET_INDEX(b, 0, y, x)] = ACTIVATION(TO_OUTPUT_TYPE(B), ACTIVATION_PARAMS);
-    output[OUTPUT_GET_INDEX(b, 1, y, x)] = ACTIVATION(TO_OUTPUT_TYPE(G), ACTIVATION_PARAMS);
-    output[OUTPUT_GET_INDEX(b, 2, y, x)] = ACTIVATION(TO_OUTPUT_TYPE(R), ACTIVATION_PARAMS);
+    output[OUTPUT_GET_INDEX(b, y, x, 0)] = ACTIVATION(TO_OUTPUT_TYPE(B), ACTIVATION_PARAMS);
+    output[OUTPUT_GET_INDEX(b, y, x, 1)] = ACTIVATION(TO_OUTPUT_TYPE(G), ACTIVATION_PARAMS);
+    output[OUTPUT_GET_INDEX(b, y, x, 2)] = ACTIVATION(TO_OUTPUT_TYPE(R), ACTIVATION_PARAMS);
 #endif
 }
 #endif
@@ -110,13 +110,13 @@ KERNEL(convert_color_ref)(read_only image2d_t input1,
 #endif
 
 #ifdef CONVERT_TO_RGB
-    output[OUTPUT_GET_INDEX(b, 0, y, x)] = ACTIVATION(TO_OUTPUT_TYPE(R), ACTIVATION_PARAMS);
-    output[OUTPUT_GET_INDEX(b, 1, y, x)] = ACTIVATION(TO_OUTPUT_TYPE(G), ACTIVATION_PARAMS);
-    output[OUTPUT_GET_INDEX(b, 2, y, x)] = ACTIVATION(TO_OUTPUT_TYPE(B), ACTIVATION_PARAMS);
+    output[OUTPUT_GET_INDEX(b, y, x, 0)] = ACTIVATION(TO_OUTPUT_TYPE(R), ACTIVATION_PARAMS);
+    output[OUTPUT_GET_INDEX(b, y, x, 1)] = ACTIVATION(TO_OUTPUT_TYPE(G), ACTIVATION_PARAMS);
+    output[OUTPUT_GET_INDEX(b, y, x, 2)] = ACTIVATION(TO_OUTPUT_TYPE(B), ACTIVATION_PARAMS);
 #else // BGR
-    output[OUTPUT_GET_INDEX(b, 0, y, x)] = ACTIVATION(TO_OUTPUT_TYPE(B), ACTIVATION_PARAMS);
-    output[OUTPUT_GET_INDEX(b, 1, y, x)] = ACTIVATION(TO_OUTPUT_TYPE(G), ACTIVATION_PARAMS);
-    output[OUTPUT_GET_INDEX(b, 2, y, x)] = ACTIVATION(TO_OUTPUT_TYPE(R), ACTIVATION_PARAMS);
+    output[OUTPUT_GET_INDEX(b, y, x, 0)] = ACTIVATION(TO_OUTPUT_TYPE(B), ACTIVATION_PARAMS);
+    output[OUTPUT_GET_INDEX(b, y, x, 1)] = ACTIVATION(TO_OUTPUT_TYPE(G), ACTIVATION_PARAMS);
+    output[OUTPUT_GET_INDEX(b, y, x, 2)] = ACTIVATION(TO_OUTPUT_TYPE(R), ACTIVATION_PARAMS);
 #endif
 }
 #endif

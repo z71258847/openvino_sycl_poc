@@ -93,8 +93,6 @@ std::vector<std::string> disabledTestPatterns() {
             R"(.*CompileModelCacheTestBase.*ConvBias.*)",
             R"(.*CompileModelCacheTestBase.*KSOFunction.*)",
             R"(.*LoadNetworkCacheTestBase.*)",
-            // Issue: 83014
-            R"(.*smoke_RemoteBlob.*canInferOnUserQueue.*)",
             // Issue: CVS-76980
             R"(.*smoke_Auto_BehaviorTests.*InferDynamicNetwork/.*)",
             // Issue: CVS-86976
@@ -143,5 +141,18 @@ std::vector<std::string> disabledTestPatterns() {
             // Plugin version was changed to ov::Version
             R"(.*VersionTest.*pluginCurrentVersionIsCorrect.*)",
 #endif
+            // New plugin work with tensors, so it means that blob in old API can have different pointers
+            R"(.*InferRequestIOBBlobTest.*secondCallGetInputDoNotReAllocateData.*)",
+            R"(.*InferRequestIOBBlobTest.*secondCallGetOutputDoNotReAllocateData.*)",
+            R"(.*InferRequestIOBBlobTest.*secondCallGetInputAfterInferSync.*)",
+            R"(.*InferRequestIOBBlobTest.*secondCallGetOutputAfterInferSync.*)",
+            // Old API cannot deallocate tensor
+            R"(.*InferRequestIOBBlobTest.*canProcessDeallocatedOutputBlobAfterGetAndSetBlob.*)",
+            // Issue: 113704 - Layout information maybe incorrect when covert tensor to blob
+            R"(.*smoke_.*BehaviorTests/InferRequestPreprocessConversionTest.*NHWC.*)",
+            // LPT bug
+            R"(.*smoke_.*MoveFakeQuantizeTransformation.*)",
+            // Dynamic state unsupported for now
+            R"(.*MemoryDynamicBatch.*)",
     };
 }

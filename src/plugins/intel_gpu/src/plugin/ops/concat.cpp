@@ -5,14 +5,14 @@
 #include "intel_gpu/plugin/program.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
-#include "ngraph/op/concat.hpp"
+#include "openvino/op/concat.hpp"
 
 #include "intel_gpu/primitives/concatenation.hpp"
 
 namespace ov {
 namespace intel_gpu {
 
-static void CreateConcatOp(Program& p, const std::shared_ptr<ngraph::op::v0::Concat>& op) {
+static void CreateConcatOp(Program& p, const std::shared_ptr<ov::op::v0::Concat>& op) {
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
     int64_t axis = op->get_axis();

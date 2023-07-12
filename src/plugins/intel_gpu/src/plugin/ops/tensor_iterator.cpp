@@ -8,9 +8,9 @@
 
 #include <cpp/ie_cnn_network.h>
 
-#include "ngraph/op/tensor_iterator.hpp"
-#include "ngraph/op/constant.hpp"
-#include "ngraph/op/util/sub_graph_base.hpp"
+#include "openvino/op/tensor_iterator.hpp"
+#include "openvino/op/constant.hpp"
+#include "openvino/op/util/sub_graph_base.hpp"
 
 #include "intel_gpu/primitives/loop.hpp"
 #include "intel_gpu/primitives/mutable_data.hpp"
@@ -21,7 +21,7 @@
 #include <vector>
 #include <algorithm>
 
-using TensorIterator = ngraph::op::v0::TensorIterator;
+using TensorIterator = ov::op::v0::TensorIterator;
 
 namespace ov {
 namespace intel_gpu {
@@ -34,7 +34,7 @@ static DATA_TYPE CreateScalarData(Program &p, const cldnn::primitive_id& id, int
     return {id, mem};
 }
 
-static cldnn::mutable_data CreateAdditionalOutputData(Program &p, const std::shared_ptr<ngraph::Node>& op,
+static cldnn::mutable_data CreateAdditionalOutputData(Program &p, const std::shared_ptr<ov::Node>& op,
                                             const cldnn::primitive_id& id, const cldnn::primitive_id& input,
                                             const int32_t output_idx) {
     const auto precision = cldnn::element_type_to_data_type(op->get_output_element_type(output_idx));
@@ -49,9 +49,7 @@ static cldnn::mutable_data CreateAdditionalOutputData(Program &p, const std::sha
 static void CreateTensorIteratorOp(Program &p, const std::shared_ptr<TensorIterator> &op) {
     auto inputs = p.GetInputInfo(op);
 
-    // get body topology from ngraph function
-    InferenceEngine::CNNNetwork body_network(op->get_body());
-    Program body_program(body_network, p.get_engine(), p.get_config(), true);
+    Program body_program(op->get_body(), p.get_engine(), p.get_config(), true);
     auto body_topology = *body_program.GetTopology();
 
     // setup input_primitive_maps/ output_primitive_maps and back_edges
@@ -93,11 +91,10 @@ static void CreateTensorIteratorOp(Program &p, const std::shared_ptr<TensorItera
             cldnn::primitive_id from_id = layer_type_name_ID(from);
 
             // reset output data type because the data types of the outputs of the
-            // body topology are always FP32 regardless of ngraph data type
+            // body topology are always FP32 regardless of element type
             {
                 const auto from_prim = body_topology.at(from_id);
-                const auto& to_ngraph_type = to->get_element_type();
-                const auto to_cldnn_type = cldnn::element_type_to_data_type(to_ngraph_type);
+                const auto to_cldnn_type = cldnn::element_type_to_data_type(to->get_element_type());
                 from_prim->output_data_types = {to_cldnn_type};
             }
             back_edges.emplace_back(from_id, to_id);

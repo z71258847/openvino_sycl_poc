@@ -175,6 +175,8 @@ kernel_selector::weights_type to_weights_type(data_types dt) {
             return kernel_selector::weights_type::F16;
         case cldnn::data_types::f32:
             return kernel_selector::weights_type::F32;
+        case cldnn::data_types::i32:
+            return kernel_selector::weights_type::INT32;
         default:
             assert(0);
             return kernel_selector::weights_type::F16;
