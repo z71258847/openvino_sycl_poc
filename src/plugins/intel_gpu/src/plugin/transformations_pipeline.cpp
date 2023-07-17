@@ -47,6 +47,7 @@
 #include <transformations/common_optimizations/softmax_fusion.hpp>
 #include <transformations/common_optimizations/broadcast_transition.hpp>
 
+#include <transformations/op_conversions/convert_slice_to_strided_slice.hpp>
 #include <transformations/op_conversions/convert_depth_to_space.hpp>
 #include <transformations/op_conversions/convert_space_to_depth.hpp>
 #include <transformations/op_conversions/convert_gelu.hpp>
@@ -90,6 +91,7 @@
 #include <transformations/convert_precision.hpp>
 #include <transformations/init_node_info.hpp>
 #include <transformations/rt_info/fused_names_attribute.hpp>
+#include <transformations/rt_info/is_shape_subgraph.hpp>
 #include <transformations/op_conversions/convert_shapeof3.hpp>
 
 #include <transformations/low_precision/mark_dequantization_subgraph.hpp>
@@ -258,6 +260,9 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
         // disable conversion to legacy and use the new mixed precision
         // in which precision sensitive nodes are kept in FP32
         pass_config->disable<ov::pass::ConvertCompressedOnlyToLegacy>();
+        pass_config->set_callback<ov::pass::SliceToStridedSlice>([](const_node_ptr &node) {
+            return !node->is_dynamic();
+        });
 
         // SpaceToDepth/DepthToSpace node implementation supports only equal input/output tensors with rank <= 5
         pass_config->set_callback<ov::pass::ConvertSpaceToDepth,

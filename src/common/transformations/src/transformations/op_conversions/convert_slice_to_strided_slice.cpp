@@ -68,7 +68,7 @@ ov::pass::SliceToStridedSlice::SliceToStridedSlice(bool use_shapes) {
     auto slice = pattern::wrap_type<ov::op::v8::Slice>();
     matcher_pass_callback callback = [=](pattern::Matcher& m) {
         auto slice_node = std::dynamic_pointer_cast<ov::op::v8::Slice>(m.get_match_root());
-        if (!slice_node)
+        if (!slice_node || transformation_callback(slice_node))
             return false;
 
         if (slice_node->get_input_size() < 4)

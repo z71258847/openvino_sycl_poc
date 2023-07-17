@@ -19,11 +19,17 @@ namespace {
 static void CreateSliceOp(Program& p, const std::shared_ptr<ngraph::op::v8::Slice>& op) {
     validate_inputs_count(op, { 4, 5 });
     auto inputs = p.GetInputInfo(op);
-    auto output_shape = tensor_from_dims(op->get_output_shape(0));
-    auto slice_prim = cldnn::slice(layer_type_name_ID(op),
-                                   inputs,
-                                   output_shape);
-    p.add_primitive(*op, slice_prim);
+    if (p.use_new_shape_infer()) {
+        auto slice_prim = cldnn::slice(layer_type_name_ID(op), inputs);
+        p.add_primitive(*op, slice_prim);
+    } else {
+        auto output_shape = tensor_from_dims(op->get_output_shape(0));
+        auto slice_prim = cldnn::slice(layer_type_name_ID(op),
+                                       inputs,
+                                       output_shape);
+        p.add_primitive(*op, slice_prim);
+
+    }
 }
 
 } // namespace

@@ -12,6 +12,7 @@
 #include "intel_gpu/primitives/shape_of.hpp"
 #include "intel_gpu/primitives/concatenation.hpp"
 #include "intel_gpu/primitives/gather.hpp"
+#include "intel_gpu/primitives/slice.hpp"
 #include "intel_gpu/primitives/strided_slice.hpp"
 #include "intel_gpu/primitives/range.hpp"
 #include "intel_gpu/primitives/scatter_update.hpp"
@@ -42,6 +43,7 @@ REGISTER_CPU(detection_output);
 REGISTER_CPU(shape_of);
 REGISTER_CPU(concatenation);
 REGISTER_CPU(gather);
+REGISTER_CPU(slice);
 REGISTER_CPU(strided_slice);
 REGISTER_CPU(range);
 REGISTER_CPU(scatter_update);

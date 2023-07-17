@@ -19,6 +19,7 @@ void register_implementations() {
     REGISTER_CPU(shape_of);
     REGISTER_CPU(concatenation);
     REGISTER_CPU(gather);
+    REGISTER_CPU(slice);
     REGISTER_CPU(strided_slice);
     REGISTER_CPU(range);
     REGISTER_CPU(scatter_update);
