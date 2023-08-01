@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 #include "openvino/op/assign.hpp"
 #include "openvino/op/read_value.hpp"
@@ -15,7 +15,7 @@ namespace intel_gpu {
 
 namespace {
 template<typename T_PRIMITIVE>
-void CreateVariableAccessPrimitive(Program &p, const std::shared_ptr<ov::op::Op> &op,
+void CreateVariableAccessPrimitive(ProgramBuilder &p, const std::shared_ptr<ov::op::Op> &op,
                                    const std::string &variable_id) {
     validate_inputs_count(op, {1});
 
@@ -36,19 +36,19 @@ void CreateVariableAccessPrimitive(Program &p, const std::shared_ptr<ov::op::Op>
     p.add_primitive(*op, prim);
 }
 
-void CreateReadValueOp(Program& p, const std::shared_ptr<ov::op::v3::ReadValue>& op) {
+void CreateReadValueOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v3::ReadValue>& op) {
     CreateVariableAccessPrimitive<cldnn::read_value>(p, op, op->get_variable_id());
 }
 
-void CreateAssignOp(Program& p, const std::shared_ptr<ov::op::v3::Assign>& op) {
+void CreateAssignOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v3::Assign>& op) {
     CreateVariableAccessPrimitive<cldnn::assign>(p, op, op->get_variable_id());
 }
 
-void CreateReadValueOp(Program& p, const std::shared_ptr<ov::op::v6::ReadValue>& op) {
+void CreateReadValueOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v6::ReadValue>& op) {
     CreateVariableAccessPrimitive<cldnn::read_value>(p, op, op->get_variable_id());
 }
 
-void CreateAssignOp(Program& p, const std::shared_ptr<ov::op::v6::Assign>& op) {
+void CreateAssignOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v6::Assign>& op) {
     CreateVariableAccessPrimitive<cldnn::assign>(p, op, op->get_variable_id());
 }
 

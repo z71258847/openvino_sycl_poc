@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/fake_quantize.hpp"
@@ -12,7 +12,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateFakeQuantizeOp(Program& p, const std::shared_ptr<ov::op::v0::FakeQuantize>& op) {
+static void CreateFakeQuantizeOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::FakeQuantize>& op) {
     validate_inputs_count(op, {5});
     std::string layerName = layer_type_name_ID(op);
     auto inputs = p.GetInputInfo(op);

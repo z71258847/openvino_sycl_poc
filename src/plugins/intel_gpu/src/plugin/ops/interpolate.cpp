@@ -6,7 +6,7 @@
 #include "openvino/op/interpolate.hpp"
 #include "openvino/op/constant.hpp"
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 #include "intel_gpu/primitives/resample.hpp"
 #include <optional>
@@ -70,7 +70,7 @@ static void ValidateAxesAndThrowIfError(const std::shared_ptr<ov::op::util::Inte
     }
 }
 
-static void CreateInterpolateOp(Program& p, const std::shared_ptr<ov::op::v4::Interpolate>& op) {
+static void CreateInterpolateOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v4::Interpolate>& op) {
     validate_inputs_count(op, {3, 4});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
@@ -148,7 +148,7 @@ static void CreateInterpolateOp(Program& p, const std::shared_ptr<ov::op::v4::In
     p.add_primitive(*op, resamplePrim);
 }
 
-static void CreateInterpolateOp(Program& p, const std::shared_ptr<ov::op::v11::Interpolate>& op) {
+static void CreateInterpolateOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v11::Interpolate>& op) {
     validate_inputs_count(op, {2, 3});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);

@@ -5,14 +5,14 @@
 #include "openvino/core/validation_util.hpp"
 #include "openvino/op/shuffle_channels.hpp"
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 #include "intel_gpu/primitives/shuffle_channels.hpp"
 
 namespace ov {
 namespace intel_gpu {
 
-static void CreateShuffleChannelsOp(Program& p, const std::shared_ptr<ov::op::v0::ShuffleChannels>& op) {
+static void CreateShuffleChannelsOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::ShuffleChannels>& op) {
     validate_inputs_count(op, {1, 2});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/ctc_greedy_decoder.hpp"
@@ -18,7 +18,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateCommonCTCGreedyDecoderOp(Program& p, const std::shared_ptr<ov::Node>& op, bool ctc_merge_repeated) {
+static void CreateCommonCTCGreedyDecoderOp(ProgramBuilder& p, const std::shared_ptr<ov::Node>& op, bool ctc_merge_repeated) {
     validate_inputs_count(op, {2, 3});
     auto inputs = p.GetInputInfo(op);
 
@@ -30,7 +30,7 @@ static void CreateCommonCTCGreedyDecoderOp(Program& p, const std::shared_ptr<ov:
         if (inputDataType == cldnn::data_types::i64) {
             // GPU primitive supports only i32 data type for 'sequence_length' and 'blank_index' inputs
             // so we need additional reorder if it's provided as i64
-            auto reorderPrimName = inputs[portIndex].pid + "_" + op->get_friendly_name() + Program::m_preProcessTag;
+            auto reorderPrimName = inputs[portIndex].pid + "_" + op->get_friendly_name() + ProgramBuilder::m_preProcessTag;
             auto targetFormat = cldnn::format::get_default_format(op->get_input_shape(portIndex).size());
             auto preprocessPrim = cldnn::reorder(reorderPrimName,
                                                  inputs[portIndex],
@@ -107,11 +107,11 @@ static void CreateCommonCTCGreedyDecoderOp(Program& p, const std::shared_ptr<ov:
     }
 }
 
-static void CreateCTCGreedyDecoderOp(Program& p, const std::shared_ptr<ov::op::v0::CTCGreedyDecoder>& op) {
+static void CreateCTCGreedyDecoderOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::CTCGreedyDecoder>& op) {
     CreateCommonCTCGreedyDecoderOp(p, op, op->get_ctc_merge_repeated());
 }
 
-static void CreateCTCGreedyDecoderSeqLenOp(Program& p, const std::shared_ptr<ov::op::v6::CTCGreedyDecoderSeqLen>& op) {
+static void CreateCTCGreedyDecoderSeqLenOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v6::CTCGreedyDecoderSeqLen>& op) {
     CreateCommonCTCGreedyDecoderOp(p, op, op->get_merge_repeated());
 }
 

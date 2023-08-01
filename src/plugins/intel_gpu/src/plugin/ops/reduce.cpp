@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/reduce_sum.hpp"
@@ -23,7 +23,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateReduceOp(Program& p, const std::shared_ptr<ov::Node>& op, cldnn::reduce_mode mode, bool keep_dims) {
+static void CreateReduceOp(ProgramBuilder& p, const std::shared_ptr<ov::Node>& op, cldnn::reduce_mode mode, bool keep_dims) {
     validate_inputs_count(op, {2});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
@@ -94,39 +94,39 @@ static void CreateReduceOp(Program& p, const std::shared_ptr<ov::Node>& op, cldn
     }
 }
 
-static void CreateReduceMaxOp(Program& p, const std::shared_ptr<ov::op::v1::ReduceMax>& op) {
+static void CreateReduceMaxOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::ReduceMax>& op) {
     CreateReduceOp(p, op, cldnn::reduce_mode::max, op->get_keep_dims());
 }
 
-static void CreateReduceLogicalAndOp(Program& p, const std::shared_ptr<ov::op::v1::ReduceLogicalAnd>& op) {
+static void CreateReduceLogicalAndOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::ReduceLogicalAnd>& op) {
     CreateReduceOp(p, op, cldnn::reduce_mode::logical_and, op->get_keep_dims());
 }
 
-static void CreateReduceLogicalOrOp(Program& p, const std::shared_ptr<ov::op::v1::ReduceLogicalOr>& op) {
+static void CreateReduceLogicalOrOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::ReduceLogicalOr>& op) {
     CreateReduceOp(p, op, cldnn::reduce_mode::logical_or, op->get_keep_dims());
 }
 
-static void CreateReduceMeanOp(Program& p, const std::shared_ptr<ov::op::v1::ReduceMean>& op) {
+static void CreateReduceMeanOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::ReduceMean>& op) {
     CreateReduceOp(p, op, cldnn::reduce_mode::mean, op->get_keep_dims());
 }
 
-static void CreateReduceMinOp(Program& p, const std::shared_ptr<ov::op::v1::ReduceMin>& op) {
+static void CreateReduceMinOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::ReduceMin>& op) {
     CreateReduceOp(p, op, cldnn::reduce_mode::min, op->get_keep_dims());
 }
 
-static void CreateReduceProdOp(Program& p, const std::shared_ptr<ov::op::v1::ReduceProd>& op) {
+static void CreateReduceProdOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::ReduceProd>& op) {
     CreateReduceOp(p, op, cldnn::reduce_mode::prod, op->get_keep_dims());
 }
 
-static void CreateReduceSumOp(Program& p, const std::shared_ptr<ov::op::v1::ReduceSum>& op) {
+static void CreateReduceSumOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::ReduceSum>& op) {
     CreateReduceOp(p, op, cldnn::reduce_mode::sum, op->get_keep_dims());
 }
 
-static void CreateReduceL1Op(Program& p, const std::shared_ptr<ov::op::v4::ReduceL1>& op) {
+static void CreateReduceL1Op(ProgramBuilder& p, const std::shared_ptr<ov::op::v4::ReduceL1>& op) {
     CreateReduceOp(p, op, cldnn::reduce_mode::l1, op->get_keep_dims());
 }
 
-static void CreateReduceL2Op(Program& p, const std::shared_ptr<ov::op::v4::ReduceL2>& op) {
+static void CreateReduceL2Op(ProgramBuilder& p, const std::shared_ptr<ov::op::v4::ReduceL2>& op) {
     CreateReduceOp(p, op, cldnn::reduce_mode::l2, op->get_keep_dims());
 }
 

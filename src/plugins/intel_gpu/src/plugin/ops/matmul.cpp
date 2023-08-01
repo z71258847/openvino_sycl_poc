@@ -4,7 +4,7 @@
 
 #include <array>
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/matmul.hpp"
@@ -71,7 +71,7 @@ static std::tuple<bool, PartialShape, PartialShape> get_aligned_shapes(const Par
     return {true, shape_a_aligned, shape_b_aligned};
 }
 
-static void CreateMatMulOp(Program& p, const std::shared_ptr<ov::op::v0::MatMul>& op) {
+static void CreateMatMulOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::MatMul>& op) {
     validate_inputs_count(op, {2});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
@@ -208,7 +208,7 @@ static void CreateMatMulOp(Program& p, const std::shared_ptr<ov::op::v0::MatMul>
             return (in0_large && in1_large) || needs_to_transpose_inputs;
         };
 
-        auto transposeInput = [] (Program& p, const std::shared_ptr<ov::Node>& op, const ov::PartialShape& shape,
+        auto transposeInput = [] (ProgramBuilder& p, const std::shared_ptr<ov::Node>& op, const ov::PartialShape& shape,
                                   const std::string& suffix, const cldnn::primitive_id& primitiveId) -> cldnn::input_info {
             std::vector<uint16_t> transposeOrder(shape.size());
             std::iota(transposeOrder.begin(), transposeOrder.end(), 0);

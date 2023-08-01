@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/experimental_detectron_generate_proposals.hpp"
@@ -14,7 +14,7 @@ namespace ov {
 namespace intel_gpu {
 
 static void CreateExperimentalDetectronGenerateProposalsSingleImageOp(
-        Program& p,
+        ProgramBuilder& p,
         const std::shared_ptr<ov::op::v6::ExperimentalDetectronGenerateProposalsSingleImage>& op) {
     validate_inputs_count(op, {4});
     if (op->get_output_size() != 2) {

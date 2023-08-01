@@ -6,7 +6,7 @@
 #include <memory>
 
 #include "intel_gpu/plugin/common_utils.hpp"
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/primitives/roi_align.hpp"
 
 namespace ov {
@@ -37,7 +37,7 @@ cldnn::roi_align::AlignedMode from(ov::op::v9::ROIAlign::AlignedMode mode) {
     }
 }
 
-void CreateROIAlignOp(Program& p, const std::shared_ptr<ov::op::v3::ROIAlign>& op) {
+void CreateROIAlignOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v3::ROIAlign>& op) {
     validate_inputs_count(op, {3});
     auto roi_align_prim = cldnn::roi_align(layer_type_name_ID(op),
                                            p.GetInputInfo(op),
@@ -50,7 +50,7 @@ void CreateROIAlignOp(Program& p, const std::shared_ptr<ov::op::v3::ROIAlign>& o
     p.add_primitive(*op, roi_align_prim);
 }
 
-void CreateROIAlignOp(Program& p, const std::shared_ptr<ov::op::v9::ROIAlign>& op) {
+void CreateROIAlignOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v9::ROIAlign>& op) {
     validate_inputs_count(op, {3});
     auto roi_align_prim = cldnn::roi_align(layer_type_name_ID(op),
                                            p.GetInputInfo(op),

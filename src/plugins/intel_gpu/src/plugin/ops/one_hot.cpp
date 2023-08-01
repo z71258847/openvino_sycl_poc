@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 #include "transformations/utils/utils.hpp"
 
@@ -13,7 +13,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateOneHotOp(Program& p, const std::shared_ptr<ov::op::v1::OneHot>& op) {
+static void CreateOneHotOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::OneHot>& op) {
     validate_inputs_count(op, {4});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);

@@ -5,7 +5,7 @@
 #include "openvino/op/experimental_detectron_detection_output.hpp"
 
 #include "intel_gpu/plugin/common_utils.hpp"
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/primitives/experimental_detectron_detection_output.hpp"
 #include "intel_gpu/primitives/mutable_data.hpp"
 
@@ -13,7 +13,7 @@ namespace ov {
 namespace intel_gpu {
 
 static void CreateExperimentalDetectronDetectionOutputOp(
-    Program& p,
+    ProgramBuilder& p,
     const std::shared_ptr<ov::op::v6::ExperimentalDetectronDetectionOutput>& op) {
     validate_inputs_count(op, {4});
 

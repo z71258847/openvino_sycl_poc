@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/embedding_segments_sum.hpp"
@@ -17,7 +17,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateEmbeddingBagOffsetsSumOp(Program& p, const std::shared_ptr<ov::op::v3::EmbeddingBagOffsetsSum>& op) {
+static void CreateEmbeddingBagOffsetsSumOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v3::EmbeddingBagOffsetsSum>& op) {
     validate_inputs_count(op, {3, 4, 5});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
@@ -43,7 +43,7 @@ static void CreateEmbeddingBagOffsetsSumOp(Program& p, const std::shared_ptr<ov:
         if (((portIndex == 1) || (portIndex == 2)) && (inputDataType == cldnn::data_types::i64)) {
             // GPU primitive supports only i32 data type for indices inputs,
             // so we need additional reorders if they are provided as i64
-            auto reorderPrimName = inputs[portIndex].pid + "_" + op->get_friendly_name() + Program::m_preProcessTag;
+            auto reorderPrimName = inputs[portIndex].pid + "_" + op->get_friendly_name() + ProgramBuilder::m_preProcessTag;
             auto targetFormat = cldnn::format::get_default_format(op->get_input_shape(portIndex).size());
             auto preprocessPrim = cldnn::reorder(reorderPrimName,
                                                  inputs[portIndex],
@@ -65,7 +65,7 @@ static void CreateEmbeddingBagOffsetsSumOp(Program& p, const std::shared_ptr<ov:
     p.add_primitive(*op, embeddingBagPrim);
 }
 
-static void CreateEmbeddingBagPackedSumOp(Program& p, const std::shared_ptr<ov::op::v3::EmbeddingBagPackedSum>& op) {
+static void CreateEmbeddingBagPackedSumOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v3::EmbeddingBagPackedSum>& op) {
     validate_inputs_count(op, {2, 3});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
@@ -78,7 +78,7 @@ static void CreateEmbeddingBagPackedSumOp(Program& p, const std::shared_ptr<ov::
         if ((portIndex == 1) && (inputDataType == cldnn::data_types::i64)) {
             // GPU primitive supports only i32 data type for indices input,
             // so we need additional reorder if it's provided as i64
-            auto reorderPrimName = inputs[portIndex].pid + "_" + op->get_friendly_name() + Program::m_preProcessTag;
+            auto reorderPrimName = inputs[portIndex].pid + "_" + op->get_friendly_name() + ProgramBuilder::m_preProcessTag;
             auto targetFormat = cldnn::format::get_default_format(op->get_input_shape(portIndex).size());
             auto preprocessPrim = cldnn::reorder(reorderPrimName,
                                                  inputs[portIndex],
@@ -100,7 +100,7 @@ static void CreateEmbeddingBagPackedSumOp(Program& p, const std::shared_ptr<ov::
     p.add_primitive(*op, embeddingBagPrim);
 }
 
-static void CreateEmbeddingSegmentsSumOp(Program& p, const std::shared_ptr<ov::op::v3::EmbeddingSegmentsSum>& op) {
+static void CreateEmbeddingSegmentsSumOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v3::EmbeddingSegmentsSum>& op) {
     validate_inputs_count(op, {4, 5, 6});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
@@ -129,7 +129,7 @@ static void CreateEmbeddingSegmentsSumOp(Program& p, const std::shared_ptr<ov::o
         if (((portIndex == 1) || (portIndex == 2)) && (inputDataType == cldnn::data_types::i64)) {
             // GPU primitive supports only i32 data type for indices inputs,
             // so we need additional reorders if they are provided as i64
-            auto reorderPrimName = inputs[portIndex].pid + "_" + op->get_friendly_name() + Program::m_preProcessTag;
+            auto reorderPrimName = inputs[portIndex].pid + "_" + op->get_friendly_name() + ProgramBuilder::m_preProcessTag;
             auto targetFormat = cldnn::format::get_default_format(op->get_input_shape(portIndex).size());
             auto preprocessPrim = cldnn::reorder(reorderPrimName,
                                                  inputs[portIndex],

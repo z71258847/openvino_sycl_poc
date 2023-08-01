@@ -4,10 +4,8 @@
 
 #pragma once
 
-#include <ie_layouts.h>
 #include "intel_gpu/runtime/layout.hpp"
 #include "openvino/core/layout.hpp"
-#include "openvino/core/deprecated.hpp"
 #include "openvino/core/type/element_type.hpp"
 
 namespace ov {

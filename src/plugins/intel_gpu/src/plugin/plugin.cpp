@@ -261,7 +261,7 @@ ov::SupportedOpsMap Plugin::query_model(const std::shared_ptr<const ov::Model>& 
     config.set_user_property(preprocess_config(orig_config));
     config.apply_user_properties(ctx->get_engine().get_device_info());
 
-    Program prog(ctx->get_engine(), config);
+    ProgramBuilder prog(ctx->get_engine(), config);
 
     auto supported = ov::get_supported_nodes(model,
         [&config,this](std::shared_ptr<ov::Model>& model) {
@@ -682,7 +682,7 @@ uint32_t Plugin::get_max_batch_size(const ov::AnyMap& options) const {
 
     auto& engine = get_default_context(device_id)->get_engine();
 
-    std::shared_ptr<Program> program;
+    std::shared_ptr<ProgramBuilder> program;
 
     GPU_DEBUG_IF(debug_config->base_batch_for_memory_estimation > 0) {
         size_t user_specified_base_batch_size = debug_config->base_batch_for_memory_estimation;
@@ -742,7 +742,7 @@ uint32_t Plugin::get_max_batch_size(const ov::AnyMap& options) const {
 
         TransformationsPipeline transformations(config, device_info);
         transformations.apply(cloned_model);
-        program = std::make_shared<Program>(cloned_model, engine, config, false, true);
+        program = std::make_shared<ProgramBuilder>(cloned_model, engine, config, false, true);
         std::pair<int64_t, int64_t> device_memory_usage = program->get_compiled_program()->get_estimated_device_mem_usage();
         if (device_memory_usage.first == static_cast<int64_t>(-1L) && device_memory_usage.second == static_cast<int64_t>(-1L)) {
             return static_cast<uint32_t>(max_batch_size);

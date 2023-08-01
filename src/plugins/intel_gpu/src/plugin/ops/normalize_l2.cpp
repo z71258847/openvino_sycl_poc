@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/normalize_l2.hpp"
@@ -14,7 +14,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateNormalizeL2Op(Program& p, const std::shared_ptr<ov::op::v0::NormalizeL2>& op) {
+static void CreateNormalizeL2Op(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::NormalizeL2>& op) {
     validate_inputs_count(op, {2});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);

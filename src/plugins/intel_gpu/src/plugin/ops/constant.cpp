@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/constant.hpp"
@@ -68,9 +68,9 @@ struct ConstProperties {
     bool hasGroupDimension;
 };
 
-static void createClDnnConstant(Program& p, const ov::Shape& constDims, const std::shared_ptr<ov::op::v0::Constant>& op, const ConstProperties& props);
+static void createClDnnConstant(ProgramBuilder& p, const ov::Shape& constDims, const std::shared_ptr<ov::op::v0::Constant>& op, const ConstProperties& props);
 
-static void CreateConstantOp(Program& p, const std::shared_ptr<ov::op::v0::Constant>& op) {
+static void CreateConstantOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Constant>& op) {
     ov::Shape constDims = op->get_shape();
     auto constUsers = op->get_output_target_inputs(0);
     size_t numConstUsers = constUsers.size();
@@ -188,7 +188,7 @@ static void CreateConstantOp(Program& p, const std::shared_ptr<ov::op::v0::Const
     }
 }
 
-void createClDnnConstant(Program& p, const ov::Shape& constDims, const std::shared_ptr<ov::op::v0::Constant>& op, const ConstProperties& props) {
+void createClDnnConstant(ProgramBuilder& p, const ov::Shape& constDims, const std::shared_ptr<ov::op::v0::Constant>& op, const ConstProperties& props) {
     cldnn::tensor constTensor = getConstTensor(constDims);
     auto constFormat = cldnn::format::get_default_format(constDims.size());
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/depth_to_space.hpp"
@@ -23,7 +23,7 @@ static cldnn::depth_to_space_mode GetDepthMode(ov::op::v0::DepthToSpace::DepthTo
     return cldnn::depth_to_space_mode::blocks_first;
 }
 
-static void CreateDepthToSpaceOp(Program& p, const std::shared_ptr<ov::op::v0::DepthToSpace>& op) {
+static void CreateDepthToSpaceOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::DepthToSpace>& op) {
     validate_inputs_count(op, {1});
     auto inputPrimitives = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);

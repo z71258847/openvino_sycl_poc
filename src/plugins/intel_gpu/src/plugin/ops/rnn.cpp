@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/lstm_cell.hpp"
@@ -61,7 +61,7 @@ void GetLSTMActivationParams(const std::shared_ptr<T>& op,
     }
 }
 
-static void CreateLSTMCellOp(Program& p, const std::shared_ptr<ov::op::v4::LSTMCell>& op) {
+static void CreateLSTMCellOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v4::LSTMCell>& op) {
     validate_inputs_count(op, {6});
     int lstm_batch_size, lstm_input_size, lstm_hidden_size;
     auto inputs = p.GetInputInfo(op);
@@ -156,7 +156,7 @@ static void CreateLSTMCellOp(Program& p, const std::shared_ptr<ov::op::v4::LSTMC
     p.add_primitive(*op, cldnn::reshape(outputCellID, cldnn::input_info(outputCellCropID), outSz));
 }
 
-static void CreateLSTMSequenceOp(Program& p, const std::shared_ptr<ov::op::v5::LSTMSequence>& op) {
+static void CreateLSTMSequenceOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v5::LSTMSequence>& op) {
     validate_inputs_count(op, {7});
 
     std::string layerName = layer_type_name_ID(op);

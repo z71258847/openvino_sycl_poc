@@ -12,7 +12,7 @@
 #include "intel_gpu/graph/topology.hpp"
 #include "intel_gpu/plugin/custom_layer.hpp"
 #include "intel_gpu/plugin/remote_context.hpp"
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 
 #include <vector>
 #include <map>
@@ -50,7 +50,7 @@ public:
     cldnn::engine& get_engine() const { return m_context->get_engine(); }
     const ExecutionConfig& get_config() const { return m_config; }
 
-    const std::map<std::string, cldnn::layout>& get_input_layouts() const { return m_program->get_input_layouts(); }
+    const std::map<std::string, cldnn::layout>& get_input_layouts() const { return m_input_layouts; }
     std::shared_ptr<cldnn::network> get_network() const;
 
     std::string out_name_to_internal(std::string out_port_name) const;
@@ -76,10 +76,9 @@ public:
 
 private:
     RemoteContextImpl::Ptr m_context;
-    std::shared_ptr<Program> m_program;
     ExecutionConfig m_config;
     uint16_t m_stream_id;
-    uint32_t m_state;
+    uint32_t m_state = 0;
     std::condition_variable m_cv;
     std::mutex m_infer_mutex;
 
@@ -90,9 +89,9 @@ private:
     std::map<cldnn::primitive_id, std::pair<std::string, PerfCounter>> perfMap;
     std::vector<cldnn::primitive_id> profilingIDs;
 
-    std::shared_ptr<cldnn::network> build_network(std::shared_ptr<cldnn::program> program);
-    void build();
-    void update_layers_map();
+    std::map<std::string, cldnn::layout> m_input_layouts;
+
+    void build(std::shared_ptr<cldnn::program> program);
     std::shared_ptr<ov::Model> get_runtime_model(std::vector<cldnn::primitive_info>& pi, bool filter_const_primitives = true);
 };
 

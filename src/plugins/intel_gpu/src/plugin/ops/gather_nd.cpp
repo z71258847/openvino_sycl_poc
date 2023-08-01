@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/gather_nd.hpp"
@@ -13,7 +13,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateGatherNDOp(Program& p, const std::shared_ptr<ov::op::v5::GatherND>& op) {
+static void CreateGatherNDOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v5::GatherND>& op) {
     validate_inputs_count(op, {2});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
@@ -34,7 +34,7 @@ static void CreateGatherNDOp(Program& p, const std::shared_ptr<ov::op::v5::Gathe
 
 REGISTER_FACTORY_IMPL(v5, GatherND);
 
-static void CreateGatherNDOp(Program& p, const std::shared_ptr<ov::op::v8::GatherND>& op) {
+static void CreateGatherNDOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v8::GatherND>& op) {
     validate_inputs_count(op, { 2 });
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);

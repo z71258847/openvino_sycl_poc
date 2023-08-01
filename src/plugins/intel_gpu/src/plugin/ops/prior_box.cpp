@@ -6,14 +6,14 @@
 #include "openvino/op/prior_box_clustered.hpp"
 #include "openvino/op/constant.hpp"
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 #include "intel_gpu/primitives/prior_box.hpp"
 
 namespace ov {
 namespace intel_gpu {
 
-static void CreatePriorBoxClusteredOp(Program& p, const std::shared_ptr<ov::op::v0::PriorBoxClustered>& op) {
+static void CreatePriorBoxClusteredOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::PriorBoxClustered>& op) {
     OPENVINO_ASSERT(false, "[GPU] PriorBoxClustered op is not supported in GPU plugin yet.");
     validate_inputs_count(op, {2});
     auto inputs = p.GetInputInfo(op);
@@ -86,7 +86,7 @@ static void CreatePriorBoxClusteredOp(Program& p, const std::shared_ptr<ov::op::
     }
 }
 
-static void CreatePriorBoxOp(Program& p, const std::shared_ptr<ov::op::v0::PriorBox>& op) {
+static void CreatePriorBoxOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::PriorBox>& op) {
     validate_inputs_count(op, {2});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
@@ -161,7 +161,7 @@ static void CreatePriorBoxOp(Program& p, const std::shared_ptr<ov::op::v0::Prior
     }
 }
 
-static void CreatePriorBoxOp(Program& p, const std::shared_ptr<ov::op::v8::PriorBox>& op) {
+static void CreatePriorBoxOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v8::PriorBox>& op) {
     validate_inputs_count(op, {2});
     const auto inputs = p.GetInputInfo(op);
     std::string layer_name = layer_type_name_ID(op);

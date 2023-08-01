@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 #include "transformations/utils/utils.hpp"
 
@@ -17,7 +17,7 @@ namespace ov {
 namespace intel_gpu {
 
 template <typename T>
-void CreateGatherOpBase(Program& p, const std::shared_ptr<T>& op, const int64_t batch_dim = 0, bool support_neg_ind = false) {
+void CreateGatherOpBase(ProgramBuilder& p, const std::shared_ptr<T>& op, const int64_t batch_dim = 0, bool support_neg_ind = false) {
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
 
@@ -31,7 +31,7 @@ void CreateGatherOpBase(Program& p, const std::shared_ptr<T>& op, const int64_t 
         if (inputDataType == cldnn::data_types::i64) {
             // GPU primitive does not support i64 inputs,
             // so we need additional reorders to convert them to i32
-            auto reorderPrimName = inputs[portIndex].pid + "_" + op->get_friendly_name() + Program::m_preProcessTag;
+            auto reorderPrimName = inputs[portIndex].pid + "_" + op->get_friendly_name() + ProgramBuilder::m_preProcessTag;
             auto targetFormat = cldnn::format::get_default_format(op->get_input_partial_shape(portIndex).size());
             auto preprocessPrim = cldnn::reorder(reorderPrimName,
                                                  inputs[portIndex],
@@ -146,21 +146,21 @@ void CreateGatherOpBase(Program& p, const std::shared_ptr<T>& op, const int64_t 
     }
 }
 
-static void CreateGatherOp(Program& p, const std::shared_ptr<ov::op::v1::Gather>& op) {
+static void CreateGatherOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::Gather>& op) {
     validate_inputs_count(op, {2, 3});
     CreateGatherOpBase<ov::op::v1::Gather>(p, op);
 }
 
 REGISTER_FACTORY_IMPL(v1, Gather);
 
-static void CreateGatherOp(Program& p, const std::shared_ptr<ov::op::v7::Gather>& op) {
+static void CreateGatherOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v7::Gather>& op) {
     validate_inputs_count(op, {2, 3, 4});
     CreateGatherOpBase<ov::op::v7::Gather>(p, op, op->get_batch_dims());
 }
 
 REGISTER_FACTORY_IMPL(v7, Gather);
 
-static void CreateGatherOp(Program& p, const std::shared_ptr<ov::op::v8::Gather>& op) {
+static void CreateGatherOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v8::Gather>& op) {
     validate_inputs_count(op, {2, 3, 4});
     CreateGatherOpBase<ov::op::v8::Gather>(p, op, op->get_batch_dims(), true);
 }

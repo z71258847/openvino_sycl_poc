@@ -8,14 +8,14 @@
 #include "openvino/op/i420_to_rgb.hpp"
 #include "openvino/op/i420_to_bgr.hpp"
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 #include "intel_gpu/primitives/reorder.hpp"
 
 namespace ov {
 namespace intel_gpu {
 
-static void CreateResultOp(Program& p, const std::shared_ptr<ov::op::v0::Result>& op) {
+static void CreateResultOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Result>& op) {
     validate_inputs_count(op, {1});
 
     auto prev = op->get_input_node_shared_ptr(0);

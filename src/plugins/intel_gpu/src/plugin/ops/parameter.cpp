@@ -9,7 +9,7 @@
 #include "openvino/op/i420_to_rgb.hpp"
 #include "openvino/op/i420_to_bgr.hpp"
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "intel_gpu/primitives/input_layout.hpp"
@@ -20,12 +20,10 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateParameterOp(Program& p, const std::shared_ptr<ov::op::v0::Parameter>& op) {
+static void CreateParameterOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Parameter>& op) {
     auto input_pshape = op->get_partial_shape();
-    if (!p.use_new_shape_infer()) {
-        if (input_pshape.size() < 4) {
-            input_pshape.insert(input_pshape.end(), 4 - input_pshape.size(), ov::Dimension(1));
-        }
+    if (!p.use_new_shape_infer() && input_pshape.size() < 4) {
+        input_pshape.insert(input_pshape.end(), 4 - input_pshape.size(), ov::Dimension(1));
     }
 
     cldnn::format input_format = cldnn::format::get_default_format(input_pshape.size());
@@ -87,25 +85,24 @@ static void CreateParameterOp(Program& p, const std::shared_ptr<ov::op::v0::Para
             auto reorder_layout = input_layout;
             reorder_layout.format = cldnn::format::bfyx;
 
-            auto reorder_name = "reorder:" + input_name + Program::m_preProcessTag + suffix;
+            auto reorder_name = "reorder:" + input_name + ProgramBuilder::m_preProcessTag + suffix;
             auto reorder = cldnn::reorder(reorder_name,
                                           cldnn::input_info(batched_name),
                                           reorder_layout);
             reorder.input_mem_type = cldnn::reorder::memory_type::surface;
             p.add_primitive(*op, reorder);
-            surfaces_inputs.push_back(cldnn::input_info(reorder_name));
+            surfaces_inputs.emplace_back(reorder_name);
         }
 
         if (batch > 1 && !is_convert_color_input)
             p.add_primitive(*op, cldnn::concatenation(input_name, surfaces_inputs, 0));
         else
-            p.primitive_ids[input_name] = "reorder:" + input_name + Program::m_preProcessTag;
+            p.primitive_ids[input_name] = "reorder:" + input_name + ProgramBuilder::m_preProcessTag;
     } else {
-        auto reorder_name = "reorder:" + input_name + Program::m_preProcessTag;
+        auto reorder_name = "reorder:" + input_name + ProgramBuilder::m_preProcessTag;
         p.inputLayouts.insert({ op->get_friendly_name(), input_layout });
 
         p.add_primitive(*op, cldnn::input_layout(input_name, input_layout));
-        p.add_primitive(*op, cldnn::reorder(reorder_name, cldnn::input_info(input_name), input_layout), {input_name});
     }
 }
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/concat.hpp"
@@ -12,7 +12,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateConcatOp(Program& p, const std::shared_ptr<ov::op::v0::Concat>& op) {
+static void CreateConcatOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Concat>& op) {
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
     int64_t axis = op->get_axis();

@@ -1,7 +1,7 @@
 // Copyright (C) 2018-2023 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 #include "intel_gpu/plugin/plugin.hpp"
 
@@ -25,14 +25,14 @@ namespace ov {
 namespace intel_gpu {
 
 template<class DATA_TYPE>
-static DATA_TYPE CreateScalarData(Program &p, const cldnn::primitive_id& id, int64_t num) {
+static DATA_TYPE CreateScalarData(ProgramBuilder &p, const cldnn::primitive_id& id, int64_t num) {
     auto mem = p.get_engine().allocate_memory({ cldnn::data_types::i64, cldnn::format::bfyx, { 1, 1, 1, 1 } });
     cldnn::mem_lock<int64_t> ptr{mem, p.get_engine().get_service_stream()};
     *ptr.begin() = num;
     return {id, mem};
 }
 
-static cldnn::mutable_data CreateAdditionalOutputData(Program &p, const std::shared_ptr<ov::Node>& op,
+static cldnn::mutable_data CreateAdditionalOutputData(ProgramBuilder &p, const std::shared_ptr<ov::Node>& op,
                                                         const cldnn::primitive_id& id, const cldnn::primitive_id& input,
                                                         const int32_t output_idx) {
     const auto precision = cldnn::element_type_to_data_type(op->get_output_element_type(output_idx));
@@ -44,7 +44,7 @@ static cldnn::mutable_data CreateAdditionalOutputData(Program &p, const std::sha
     return md;
 }
 
-static void CreateLoopOp(Program& p, const std::shared_ptr<Loop>& op) {
+static void CreateLoopOp(ProgramBuilder& p, const std::shared_ptr<Loop>& op) {
     const std::string layerName = layer_type_name_ID(op);
     auto inputs = p.GetInputInfo(op);
     const auto& loop_input_descs = op->get_input_descriptions();
@@ -69,7 +69,7 @@ static void CreateLoopOp(Program& p, const std::shared_ptr<Loop>& op) {
     }
 
     // get body topology from ov::Model
-    Program body_program(op->get_function(), p.get_engine(), p.get_config(), true);
+    ProgramBuilder body_program(op->get_function(), p.get_engine(), p.get_config(), true);
     auto body_topology = *body_program.GetTopology();
 
     // setup input_primitive_maps/ output_primitive_maps and back_edges

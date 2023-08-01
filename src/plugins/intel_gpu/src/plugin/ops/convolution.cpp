@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/convolution.hpp"
@@ -22,7 +22,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateGroupConvolutionOp(Program& p, const std::shared_ptr<ov::op::v1::GroupConvolution>& op) {
+static void CreateGroupConvolutionOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::GroupConvolution>& op) {
     validate_inputs_count(op, {2});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
@@ -61,7 +61,7 @@ static void CreateGroupConvolutionOp(Program& p, const std::shared_ptr<ov::op::v
     p.add_primitive(*op, convPrim);
 }
 
-static void CreateConvolutionOp(Program& p, const std::shared_ptr<ov::op::v1::Convolution>& op) {
+static void CreateConvolutionOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::Convolution>& op) {
     validate_inputs_count(op, {2});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
@@ -99,7 +99,7 @@ static void CreateConvolutionOp(Program& p, const std::shared_ptr<ov::op::v1::Co
     p.add_primitive(*op, convPrim);
 }
 
-static void CreateConvolutionBackpropDataOp(Program& p, const std::shared_ptr<ov::op::v1::ConvolutionBackpropData>& op) {
+static void CreateConvolutionBackpropDataOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::ConvolutionBackpropData>& op) {
     // 3rd input is an optional output shape
     validate_inputs_count(op, {2, 3});
     auto inputs = p.GetInputInfo(op);
@@ -187,7 +187,7 @@ static void CreateConvolutionBackpropDataOp(Program& p, const std::shared_ptr<ov
     }
 }
 
-static void CreateGroupConvolutionBackpropDataOp(Program& p, const std::shared_ptr<ov::op::v1::GroupConvolutionBackpropData>& op) {
+static void CreateGroupConvolutionBackpropDataOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::GroupConvolutionBackpropData>& op) {
     // 3rd input is an optional output shape
     validate_inputs_count(op, {2, 3});
     auto inputs = p.GetInputInfo(op);
@@ -278,7 +278,7 @@ static void CreateGroupConvolutionBackpropDataOp(Program& p, const std::shared_p
     }
 }
 
-static void DeformableConvolutionImpl(Program& p,
+static void DeformableConvolutionImpl(ProgramBuilder& p,
                                       const std::shared_ptr<ov::Node>& op,
                                       const int64_t groups,
                                       const ov::Strides& strides,
@@ -351,7 +351,7 @@ static void DeformableConvolutionImpl(Program& p,
     }
 }
 
-static void CreateDeformableConvolutionOp(Program& p, const std::shared_ptr<ov::op::v1::DeformableConvolution>& op) {
+static void CreateDeformableConvolutionOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::DeformableConvolution>& op) {
     validate_inputs_count(op, {3});
     auto strides = op->get_strides();
     auto pads_begin = op->get_pads_begin();
@@ -365,7 +365,7 @@ static void CreateDeformableConvolutionOp(Program& p, const std::shared_ptr<ov::
     DeformableConvolutionImpl(p, op, op->get_group(), strides, dilations, pads_begin, op->get_deformable_group());
 }
 
-static void CreateDeformableConvolutionOp(Program& p, const std::shared_ptr<ov::op::v8::DeformableConvolution>& op) {
+static void CreateDeformableConvolutionOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v8::DeformableConvolution>& op) {
     validate_inputs_count(op, {3, 4});
     auto strides = op->get_strides();
     auto pads_begin = op->get_pads_begin();
@@ -386,7 +386,7 @@ static void CreateDeformableConvolutionOp(Program& p, const std::shared_ptr<ov::
                               op->get_bilinear_interpolation_pad());
 }
 
-static void CreateBinaryConvolutionOp(Program& p, const std::shared_ptr<ov::op::v1::BinaryConvolution>& op) {
+static void CreateBinaryConvolutionOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::BinaryConvolution>& op) {
     validate_inputs_count(op, {2});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);

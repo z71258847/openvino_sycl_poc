@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "transformations/utils/utils.hpp"
 
 #include "openvino/op/tanh.hpp"
@@ -46,7 +46,7 @@
 namespace ov {
 namespace intel_gpu {
 
-void CreateUnaryEltwiseOp(Program& p, const std::shared_ptr<ov::Node>& op,
+void CreateUnaryEltwiseOp(ProgramBuilder& p, const std::shared_ptr<ov::Node>& op,
                           cldnn::activation_func func, cldnn::activation_additional_params params) {
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
@@ -54,24 +54,24 @@ void CreateUnaryEltwiseOp(Program& p, const std::shared_ptr<ov::Node>& op,
     p.add_primitive(*op, activationPrimitive);
 }
 
-static void CreateTanhOp(Program& p, const std::shared_ptr<ov::op::v0::Tanh>& op) {
+static void CreateTanhOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Tanh>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::hyperbolic_tan, {});
 }
 
-static void CreateEluOp(Program& p, const std::shared_ptr<ov::op::v0::Elu>& op) {
+static void CreateEluOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Elu>& op) {
     auto alpha = static_cast<float>(op->get_alpha());
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::elu, {alpha});
 }
 
-static void CreateSigmoidOp(Program& p, const std::shared_ptr<ov::op::v0::Sigmoid>& op) {
+static void CreateSigmoidOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Sigmoid>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::logistic, {});
 }
 
-static void CreateReluOp(Program& p, const std::shared_ptr<ov::op::v0::Relu>& op) {
+static void CreateReluOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Relu>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::relu, {});
 }
 
-static void CreatePReluOp(Program& p, const std::shared_ptr<ov::op::v0::PRelu>& op) {
+static void CreatePReluOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::PRelu>& op) {
     validate_inputs_count(op, {2});
 
     auto slope_node = std::dynamic_pointer_cast<ov::op::v0::Constant>(op->get_input_node_shared_ptr(1));
@@ -94,7 +94,7 @@ static void CreatePReluOp(Program& p, const std::shared_ptr<ov::op::v0::PRelu>& 
     }
 }
 
-static void CreateClampOp(Program& p, const std::shared_ptr<ov::op::v0::Clamp>& op) {
+static void CreateClampOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Clamp>& op) {
     double min = op->get_min();
     double max = op->get_max();
     if (op->get_output_element_type(0) == ov::element::i32) {
@@ -109,59 +109,59 @@ static void CreateClampOp(Program& p, const std::shared_ptr<ov::op::v0::Clamp>& 
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::clamp, {static_cast<float>(min), static_cast<float>(max)});
 }
 
-static void CreateExpOp(Program& p, const std::shared_ptr<ov::op::v0::Exp>& op) {
+static void CreateExpOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Exp>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::exp, {});
 }
 
-static void CreateLogicalNotOp(Program& p, const std::shared_ptr<ov::op::v1::LogicalNot>& op) {
+static void CreateLogicalNotOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::LogicalNot>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::negation, {});
 }
 
-static void CreateAsinOp(Program& p, const std::shared_ptr<ov::op::v0::Asin>& op) {
+static void CreateAsinOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Asin>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::asin, {});
 }
 
-static void CreateAsinhOp(Program& p, const std::shared_ptr<ov::op::v3::Asinh>& op) {
+static void CreateAsinhOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v3::Asinh>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::asinh, {});
 }
 
-static void CreateAcosOp(Program& p, const std::shared_ptr<ov::op::v0::Acos>& op) {
+static void CreateAcosOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Acos>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::acos, {});
 }
 
-static void CreateAcoshOp(Program& p, const std::shared_ptr<ov::op::v3::Acosh>& op) {
+static void CreateAcoshOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v3::Acosh>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::acosh, {});
 }
 
-static void CreateAtanOp(Program& p, const std::shared_ptr<ov::op::v0::Atan>& op) {
+static void CreateAtanOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Atan>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::atan, {});
 }
 
-static void CreateAtanhOp(Program& p, const std::shared_ptr<ov::op::v3::Atanh>& op) {
+static void CreateAtanhOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v3::Atanh>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::atanh, {});
 }
 
-static void CreateAbsOp(Program& p, const std::shared_ptr<ov::op::v0::Abs>& op) {
+static void CreateAbsOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Abs>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::abs, {});
 }
 
-static void CreateFloorOp(Program& p, const std::shared_ptr<ov::op::v0::Floor>& op) {
+static void CreateFloorOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Floor>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::floor, {});
 }
 
-static void CreateCeilingOp(Program& p, const std::shared_ptr<ov::op::v0::Ceiling>& op) {
+static void CreateCeilingOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Ceiling>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::ceil, {});
 }
 
-static void CreateSqrtOp(Program& p, const std::shared_ptr<ov::op::v0::Sqrt>& op) {
+static void CreateSqrtOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Sqrt>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::sqrt, {});
 }
 
-static void CreateErfOp(Program& p, const std::shared_ptr<ov::op::v0::Erf>& op) {
+static void CreateErfOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Erf>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::erf, {});
 }
 
-static void CreateHardSigmoidOp(Program& p, const std::shared_ptr<ov::op::v0::HardSigmoid>& op) {
+static void CreateHardSigmoidOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::HardSigmoid>& op) {
     validate_inputs_count(op, {3});
     auto alpha_node = std::dynamic_pointer_cast<ov::op::v0::Constant>(op->get_input_node_shared_ptr(1));
     auto beta_node = std::dynamic_pointer_cast<ov::op::v0::Constant>(op->get_input_node_shared_ptr(2));
@@ -179,15 +179,15 @@ static void CreateHardSigmoidOp(Program& p, const std::shared_ptr<ov::op::v0::Ha
     }
 }
 
-static void CreateLogOp(Program& p, const std::shared_ptr<ov::op::v0::Log>& op) {
+static void CreateLogOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Log>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::log, {});
 }
 
-static void CreateNegativeOp(Program& p, const std::shared_ptr<ov::op::v0::Negative>& op) {
+static void CreateNegativeOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Negative>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::negative, {});
 }
 
-static void CreateSeluOp(Program& p, const std::shared_ptr<ov::op::v0::Selu>& op) {
+static void CreateSeluOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Selu>& op) {
     validate_inputs_count(op, {3});
     auto alpha_node = std::dynamic_pointer_cast<ov::op::v0::Constant>(op->get_input_node_shared_ptr(1));
     auto lambda_node = std::dynamic_pointer_cast<ov::op::v0::Constant>(op->get_input_node_shared_ptr(2));
@@ -207,31 +207,31 @@ static void CreateSeluOp(Program& p, const std::shared_ptr<ov::op::v0::Selu>& op
     }
 }
 
-static void CreateSoftPlusOp(Program& p, const std::shared_ptr<ov::op::v4::SoftPlus>& op) {
+static void CreateSoftPlusOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v4::SoftPlus>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::softplus, {});
 }
 
-static void CreateTanOp(Program& p, const std::shared_ptr<ov::op::v0::Tan>& op) {
+static void CreateTanOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Tan>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::tan, {});
 }
 
-static void CreateSinOp(Program& p, const std::shared_ptr<ov::op::v0::Sin>& op) {
+static void CreateSinOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Sin>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::sin, {});
 }
 
-static void CreateSinhOp(Program& p, const std::shared_ptr<ov::op::v0::Sinh>& op) {
+static void CreateSinhOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Sinh>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::sinh, {});
 }
 
-static void CreateCosOp(Program& p, const std::shared_ptr<ov::op::v0::Cos>& op) {
+static void CreateCosOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Cos>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::cos, {});
 }
 
-static void CreateCoshOp(Program& p, const std::shared_ptr<ov::op::v0::Cosh>& op) {
+static void CreateCoshOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Cosh>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::cosh, {});
 }
 
-static void CreateSwishOp(Program& p, const std::shared_ptr<ov::op::v4::Swish>& op) {
+static void CreateSwishOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v4::Swish>& op) {
     validate_inputs_count(op, {1, 2});
     if (op->get_input_size() == 2) {
         auto beta_node = std::dynamic_pointer_cast<ov::op::v0::Constant>(op->get_input_node_shared_ptr(1));
@@ -253,38 +253,38 @@ static void CreateSwishOp(Program& p, const std::shared_ptr<ov::op::v4::Swish>& 
     }
 }
 
-static void CreateHSwishOp(Program& p, const std::shared_ptr<ov::op::v4::HSwish>& op) {
+static void CreateHSwishOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v4::HSwish>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::hswish, {});
 }
 
-static void CreateMishOp(Program& p, const std::shared_ptr<ov::op::v4::Mish>& op) {
+static void CreateMishOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v4::Mish>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::mish, {});
 }
 
-static void CreateGeluOp(Program& p, const std::shared_ptr<ov::op::v7::Gelu>& op) {
+static void CreateGeluOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v7::Gelu>& op) {
     cldnn::activation_func activationFunc =
             op->get_approximation_mode() == op::GeluApproximationMode::ERF ? cldnn::activation_func::gelu
                                                                            : cldnn::activation_func::gelu_tanh;
     CreateUnaryEltwiseOp(p, op, activationFunc, {});
 }
 
-static void CreateSoftSignOp(Program& p, const std::shared_ptr<ov::op::v9::SoftSign>& op) {
+static void CreateSoftSignOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v9::SoftSign>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::softsign, {});
 }
 
-static void CreateGeluOp(Program &p, const std::shared_ptr<ov::op::v0::Gelu>& op) {
+static void CreateGeluOp(ProgramBuilder &p, const std::shared_ptr<ov::op::v0::Gelu>& op) {
     CreateUnaryEltwiseOp(p, op,  cldnn::activation_func::gelu, {});
 }
 
-static void CreateSignOp(Program& p, const std::shared_ptr<ov::op::v0::Sign>& op) {
+static void CreateSignOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Sign>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::sign, {});
 }
 
-static void CreateHSigmoidOp(Program& p, const std::shared_ptr<ov::op::v5::HSigmoid>& op) {
+static void CreateHSigmoidOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v5::HSigmoid>& op) {
     CreateUnaryEltwiseOp(p, op, cldnn::activation_func::hsigmoid, {});
 }
 
-static void CreateRoundOp(Program& p, const std::shared_ptr<ov::op::v5::Round>& op) {
+static void CreateRoundOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v5::Round>& op) {
     auto func = cldnn::activation_func::none;
     switch (op->get_mode()) {
         case ov::op::v5::Round::RoundMode::HALF_TO_EVEN : func = cldnn::activation_func::round_half_to_even; break;

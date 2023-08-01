@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/roi_pooling.hpp"
@@ -25,7 +25,7 @@ static cldnn::pooling_mode GetPoolingMode(std::string method) {
         return cldnn::pooling_mode::deformable_bilinear;
 }
 
-static void CreateDeformablePSROIPoolingOp(Program& p, const std::shared_ptr<ov::op::v1::DeformablePSROIPooling>& op) {
+static void CreateDeformablePSROIPoolingOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::DeformablePSROIPooling>& op) {
     validate_inputs_count(op, {2, 3});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
@@ -62,7 +62,7 @@ static void CreateDeformablePSROIPoolingOp(Program& p, const std::shared_ptr<ov:
     p.add_primitive(*op, psROIPoolingPrim);
 }
 
-static void CreatePSROIPoolingOp(Program& p, const std::shared_ptr<ov::op::v0::PSROIPooling>& op) {
+static void CreatePSROIPoolingOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::PSROIPooling>& op) {
     validate_inputs_count(op, {2});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
@@ -89,7 +89,7 @@ static void CreatePSROIPoolingOp(Program& p, const std::shared_ptr<ov::op::v0::P
     p.add_primitive(*op, psROIPoolingPrim);
 }
 
-static void CreateROIPoolingOp(Program& p, const std::shared_ptr<ov::op::v0::ROIPooling>& op) {
+static void CreateROIPoolingOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::ROIPooling>& op) {
     validate_inputs_count(op, {2});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);

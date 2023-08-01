@@ -7,14 +7,14 @@
 
 #include "intel_gpu/primitives/roll.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 
 namespace ov {
 namespace intel_gpu {
 
 namespace {
 
-void CreateRollOp(Program& p, const std::shared_ptr<ov::op::v7::Roll>& op) {
+void CreateRollOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v7::Roll>& op) {
     validate_inputs_count(op, {3});
 
     const auto inputs = p.GetInputInfo(op);

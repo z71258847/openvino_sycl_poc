@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "intel_gpu/plugin/common_utils.hpp"
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/primitives/eye.hpp"
 #include "intel_gpu/runtime/layout.hpp"
 
@@ -17,7 +17,7 @@ namespace intel_gpu {
 
 namespace {
 
-static void CreateEyeOp(Program& p, const std::shared_ptr<ov::op::v9::Eye>& op) {
+static void CreateEyeOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v9::Eye>& op) {
     validate_inputs_count(op, {3, 4});
 
     const ov::Shape& output_shapes = op->get_output_shape(0);

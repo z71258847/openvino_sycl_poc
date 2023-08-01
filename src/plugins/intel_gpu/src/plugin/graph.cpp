@@ -38,19 +38,23 @@ namespace intel_gpu {
 Graph::Graph(std::shared_ptr<ov::Model> model, RemoteContextImpl::Ptr context, const ExecutionConfig& config, uint16_t stream_id)
     : m_context(context)
     , m_config(config)
-    , m_stream_id(stream_id)
-    , m_state(0) {
-    m_program = std::make_shared<Program>(model, get_engine(), config, false, false);
-    m_config = m_program->get_config();
-    build();
+    , m_stream_id(stream_id) {
+    auto program_builder = std::make_shared<ProgramBuilder>(model, get_engine(), config, false, false);
+    m_config = program_builder->get_config();
+
+    build(program_builder->get_compiled_program());
+
+    primitiveIDs = program_builder->primitive_ids;
+    prevPrimitiveIDs = program_builder->prevPrimitiveIDs;
+    profilingIDs = program_builder->profiling_ids;
+    perfMap = program_builder->perfMap;
+    m_input_layouts = program_builder->get_input_layouts();
 }
 
 Graph::Graph(cldnn::BinaryInputBuffer &ib, RemoteContextImpl::Ptr context, const ExecutionConfig& config, uint16_t stream_id)
     : m_context(context)
     , m_config(config)
-    , m_stream_id(stream_id)
-    , m_state(0) {
-    m_program = std::make_shared<Program>(get_engine(), config);
+    , m_stream_id(stream_id) {
     bool need_onednn_engine = false;
     ib >> need_onednn_engine;
     if (need_onednn_engine) {
@@ -61,12 +65,7 @@ Graph::Graph(cldnn::BinaryInputBuffer &ib, RemoteContextImpl::Ptr context, const
 #endif  // ENABLE_ONEDNN_FOR_GPU
     }
 
-    ib >> m_program->inputLayouts;
-    Program::variables_state_info_map variablesStateInfoMap;
-    ib >> variablesStateInfoMap;
-    for (const auto& variablesStateInfo : variablesStateInfoMap) {
-        m_program->AddVariableStateInfo(variablesStateInfo.first, *variablesStateInfo.second.begin());
-    }
+    ib >> m_input_layouts;
     ib >> primitiveIDs;
     ib >> prevPrimitiveIDs;
     ib >> profilingIDs;
@@ -91,26 +90,27 @@ Graph::Graph(cldnn::BinaryInputBuffer &ib, RemoteContextImpl::Ptr context, const
 
 Graph::Graph(std::shared_ptr<Graph> graph, uint16_t stream_id)
         : m_context(graph->m_context)
-        , m_program(graph->m_program)
         , m_config(graph->m_config)
         , m_stream_id(stream_id)
-        , m_state(0) {
-    build();
+        , primitiveIDs(graph->primitiveIDs)
+        , prevPrimitiveIDs(graph->prevPrimitiveIDs)
+        , perfMap(graph->perfMap)
+        , profilingIDs(graph->profilingIDs)
+        , m_input_layouts(graph->m_input_layouts) {
+    build(graph->get_network()->get_program());
 }
 
-void Graph::update_layers_map() {
-    OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "Graph::update_layers_map");
-    primitiveIDs = m_program->primitive_ids;
-    prevPrimitiveIDs = m_program->prevPrimitiveIDs;
-    profilingIDs = m_program->profiling_ids;
-    perfMap = m_program->perfMap;
-}
-
-void Graph::build() {
+void Graph::build(std::shared_ptr<cldnn::program> program) {
     OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "Graph::build");
-    update_layers_map();
 
-    m_network = build_network(m_program->get_compiled_program());
+    auto external_queue = m_context->get_external_queue();
+    if (external_queue) {
+        OPENVINO_ASSERT(m_config.get_property(ov::num_streams) == 1, "[GPU] Throughput streams can't be used with shared queue!");
+        const auto &engine = program->get_engine();
+        m_network = std::make_shared<cldnn::network>(program, engine.create_stream(m_config, external_queue), m_stream_id);
+    } else {
+        m_network = std::make_shared<cldnn::network>(program, m_stream_id);
+    }
 
     GPU_DEBUG_GET_INSTANCE(debug_config);
     GPU_DEBUG_IF(!debug_config->dry_run_path.empty()) {
@@ -133,22 +133,6 @@ void Graph::build() {
 
 bool Graph::use_external_queue() const {
     return m_context->get_external_queue() != nullptr;
-}
-
-std::shared_ptr<cldnn::network> Graph::build_network(std::shared_ptr<cldnn::program> program) {
-    OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "Graph::build_network");
-    std::shared_ptr<cldnn::network> network = nullptr;
-
-    auto external_queue = m_context->get_external_queue();
-    if (external_queue) {
-        OPENVINO_ASSERT(m_config.get_property(ov::num_streams) == 1, "[GPU] Throughput streams can't be used with shared queue!");
-        const auto &engine = m_program->get_engine();
-        network = std::make_shared<cldnn::network>(program, engine.create_stream(m_config, external_queue), m_stream_id);
-    } else {
-        network = std::make_shared<cldnn::network>(program, m_stream_id);
-    }
-
-    return network;
 }
 
 std::shared_ptr<ov::Model> Graph::get_runtime_model(std::vector<cldnn::primitive_info>& primitives_info, bool filter_const_primitives) {
@@ -436,7 +420,7 @@ std::shared_ptr<ov::Model> Graph::get_runtime_model(std::vector<cldnn::primitive
 }
 
 // Cache blob format:
-//     [ ov::intel_gpu::Program::inputLayouts ]
+//     [ ov::intel_gpu::ProgramBuilder::inputLayouts ]
 //     [ ov::intel_gpu::Graph::primitiveIDs ]
 //     [ cldnn::network ]
 void Graph::export_model(cldnn::BinaryOutputBuffer &ob) {
@@ -451,8 +435,7 @@ void Graph::export_model(cldnn::BinaryOutputBuffer &ob) {
 #endif  // ENABLE_ONEDNN_FOR_GPU
     ob << need_onednn_engine;
 
-    ob << m_program->inputLayouts;
-    ob << m_program->GetVariablesStatesInfo();
+    ob << m_input_layouts;
     ob << primitiveIDs;
     ob << prevPrimitiveIDs;
     ob << profilingIDs;

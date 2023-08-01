@@ -5,7 +5,7 @@
 #include "openvino/op/adaptive_max_pool.hpp"
 #include "openvino/op/adaptive_avg_pool.hpp"
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "intel_gpu/primitives/mutable_data.hpp"
@@ -14,7 +14,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateAdaptiveAvgPoolOp(Program& p, const std::shared_ptr<ov::op::v8::AdaptiveAvgPool>& op) {
+static void CreateAdaptiveAvgPoolOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v8::AdaptiveAvgPool>& op) {
     validate_inputs_count(op, {2});
 
     const auto inputs = p.GetInputInfo(op);
@@ -26,7 +26,7 @@ static void CreateAdaptiveAvgPoolOp(Program& p, const std::shared_ptr<ov::op::v8
     p.add_primitive(*op, poolPrim);
 }
 
-static void CreateAdaptiveMaxPoolOp(Program& p, const std::shared_ptr<ov::op::v8::AdaptiveMaxPool>& op) {
+static void CreateAdaptiveMaxPoolOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v8::AdaptiveMaxPool>& op) {
     validate_inputs_count(op, {2});
     OPENVINO_ASSERT(op->get_output_size() == 2, "[GPU] AdaptiveMaxPool requires 2 outputs");
 

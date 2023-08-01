@@ -7,7 +7,7 @@
 #include <openvino/opsets/opset8.hpp>
 
 #include "intel_gpu/plugin/common_utils.hpp"
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/primitives/mutable_data.hpp"
 #include "ov_ops/nms_static_shape_ie.hpp"
 
@@ -23,7 +23,7 @@ namespace ov {
 namespace intel_gpu {
 
 namespace {
-void CreateNmsStaticShapeIE8Op(Program& p, const std::shared_ptr<ov::op::internal::NmsStaticShapeIE8>& op) {
+void CreateNmsStaticShapeIE8Op(ProgramBuilder& p, const std::shared_ptr<ov::op::internal::NmsStaticShapeIE8>& op) {
     validate_inputs_count(op, {2});
     auto inputs = p.GetInputInfo(op);
 

@@ -4,7 +4,7 @@
 
 #include "openvino/op/proposal.hpp"
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 #include "intel_gpu/primitives/proposal.hpp"
 #include "intel_gpu/primitives/mutable_data.hpp"
@@ -13,7 +13,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateProposalOp(Program& p, const std::shared_ptr<ov::op::v0::Proposal>& op) {
+static void CreateProposalOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Proposal>& op) {
     validate_inputs_count(op, {3});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);

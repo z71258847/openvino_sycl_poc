@@ -6,14 +6,14 @@
 #include "openvino/op/scatter_elements_update.hpp"
 #include "openvino/op/constant.hpp"
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 #include "intel_gpu/primitives/scatter_elements_update.hpp"
 
 namespace ov {
 namespace intel_gpu {
 
-static void CreateScatterElementsUpdateOp(Program& p, const std::shared_ptr<ov::op::v3::ScatterElementsUpdate>& op) {
+static void CreateScatterElementsUpdateOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v3::ScatterElementsUpdate>& op) {
     validate_inputs_count(op, {4});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);

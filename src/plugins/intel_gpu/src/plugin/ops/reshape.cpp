@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/reshape.hpp"
@@ -16,7 +16,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateCommonReshapeOp(Program& p, const std::shared_ptr<ov::Node>& op, cldnn::reshape::reshape_mode mode, bool special_zero = false) {
+static void CreateCommonReshapeOp(ProgramBuilder& p, const std::shared_ptr<ov::Node>& op, cldnn::reshape::reshape_mode mode, bool special_zero = false) {
     validate_inputs_count(op, {1, 2});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
@@ -83,15 +83,15 @@ static void CreateCommonReshapeOp(Program& p, const std::shared_ptr<ov::Node>& o
     }
 }
 
-static void CreateReshapeOp(Program& p, const std::shared_ptr<ov::op::v1::Reshape>& op) {
+static void CreateReshapeOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::Reshape>& op) {
     CreateCommonReshapeOp(p, op, cldnn::reshape::reshape_mode::base, op->get_special_zero());
 }
 
-static void CreateSqueezeOp(Program& p, const std::shared_ptr<ov::op::v0::Squeeze>& op) {
+static void CreateSqueezeOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Squeeze>& op) {
     CreateCommonReshapeOp(p, op, cldnn::reshape::reshape_mode::squeeze);
 }
 
-static void CreateUnsqueezeOp(Program& p, const std::shared_ptr<ov::op::v0::Unsqueeze>& op) {
+static void CreateUnsqueezeOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::Unsqueeze>& op) {
     CreateCommonReshapeOp(p, op, cldnn::reshape::reshape_mode::unsqueeze);
 }
 

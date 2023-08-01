@@ -4,6 +4,10 @@
 
 #include "include/batch_headers/fetch_data.cl"
 
+
+#define IMAGE_W INPUT0_SIZE_Y
+#define IMAGE_H (INPUT0_FEATURE_NUM * 2 / 3)
+
 #if defined(CONVERT_FROM_NV12) || defined(CONVERT_FROM_I420)
 #ifdef BUFFER_MEM
 KERNEL(convert_color_ref)(const __global INPUT0_TYPE* input1,
@@ -28,10 +32,10 @@ KERNEL(convert_color_ref)(const __global INPUT0_TYPE* input1,
     float U = input2[GET_DATA_INDEX(INPUT1, b, y / 2, x / 2, 0)];
     float V = input2[GET_DATA_INDEX(INPUT1, b, y / 2, x / 2, 1)];
 #else // Single plane
-    uint input_uv_offset = INPUT0_FEATURE_NUM * INPUT0_SIZE_Y / 3 * 2;
+    uint input_uv_offset = IMAGE_W * IMAGE_H;
 #ifdef CONVERT_FROM_NV12
-    float U = input1[GET_DATA_INDEX(INPUT0, b, y / 2, (x / 2) * 2, 0) + input_uv_offset];
-    float V = input1[GET_DATA_INDEX(INPUT0, b, y / 2, (x / 2) * 2, 1) + input_uv_offset];
+    float U = input1[GET_DATA_INDEX(INPUT0, b, (y / 2), (x / 2) * 2, 0) + input_uv_offset];
+    float V = input1[GET_DATA_INDEX(INPUT0, b, (y / 2), (x / 2) * 2, 0) + input_uv_offset + 1];
 #else
     float U = input1[GET_DATA_INDEX(INPUT0, b, 0, x / 2 + (y / 2)*(INPUT0_FEATURE_PITCH / 2), 0) + input_uv_offset];
     float V = input1[GET_DATA_INDEX(INPUT0, b, 0, x / 2 + (y / 2)*(INPUT0_FEATURE_PITCH / 2), 0) + 5 * input_uv_offset / 4];
@@ -92,9 +96,8 @@ KERNEL(convert_color_ref)(read_only image2d_t input1,
     float Ucomponent = mad(UV.x, 255.0f, -128.f);
     float Vcomponent = mad(UV.y, 255.0f, -128.f);
 #else // Single plane
-    uint input_y_offset = INPUT0_SIZE_Y / 3 * 2;
-    float4 U = read_imagef(input1, (int2)((x / 2) * 2,     y / 2 + input_y_offset));
-    float4 V = read_imagef(input1, (int2)((x / 2) * 2 + 1, y / 2 + input_y_offset));
+    float4 U = read_imagef(input1, (int2)((x / 2) * 2,     y / 2 + IMAGE_H));
+    float4 V = read_imagef(input1, (int2)((x / 2) * 2 + 1, y / 2 + IMAGE_H));
     float Ucomponent = mad(U.x, 255.0f, -128.f);
     float Vcomponent = mad(V.x, 255.0f, -128.f);
 #endif

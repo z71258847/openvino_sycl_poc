@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/experimental_detectron_topkrois.hpp"
@@ -17,7 +17,7 @@ namespace {
 
 using namespace cldnn;
 
-void CreateExperimentalDetectronTopKROIsOp(Program &p,
+void CreateExperimentalDetectronTopKROIsOp(ProgramBuilder &p,
                                            const std::shared_ptr<ov::op::v6::ExperimentalDetectronTopKROIs> &op) {
     validate_inputs_count(op, {2});
     auto inputs = p.GetInputInfo(op);

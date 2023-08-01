@@ -6,7 +6,7 @@
 #include "openvino/op/cum_sum.hpp"
 #include "openvino/op/constant.hpp"
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "intel_gpu/primitives/cum_sum.hpp"
@@ -14,7 +14,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateCumSumOp(Program& p, const std::shared_ptr<ov::op::v0::CumSum>& op) {
+static void CreateCumSumOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::CumSum>& op) {
     validate_inputs_count(op, {1, 2});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);

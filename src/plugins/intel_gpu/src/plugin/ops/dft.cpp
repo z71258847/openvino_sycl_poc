@@ -10,7 +10,7 @@
 #include "openvino/core/validation_util.hpp"
 
 #include <intel_gpu/plugin/common_utils.hpp>
-#include <intel_gpu/plugin/program.hpp>
+#include "intel_gpu/plugin/program_builder.hpp"
 #include <intel_gpu/primitives/dft.hpp>
 
 namespace ov {
@@ -18,7 +18,7 @@ namespace intel_gpu {
 
 namespace {
 
-void createDft(Program& p,
+void createDft(ProgramBuilder& p,
                const std::shared_ptr<ov::Node>& op,
                cldnn::dft_direction direction,
                cldnn::dft_mode mode) {
@@ -52,19 +52,19 @@ void createDft(Program& p,
     p.add_primitive(*op, prim);
 }
 
-void CreateDFTOp(Program& p, const std::shared_ptr<ov::op::v7::DFT>& op) {
+void CreateDFTOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v7::DFT>& op) {
     createDft(p, op, cldnn::dft_direction::forward, cldnn::dft_mode::complex);
 }
 
-void CreateIDFTOp(Program& p, const std::shared_ptr<ov::op::v7::IDFT>& op) {
+void CreateIDFTOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v7::IDFT>& op) {
     createDft(p, op, cldnn::dft_direction::inverse, cldnn::dft_mode::complex);
 }
 
-void CreateRDFTOp(Program& p, const std::shared_ptr<ov::op::v9::RDFT>& op) {
+void CreateRDFTOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v9::RDFT>& op) {
     createDft(p, op, cldnn::dft_direction::forward, cldnn::dft_mode::real);
 }
 
-void CreateIRDFTOp(Program& p, const std::shared_ptr<ov::op::v9::IRDFT>& op) {
+void CreateIRDFTOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v9::IRDFT>& op) {
     createDft(p, op, cldnn::dft_direction::inverse, cldnn::dft_mode::real);
 }
 

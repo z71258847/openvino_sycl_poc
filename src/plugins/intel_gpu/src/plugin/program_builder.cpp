@@ -8,7 +8,7 @@
 #include "openvino/op/split.hpp"
 #include "openvino/op/variadic_split.hpp"
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/transformations_pipeline.hpp"
 #include "intel_gpu/runtime/itt.hpp"
 #include "intel_gpu/runtime/debug_configuration.hpp"
@@ -27,11 +27,11 @@
 namespace ov {
 namespace intel_gpu {
 
-const cldnn::primitive_id Program::m_preProcessTag("_cldnn_input_preprocess");
-const cldnn::primitive_id Program::m_preCustomLayerTag("_cldnn_custom_preprocess");
-const cldnn::primitive_id Program::m_postCustomLayerTag("_cldnn_custom_postprocess");
-Program::factories_map_t Program::factories_map = {};
-std::mutex Program::m_mutex = {};
+const cldnn::primitive_id ProgramBuilder::m_preProcessTag("_cldnn_input_preprocess");
+const cldnn::primitive_id ProgramBuilder::m_preCustomLayerTag("_cldnn_custom_preprocess");
+const cldnn::primitive_id ProgramBuilder::m_postCustomLayerTag("_cldnn_custom_postprocess");
+ProgramBuilder::factories_map_t ProgramBuilder::factories_map = {};
+std::mutex ProgramBuilder::m_mutex = {};
 
 std::string layer_type_lower(const ov::Node* op) {
     std::string layerType = op->get_type_name();
@@ -60,9 +60,9 @@ auto getParamName = [](const std::shared_ptr<ov::Node>& param) -> std::string {
         return param->get_friendly_name();
 };
 
-Program::Program(std::shared_ptr<ov::Model> model, cldnn::engine& engine, const ExecutionConfig& config,
-                 bool create_topology_only, bool partial_build,
-                 std::shared_ptr<ov::threading::IStreamsExecutor> task_executor, bool is_inner_program)
+ProgramBuilder::ProgramBuilder(std::shared_ptr<ov::Model> model, cldnn::engine& engine, const ExecutionConfig& config,
+                               bool create_topology_only, bool partial_build,
+                               std::shared_ptr<ov::threading::IStreamsExecutor> task_executor, bool is_inner_program)
     : m_config(config)
     , m_engine(engine)
     , queryMode(false)
@@ -105,22 +105,22 @@ Program::Program(std::shared_ptr<ov::Model> model, cldnn::engine& engine, const 
     m_program = build(ops, create_topology_only, partial_build, is_inner_program);
 }
 
-Program::Program(cldnn::engine& engine, const ExecutionConfig& config)
+ProgramBuilder::ProgramBuilder(cldnn::engine& engine, const ExecutionConfig& config)
         : m_config(config)
         , m_engine(engine)
         , queryMode(false) {
     m_task_executor = cldnn::program::make_task_executor(m_config);
 }
 
-std::shared_ptr<cldnn::program> Program::get_compiled_program() {
+std::shared_ptr<cldnn::program> ProgramBuilder::get_compiled_program() {
     return m_program;
 }
 
-void Program::prepare_build() {
+void ProgramBuilder::prepare_build() {
     m_topology.reset(new cldnn::topology());
 }
 
-void Program::cleanup_build() {
+void ProgramBuilder::cleanup_build() {
     m_topology.reset();
     #if defined(__unix__) && !defined(__ANDROID__)
     //  NOTE: In linux, without malloc_trim, an amount of the memory used by compilation is not being returned to system thought they are freed.
@@ -132,9 +132,9 @@ void Program::cleanup_build() {
     #endif
 }
 
-std::shared_ptr<cldnn::program> Program::build(const std::vector<std::shared_ptr<ov::Node>>& ops,
+std::shared_ptr<cldnn::program> ProgramBuilder::build(const std::vector<std::shared_ptr<ov::Node>>& ops,
                                                bool create_topology_only, bool partial_build, bool is_inner_program) {
-    OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "Program::build");
+    OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "ProgramBuilder::build");
     // In the case of inner program, allow_new_shape_infer flag is setted by outside of program.
     // So, do not check allow_new_shape_infer for inner program build
     for (const auto& op : ops) {
@@ -162,12 +162,12 @@ std::shared_ptr<cldnn::program> Program::build(const std::vector<std::shared_ptr
     if (create_topology_only) {
         return {};
     } else {
-        OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "Program::CreateProgram");
+        OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "ProgramBuilder::CreateProgram");
         cldnn::program::ptr program;
         try {
             program = cldnn::program::build_program(m_engine, *m_topology, m_config, get_task_executor());
         } catch (std::exception& e) {
-            OPENVINO_ASSERT(false, "[GPU] Program build failed!\n", e.what());
+            OPENVINO_ASSERT(false, "[GPU] ProgramBuilder build failed!\n", e.what());
         }
         cleanup_build();
 
@@ -175,8 +175,8 @@ std::shared_ptr<cldnn::program> Program::build(const std::vector<std::shared_ptr
     }
 }
 
-bool Program::is_op_supported(const std::shared_ptr<ov::Node>& op) {
-    OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "Program::is_op_supported");
+bool ProgramBuilder::is_op_supported(const std::shared_ptr<ov::Node>& op) {
+    OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "ProgramBuilder::is_op_supported");
     cldnn::topology topology;
     try {
         // Query mode disables checks that input primitives are created,
@@ -203,8 +203,8 @@ bool Program::is_op_supported(const std::shared_ptr<ov::Node>& op) {
     return true;
 }
 
-void Program::CreateSingleLayerPrimitive(cldnn::topology& topology, const std::shared_ptr<ov::Node>& op) {
-    OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "Program::CreateSingleLayerPrimitive");
+void ProgramBuilder::CreateSingleLayerPrimitive(cldnn::topology& topology, const std::shared_ptr<ov::Node>& op) {
+    OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "ProgramBuilder::CreateSingleLayerPrimitive");
     GPU_DEBUG_LOG << "Process " << "op::v" << op->get_type_info().version_id << "::" << op->get_type_name() << " operation "
                   << "(friendly_name=" << op->get_friendly_name() << ")" << std::endl;
 
@@ -233,7 +233,7 @@ void Program::CreateSingleLayerPrimitive(cldnn::topology& topology, const std::s
     }
 }
 
-std::vector<cldnn::input_info> Program::GetInputInfo(const std::shared_ptr<ov::Node>& op) const {
+std::vector<cldnn::input_info> ProgramBuilder::GetInputInfo(const std::shared_ptr<ov::Node>& op) const {
     if (!op) {
         return {};
     }
@@ -265,7 +265,7 @@ std::vector<cldnn::input_info> Program::GetInputInfo(const std::shared_ptr<ov::N
     return inputInfo;
 }
 
-void Program::init_profile_info(const cldnn::primitive& prim) {
+void ProgramBuilder::init_profile_info(const cldnn::primitive& prim) {
     perfMap[prim.id].first = prim.id;
     auto& perfEntry = perfMap[prim.id].second;
     perfEntry.layerType = prim.origin_op_type_name;
@@ -275,7 +275,7 @@ void Program::init_profile_info(const cldnn::primitive& prim) {
     perfEntry.parentPrimitive = prim.origin_op_name;
 }
 
-void Program::AddVariableStateInfo(const std::string& variable_id, const cldnn::layout& layout) {
+void ProgramBuilder::AddVariableStateInfo(const std::string& variable_id, const cldnn::layout& layout) {
     auto it = m_variablesStateInfo.find(variable_id);
     if (it != m_variablesStateInfo.end())
         it->second.insert(layout);
@@ -283,8 +283,8 @@ void Program::AddVariableStateInfo(const std::string& variable_id, const cldnn::
         m_variablesStateInfo.insert({variable_id, { layout }});
 }
 
-void Program::add_primitive(const ov::Node& op, std::shared_ptr<cldnn::primitive> prim, std::vector<std::string> aliases) {
-    OPENVINO_ASSERT(m_topology != nullptr, "[GPU] Invalid Program builder state: topology is nullptr");
+void ProgramBuilder::add_primitive(const ov::Node& op, std::shared_ptr<cldnn::primitive> prim, std::vector<std::string> aliases) {
+    OPENVINO_ASSERT(m_topology != nullptr, "[GPU] Invalid ProgramBuilder builder state: topology is nullptr");
 
     prim->origin_op_name = op.get_friendly_name();
     prim->origin_op_type_name = op.get_type_name();
@@ -316,7 +316,7 @@ void Program::add_primitive(const ov::Node& op, std::shared_ptr<cldnn::primitive
     m_topology->add_primitive(prim);
 }
 
-bool Program::requires_new_shape_infer(const ov::Node& op) const {
+bool ProgramBuilder::requires_new_shape_infer(const ov::Node& op) const {
     if (op.is_dynamic()) {
         return true;
     }

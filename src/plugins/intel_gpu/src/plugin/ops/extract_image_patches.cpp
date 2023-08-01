@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/extractimagepatches.hpp"
@@ -23,7 +23,7 @@ static inline std::string PadToString(ov::op::PadType pad) {
     return "";
 }
 
-static void CreateExtractImagePatchesOp(Program& p, const std::shared_ptr<ov::op::v3::ExtractImagePatches>& op) {
+static void CreateExtractImagePatchesOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v3::ExtractImagePatches>& op) {
     validate_inputs_count(op, {1});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/non_max_suppression.hpp"
@@ -16,7 +16,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateNonMaxSuppressionIEInternalOp(Program& p, const std::shared_ptr<ov::op::internal::NonMaxSuppressionIEInternal>& op) {
+static void CreateNonMaxSuppressionIEInternalOp(ProgramBuilder& p, const std::shared_ptr<ov::op::internal::NonMaxSuppressionIEInternal>& op) {
     validate_inputs_count(op, {2, 3, 4, 5, 6});
     auto inputs = p.GetInputInfo(op);
     std::vector<cldnn::input_info> reordered_inputs;
@@ -27,7 +27,7 @@ static void CreateNonMaxSuppressionIEInternalOp(Program& p, const std::shared_pt
         if ((portIndex == 2) && (inputDataType == cldnn::data_types::i64)) {
             // GPU primitive supports only i32 data type for 'max_output_boxes_per_class' input
             // so we need additional reorder if it's provided as i64
-            auto reorderPrimName = inputs[portIndex].pid + "_" + op->get_friendly_name() + Program::m_preProcessTag;
+            auto reorderPrimName = inputs[portIndex].pid + "_" + op->get_friendly_name() + ProgramBuilder::m_preProcessTag;
             auto targetFormat = cldnn::format::get_default_format(op->get_input_partial_shape(portIndex).size());
             auto preprocessPrim = cldnn::reorder(reorderPrimName,
                                                  inputs[portIndex],

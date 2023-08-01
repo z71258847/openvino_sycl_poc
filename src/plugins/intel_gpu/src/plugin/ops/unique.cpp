@@ -7,14 +7,14 @@
 #include "openvino/op/constant.hpp"
 
 #include "intel_gpu/primitives/unique.hpp"
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 
 namespace ov {
 namespace intel_gpu {
 
 namespace {
 
-void CreateUniqueOp(Program& p, const std::shared_ptr<ov::op::v10::Unique>& op) {
+void CreateUniqueOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v10::Unique>& op) {
     validate_inputs_count(op, {1, 2});
 
     bool flattened = true;

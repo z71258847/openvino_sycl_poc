@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/shape_of.hpp"
@@ -12,7 +12,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateShapeOfOpCommon(Program& p, const std::shared_ptr<ov::Node>& op) {
+static void CreateShapeOfOpCommon(ProgramBuilder& p, const std::shared_ptr<ov::Node>& op) {
     validate_inputs_count(op, {1, 2});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
@@ -25,11 +25,11 @@ static void CreateShapeOfOpCommon(Program& p, const std::shared_ptr<ov::Node>& o
     p.add_primitive(*op, primitive);
 }
 
-static void CreateShapeOfOp(Program& p, const std::shared_ptr<ov::op::v0::ShapeOf>& op) {
+static void CreateShapeOfOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::ShapeOf>& op) {
     CreateShapeOfOpCommon(p, op);
 }
 
-static void CreateShapeOfOp(Program& p, const std::shared_ptr<ov::op::v3::ShapeOf>& op) {
+static void CreateShapeOfOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v3::ShapeOf>& op) {
    CreateShapeOfOpCommon(p, op);
 }
 

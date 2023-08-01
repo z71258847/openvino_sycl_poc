@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/lrn.hpp"
@@ -21,7 +21,7 @@ static cldnn::lrn_norm_region GetNormRegion(std::vector<int64_t> axis_value) {
     }
 }
 
-static void CreateLRNOp(Program& p, const std::shared_ptr<ov::op::v0::LRN>& op) {
+static void CreateLRNOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::LRN>& op) {
     validate_inputs_count(op, {2});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);

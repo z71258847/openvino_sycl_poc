@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/topk.hpp"
@@ -14,7 +14,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void TopKImpl(Program& p,
+static void TopKImpl(ProgramBuilder& p,
                      const std::shared_ptr<ov::Node>& op,
                      ov::op::TopKMode mode,
                      ov::op::TopKSortType stype,
@@ -116,11 +116,11 @@ static void TopKImpl(Program& p,
     }
 }
 
-static void CreateTopKOp(Program& p, const std::shared_ptr<ov::op::v1::TopK>& op) {
+static void CreateTopKOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::TopK>& op) {
     TopKImpl(p, op, op->get_mode(), op->get_sort_type(), static_cast<uint32_t>(op->get_k()), op->get_axis());
 }
 
-static void CreateTopKOp(Program& p, const std::shared_ptr<ov::op::v11::TopK>& op) {
+static void CreateTopKOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v11::TopK>& op) {
     TopKImpl(p, op, op->get_mode(), op->get_sort_type(), static_cast<uint32_t>(op->get_k()), op->get_axis(), op->get_stable());
 }
 

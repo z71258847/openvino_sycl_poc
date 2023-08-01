@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/split.hpp"
@@ -13,7 +13,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateCommonSplitOp(Program& p, const std::shared_ptr<ov::Node>& op) {
+static void CreateCommonSplitOp(ProgramBuilder& p, const std::shared_ptr<ov::Node>& op) {
     auto get_layer_name = [&](size_t idx)->std::string {
         return layer_type_name_ID(op) + ((op->get_output_size() == 1)? "" : ".out" + std::to_string(idx));
     };
@@ -87,12 +87,12 @@ static void CreateCommonSplitOp(Program& p, const std::shared_ptr<ov::Node>& op)
     }
 }
 
-static void CreateSplitOp(Program& p, const std::shared_ptr<ov::op::v1::Split>& op) {
+static void CreateSplitOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::Split>& op) {
     validate_inputs_count(op, {2});
     CreateCommonSplitOp(p, op);
 }
 
-static void CreateVariadicSplitOp(Program& p, const std::shared_ptr<ov::op::v1::VariadicSplit>& op) {
+static void CreateVariadicSplitOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v1::VariadicSplit>& op) {
     validate_inputs_count(op, {3});
     CreateCommonSplitOp(p, op);
 }

@@ -5,7 +5,7 @@
 #include "openvino/core/attribute_visitor.hpp"
 #include "openvino/core/node.hpp"
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 #include "intel_gpu/plugin/simple_math.hpp"
 #include "intel_gpu/primitives/custom_gpu_primitive.hpp"
@@ -100,7 +100,7 @@ protected:
     std::map<std::string, std::string> m_values;
 };
 
-void CreateCustomOp(Program& p, const std::shared_ptr<ov::Node>& op, CustomLayerPtr customLayer) {
+void CreateCustomOp(ProgramBuilder& p, const std::shared_ptr<ov::Node>& op, CustomLayerPtr customLayer) {
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
 
@@ -140,7 +140,7 @@ void CreateCustomOp(Program& p, const std::shared_ptr<ov::Node>& op, CustomLayer
             if (param.portIndex < static_cast<int>(inputs.size()) && reordered_inputs[param.portIndex].pid.empty()) {
                 // todo: add support for multiple reorders of the same input? (read as bfyx for one arg and yxfb for another)
                 if (param.format != cldnn::format::any) {
-                    auto reorderPrimName = inputs[param.portIndex].pid + "_" + op->get_friendly_name() + Program::m_preCustomLayerTag;
+                    auto reorderPrimName = inputs[param.portIndex].pid + "_" + op->get_friendly_name() + ProgramBuilder::m_preCustomLayerTag;
                     auto preprocessPrim = cldnn::reorder(
                         reorderPrimName,
                         inputs[param.portIndex],
@@ -233,7 +233,7 @@ void CreateCustomOp(Program& p, const std::shared_ptr<ov::Node>& op, CustomLayer
     auto prevLayerName = genericLayerName;
     if (outputLayout.format != cldnn::format::any) {
         // Handle output reorder
-        auto reorderPrimName = genericLayerName + Program::m_postCustomLayerTag;
+        auto reorderPrimName = genericLayerName + ProgramBuilder::m_postCustomLayerTag;
         p.add_primitive(*op, cldnn::reorder(reorderPrimName,
                                             cldnn::input_info(genericLayerName),
                                             cldnn::format::get_default_format(op->get_output_shape(0).size()),

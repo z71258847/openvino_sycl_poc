@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/plugin/program.hpp"
+#include "intel_gpu/plugin/program_builder.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
 #include "openvino/op/region_yolo.hpp"
@@ -12,7 +12,7 @@
 namespace ov {
 namespace intel_gpu {
 
-static void CreateRegionYoloOp(Program& p, const std::shared_ptr<ov::op::v0::RegionYolo>& op) {
+static void CreateRegionYoloOp(ProgramBuilder& p, const std::shared_ptr<ov::op::v0::RegionYolo>& op) {
     validate_inputs_count(op, {1});
     auto inputs = p.GetInputInfo(op);
     std::string layerName = layer_type_name_ID(op);
