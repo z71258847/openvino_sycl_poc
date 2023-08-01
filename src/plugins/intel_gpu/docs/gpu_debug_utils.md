@@ -149,14 +149,6 @@ So it allows you to quickly check the execution time of some operation on the de
 
 * You can dump graphs with `OV_GPU_DumpGraphs` of debug config. For the usage of debug config, see the [link](#debug-config).
 
-* Alternatively, you can also enable the dumps from the application source code:
-clDNN plugin has the special internal config option - `graph_dumps_dir`, which can be set from the user app via plugin config:
-```cpp
-Core ie;
-std::map<std::string, std::string> device_config;
-device_config[CLDNN_CONFIG_KEY(GRAPH_DUMPS_DIR)] = "/some/existing/path/";
-ie.SetConfig(device_config, "GPU");
-```
 
 For each stage, it dumps:
 ```
@@ -175,14 +167,6 @@ Since *Intel_GPU* source tree contains only *templates* of the OpenCL™ kernels
 
 * You can use `OV_GPU_DumpSources` of debug config. For the usage of debug config, see [link](#debug-config).
 
-* You can also dump OpenCL source code by changing OpenVINO source code:
-clDNN plugin has the special internal config option - `sources_dumps_dir`, which can be set from the user app via plugin config:
-```cpp
-Core ie;
-std::map<std::string, std::string> device_config;
-device_config[CLDNN_CONFIG_KEY(SOURCES_DUMPS_DIR)] = "/some/existing/path/";
-ie.SetConfig(device_config, "GPU");
-```
 
 When this key is enabled, the plugin dumps multiple files with the following names:
 ```
