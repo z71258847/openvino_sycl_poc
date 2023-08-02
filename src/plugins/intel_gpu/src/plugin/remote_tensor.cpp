@@ -14,31 +14,27 @@ namespace ov {
 namespace intel_gpu {
 
 RemoteTensorImpl::RemoteTensorImpl(RemoteContextImpl::Ptr context,
-                                   cldnn::stream& stream,
                                    const ov::Shape& shape,
                                    const ov::element::Type& element_type,
+                                   TensorType mem_type,
                                    cldnn::shared_handle mem,
                                    cldnn::shared_surface surf,
-                                   uint32_t plane,
-                                   TensorType mem_type)
-    :
-    // m_allocator(std::make_shared<RemoteAllocator>())
-    m_context(context)
-    , m_stream(stream)
-    , m_mem(mem)
-    , m_surf(surf)
-    , m_plane(plane)
+                                   uint32_t plane)
+    : m_context(context)
+    , m_element_type(element_type)
+    , m_shape(shape)
     , m_layout(make_layout(element_type, shape))
     , m_mem_type(mem_type)
-    , m_element_type(element_type)
-    , m_shape(shape) {
+    , m_mem(mem)
+    , m_surf(surf)
+    , m_plane(plane) {
     if (supports_caching()) {
         m_hash = cldnn::hash_combine(0, m_mem);
         m_hash = cldnn::hash_combine(m_hash, m_surf);
         m_hash = cldnn::hash_combine(m_hash, plane);
-        m_hash = cldnn::hash_combine(m_hash, static_cast<std::underlying_type<cldnn::format::type>::type>(m_layout.format));
-        m_hash = cldnn::hash_combine(m_hash, static_cast<std::underlying_type<cldnn::data_types>::type>(m_layout.data_type));
-        for (const auto& d : m_layout.get_shape()) {
+        m_hash = cldnn::hash_combine(m_hash, m_shape.size());
+        m_hash = cldnn::hash_combine(m_hash, element_type.hash());
+        for (const auto& d : m_shape) {
             m_hash = cldnn::hash_combine(m_hash, d);
         }
     }

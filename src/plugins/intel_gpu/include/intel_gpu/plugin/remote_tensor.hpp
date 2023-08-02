@@ -31,13 +31,12 @@ class RemoteTensorImpl : public ov::IRemoteTensor {
     friend class RemoteAllocator;
 public:
     RemoteTensorImpl(std::shared_ptr<RemoteContextImpl> context,
-                     cldnn::stream& stream,
                      const ov::Shape& shape,
                      const ov::element::Type& element_type,
+                     TensorType mem_type = TensorType::BT_BUF_INTERNAL,
                      cldnn::shared_handle mem = nullptr,
                      cldnn::shared_surface surf = 0,
-                     uint32_t plane = 0,
-                     TensorType mem_type = TensorType::BT_BUF_INTERNAL);
+                     uint32_t plane = 0);
 
     ~RemoteTensorImpl() override;
     const AnyMap& get_properties() const override;
@@ -60,23 +59,20 @@ public:
 
 private:
     std::shared_ptr<RemoteContextImpl> m_context;
-    cldnn::stream& m_stream;
-
-    cldnn::shared_handle m_mem;
-    cldnn::shared_surface m_surf;
-
-    uint32_t m_plane;
-    cldnn::layout m_layout;
-    TensorType m_mem_type;
-    size_t m_hash = 0;
-
-    ov::AnyMap m_properties;
 
     ov::element::Type m_element_type;
     ov::Shape m_shape;
     ov::Strides m_strides{};
+    ov::AnyMap m_properties;
 
     cldnn::memory::ptr m_memory_object = nullptr;
+    cldnn::layout m_layout;
+    TensorType m_mem_type;
+
+    cldnn::shared_handle m_mem;
+    cldnn::shared_surface m_surf;
+    uint32_t m_plane;
+    size_t m_hash = 0;
 
     bool is_shared() const;
     bool supports_caching() const;

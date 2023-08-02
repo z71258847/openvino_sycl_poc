@@ -484,13 +484,10 @@ std::shared_ptr<ov::ITensor> SyncInferRequest::create_device_tensor(const ov::Sh
     }
 
     return std::make_shared<RemoteTensorImpl>(m_context,
-                                              m_graph->get_network()->get_stream(),
                                               shape_copy,
                                               element_type,
-                                              mem_ptr,
-                                              0,
-                                              0,
-                                              tensor_type);
+                                              tensor_type,
+                                              mem_ptr);
 }
 
 std::shared_ptr<ov::ITensor> SyncInferRequest::create_shared_device_tensor(const ov::Shape& shape, ov::element::Type element_type, void* usm_host_mem) const {

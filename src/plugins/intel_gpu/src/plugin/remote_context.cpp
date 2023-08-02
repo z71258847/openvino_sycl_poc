@@ -158,7 +158,7 @@ ov::SoPtr<ov::IRemoteTensor> RemoteContextImpl::create_tensor(const ov::element:
                 check_if_shared();
 #endif
             } else {
-                OPENVINO_ASSERT(false, "[GPU] Unsupported shared object type ", mem_type);
+                OPENVINO_THROW("[GPU] Unsupported shared object type ", mem_type);
             }
 
             return { reuse_memory(type, shape, mem, tensor_type), nullptr };
@@ -197,15 +197,14 @@ void RemoteContextImpl::add_to_cache(size_t hash, cldnn::memory::ptr memory) {
 }
 
 std::shared_ptr<ov::IRemoteTensor> RemoteContextImpl::reuse_surface(const ov::element::Type type, const ov::Shape& shape, const ov::AnyMap& params) {
-    auto& stream = m_engine->get_service_stream();
     uint32_t plane = extract_object(params, ov::intel_gpu::va_plane);
 
 #ifdef _WIN32
     cldnn::shared_handle surf = extract_object(params, ov::intel_gpu::dev_object_handle);
-    return std::make_shared<RemoteTensorImpl>(get_this_shared_ptr(), stream, shape, type, surf, 0, plane, TensorType::BT_SURF_SHARED);
+    return std::make_shared<RemoteTensorImpl>(get_this_shared_ptr(), shape, type, TensorType::BT_SURF_SHARED, surf, 0, plane);
 #else
     cldnn::shared_surface surf = extract_object(params, ov::intel_gpu::dev_object_handle);
-    return std::make_shared<RemoteTensorImpl>(get_this_shared_ptr(), stream, shape, type, nullptr, surf, plane, TensorType::BT_SURF_SHARED);
+    return std::make_shared<RemoteTensorImpl>(get_this_shared_ptr(), shape, type, TensorType::BT_SURF_SHARED, nullptr, surf, plane);
 #endif
 }
 
@@ -213,19 +212,15 @@ std::shared_ptr<ov::IRemoteTensor> RemoteContextImpl::reuse_memory(const ov::ele
                                                                    const ov::Shape& shape,
                                                                    cldnn::shared_handle mem,
                                                                    TensorType tensor_type) {
-    auto& stream = m_engine->get_service_stream();
-    return std::make_shared<RemoteTensorImpl>(get_this_shared_ptr(), stream, shape, type, mem, 0, 0, tensor_type);
+    return std::make_shared<RemoteTensorImpl>(get_this_shared_ptr(), shape, type, tensor_type, mem);
 }
 
 std::shared_ptr<ov::IRemoteTensor> RemoteContextImpl::create_buffer(const ov::element::Type type, const ov::Shape& shape) {
-    auto& stream = m_engine->get_service_stream();
-    return std::make_shared<RemoteTensorImpl>(get_this_shared_ptr(), stream, shape, type, nullptr, 0, 0, TensorType::BT_BUF_INTERNAL);
+    return std::make_shared<RemoteTensorImpl>(get_this_shared_ptr(), shape, type, TensorType::BT_BUF_INTERNAL);
 }
 
 std::shared_ptr<ov::IRemoteTensor> RemoteContextImpl::create_usm(const ov::element::Type type, const ov::Shape& shape, TensorType alloc_type) {
-    auto& stream = m_engine->get_service_stream();
-
-    return std::make_shared<RemoteTensorImpl>(get_this_shared_ptr(), stream, shape, type, nullptr, 0, 0, alloc_type);
+    return std::make_shared<RemoteTensorImpl>(get_this_shared_ptr(), shape, type, alloc_type);
 }
 
 void RemoteContextImpl::check_if_shared() const {
