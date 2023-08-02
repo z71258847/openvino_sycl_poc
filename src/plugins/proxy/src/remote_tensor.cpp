@@ -5,12 +5,13 @@
 #include "remote_tensor.hpp"
 
 #include <memory>
+
+#include "openvino/proxy/plugin.hpp"
 #include "openvino/runtime/itensor.hpp"
 #include "openvino/runtime/make_tensor.hpp"
 #include "openvino/runtime/so_ptr.hpp"
 #include "remote_utils.hpp"
 
-#include "openvino/proxy/plugin.hpp"
 
 namespace {
 std::shared_ptr<ov::IRemoteTensor> cast_tensor(const ov::SoPtr<ov::ITensor>& tensor) {

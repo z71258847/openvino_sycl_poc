@@ -4,23 +4,26 @@
 
 #pragma once
 
-#include "openvino/runtime/iremote_context.hpp"
-
 #include "ie_ngraph_utils.hpp"
-#include "ie_remote_context.hpp"
 #include "ie_remote_blob.hpp"
+#include "ie_remote_context.hpp"
+#include "openvino/runtime/iremote_context.hpp"
 
 namespace ov {
 namespace legacy_convert {
 
-INFERENCE_ENGINE_API_CPP(ov::SoPtr<ov::IRemoteContext>) convert_remote_context(const std::shared_ptr<InferenceEngine::RemoteContext>& context);
+INFERENCE_ENGINE_API_CPP(ov::SoPtr<ov::IRemoteContext>)
+convert_remote_context(const std::shared_ptr<InferenceEngine::RemoteContext>& context);
 INFERENCE_ENGINE_API_CPP(ie::Blob*) get_hardware_blob(ie::Blob* blob);
 
 class INFERENCE_ENGINE_API_CLASS(TensorHolder) {
 public:
     TensorHolder(ov::SoPtr<ov::ITensor> tensor) : _tensor(tensor) {}
 
-    ov::SoPtr<ov::ITensor> get_tensor() const { return _tensor; }
+    ov::SoPtr<ov::ITensor> get_tensor() const {
+        return _tensor;
+    }
+
 private:
     ov::SoPtr<ov::ITensor> _tensor;
 };
@@ -99,8 +102,8 @@ public:
 class INFERENCE_ENGINE_API_CLASS(TensorRemoteBlob) : public ie::RemoteBlob, public ov::legacy_convert::TensorHolder {
 public:
     TensorRemoteBlob(const ov::SoPtr<ITensor>& tensor, ie::TensorDesc desc)
-        : ie::RemoteBlob{desc}
-        , ov::legacy_convert::TensorHolder(tensor) {
+        : ie::RemoteBlob{desc},
+          ov::legacy_convert::TensorHolder(tensor) {
         OPENVINO_ASSERT(this->get_tensor());
     }
     std::shared_ptr<ov::IRemoteTensor> cast_tensor() const {
@@ -155,7 +158,6 @@ private:
 };
 
 }  // namespace ov
-
 
 namespace InferenceEngine {
 

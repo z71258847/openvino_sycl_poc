@@ -9,9 +9,9 @@
 #include "ie_blob.h"
 #include "ie_ngraph_utils.hpp"
 #include "ie_remote_blob.hpp"
-#include "remote_utils.hpp"
 #include "openvino/runtime/iremote_tensor.hpp"
 #include "openvino/runtime/properties.hpp"
+#include "remote_utils.hpp"
 #ifdef PROXY_PLUGIN_ENABLED
 #    include "openvino/proxy/plugin.hpp"
 #endif

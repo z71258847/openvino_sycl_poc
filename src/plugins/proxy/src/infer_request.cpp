@@ -3,11 +3,11 @@
 //
 
 #include "openvino/proxy/infer_request.hpp"
-#include "openvino/proxy/plugin.hpp"
 
 #include <memory>
 #include <openvino/runtime/iremote_tensor.hpp>
 
+#include "openvino/proxy/plugin.hpp"
 #include "openvino/runtime/itensor.hpp"
 #include "openvino/runtime/make_tensor.hpp"
 #include "openvino/runtime/remote_context.hpp"
