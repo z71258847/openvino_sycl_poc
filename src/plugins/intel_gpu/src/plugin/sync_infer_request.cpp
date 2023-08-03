@@ -741,7 +741,6 @@ std::vector<cldnn::event::ptr> SyncInferRequest::prepare_output(const std::strin
                                                                 const TensorWrapper& user_tensor_wrapper) {
     OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "SyncInferRequest::prepare_output");
     auto pshape = port.get_partial_shape();
-    auto is_dynamic = pshape.is_dynamic();
     auto element_type = port.get_element_type();
     auto user_tensor = user_tensor_wrapper.ptr;
     auto remote_ptr = std::dynamic_pointer_cast<RemoteTensorImpl>(user_tensor);
@@ -766,23 +765,18 @@ std::vector<cldnn::event::ptr> SyncInferRequest::prepare_output(const std::strin
         m_plugin_outputs[name] = user_tensor_wrapper;
     }
 
-    if (!is_dynamic) {
-        auto is_cpu_impl = network->is_cpu_impl(internal_name);
-        bool has_device_buffer = m_plugin_outputs.count(name) > 0;
-        bool update_device_tensor = !has_device_buffer ||
-                                    (m_plugin_outputs[name].owner == TensorOwner::USER && !is_remote);
-        if (update_device_tensor) {
-            m_plugin_outputs[name] = create_or_share_device_tensor(user_tensor_wrapper, name, pshape, device_tensor_et, is_cpu_impl || convert_needed);
-        }
+    auto is_cpu_impl = network->is_cpu_impl(internal_name);
+    bool has_device_buffer = m_plugin_outputs.count(name) > 0;
+    bool update_device_tensor = !has_device_buffer ||
+                                (m_plugin_outputs[name].owner == TensorOwner::USER && !is_remote);
+    if (update_device_tensor) {
+        m_plugin_outputs[name] = create_or_share_device_tensor(user_tensor_wrapper, name, pshape, device_tensor_et, is_cpu_impl || convert_needed);
     }
 
-    // Missing output in _plugin_outputs means that the network is dynamic and outputs couldn't be pre-allocated
-    if (m_plugin_outputs.find(name) == m_plugin_outputs.end())
-        return {};
-
     auto output_tensor = std::dynamic_pointer_cast<RemoteTensorImpl>(m_plugin_outputs.at(name).ptr);
-    auto output_memory = output_tensor->get_memory();
-    return network->set_output_memory(internal_name, output_memory);
+    output_tensor->set_shape(user_tensor->get_shape());
+
+    return network->set_output_memory(internal_name, output_tensor->get_memory_manager());
 }
 
 void SyncInferRequest::init_mappings(bool is_legacy_api) {

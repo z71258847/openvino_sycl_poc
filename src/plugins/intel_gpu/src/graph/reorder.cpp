@@ -262,16 +262,16 @@ void reorder_inst::update_output_memory() {
     if (!can_be_optimized())
         return;
 
-    if (static_cast<bool>(_outputs[0]) && _network.get_engine().is_the_same_buffer(output_memory(), input_memory()))
+    if (static_cast<bool>(get_mem_manager(0).allocated()) && _network.get_engine().is_the_same_buffer(output_memory(), input_memory()))
         return;
 
     if (_node != nullptr)
         build_deps();
 
     if (requires_reinterpret()) {
-        _outputs[0] = _network.get_engine().reinterpret_buffer(input_memory(), get_output_layout());
+        get_mem_manager(0).set_memory(_network.get_engine().reinterpret_buffer(input_memory(), get_output_layout()));
     } else {
-        _outputs[0] = input_memory_ptr();
+        get_mem_manager(0).set_memory(input_memory_ptr());
     }
     _mem_allocated = false;
 }

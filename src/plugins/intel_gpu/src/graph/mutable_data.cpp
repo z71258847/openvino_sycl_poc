@@ -56,10 +56,10 @@ event::ptr mutable_data_inst::set_output_memory(memory::ptr mem_new, bool check,
         auto& eng = _network.get_engine();
         auto& mem_node = const_cast<program_node*>(_node)->as<mutable_data>();
         auto& mem_attached = mem_node.get_attached_memory();
-        const auto& mem_orig = *_outputs[idx];
+        const auto& mem_orig = *get_mem_manager(idx).get_memory();
         if (!eng.is_the_same_buffer(*mem_new, mem_attached)) {
             if (_node->is_input()) {
-                input_ev = mem_new->copy_from(_network.get_stream(), *_outputs[idx], false);
+                input_ev = mem_new->copy_from(_network.get_stream(), mem_orig, false);
             }
 
             // re-attach mutable_data internal memory if necessary
@@ -86,18 +86,18 @@ mutable_data_inst::typed_primitive_inst(network& network, mutable_data_node cons
 void mutable_data_inst::save(cldnn::BinaryOutputBuffer& ob) const {
     parent::save(ob);
 
-    size_t data_size = _outputs[0]->size();
+    size_t data_size = get_mem_manager(0).size();
     ob << make_data(&data_size, sizeof(size_t));
 
     if (data_size == 0)
         return;
 
-    allocation_type _allocation_type = _outputs[0]->get_allocation_type();
+    allocation_type _allocation_type = get_mem_manager(0).get_allocation_type();
 
     if (_allocation_type == allocation_type::usm_host || _allocation_type == allocation_type::usm_shared) {
-        ob << make_data(_outputs[0]->buffer_ptr(), data_size);
+        ob << make_data(get_mem_manager(0).get_memory()->buffer_ptr(), data_size);
     } else {
-        mem_lock<char, mem_lock_type::read> lock{_outputs[0], get_node().get_program().get_stream()};
+        mem_lock<char, mem_lock_type::read> lock{get_mem_manager(0).get_memory(), get_node().get_program().get_stream()};
         ob << make_data(lock.data(), data_size);
     }
 }
@@ -111,17 +111,17 @@ void mutable_data_inst::load(BinaryInputBuffer& ib) {
     if (data_size == 0)
         return;
 
-    OPENVINO_ASSERT(_outputs[0] != nullptr, "Output memory should be allocated before importing data.");
+    OPENVINO_ASSERT(m_outputs[0] != nullptr, "Output memory should be allocated before importing data.");
 
-    allocation_type _allocation_type = _outputs[0]->get_allocation_type();
+    allocation_type _allocation_type = get_mem_manager(0).get_allocation_type();
 
     if (_allocation_type == allocation_type::usm_host || _allocation_type == allocation_type::usm_shared) {
-        ib >> make_data(_outputs[0]->buffer_ptr(), data_size);
+        ib >> make_data(get_mem_manager(0).get_memory()->buffer_ptr(), data_size);
     } else {
         std::vector<uint8_t> _buf;
         _buf.resize(data_size);
         ib >> make_data(_buf.data(), data_size);
-        _outputs[0]->copy_from(get_network().get_stream(), _buf.data());
+        get_mem_manager(0).get_memory()->copy_from(get_network().get_stream(), _buf.data());
     }
 }
 

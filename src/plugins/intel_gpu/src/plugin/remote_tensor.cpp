@@ -7,6 +7,7 @@
 #include "intel_gpu/plugin/remote_allocators.hpp"
 #include "intel_gpu/plugin/plugin.hpp"
 #include "intel_gpu/runtime/itt.hpp"
+#include "intel_gpu/runtime/memory_manager.hpp"
 
 #include <memory>
 
@@ -23,6 +24,7 @@ RemoteTensorImpl::RemoteTensorImpl(RemoteContextImpl::Ptr context,
     : m_context(context)
     , m_element_type(element_type)
     , m_shape(shape)
+    , m_memory_manager(std::make_shared<MemoryManager>(context->get_engine()))
     , m_layout(make_layout(element_type, shape))
     , m_mem_type(mem_type)
     , m_mem(mem)
@@ -80,11 +82,12 @@ const AnyMap& RemoteTensorImpl::get_properties() const {
  void RemoteTensorImpl::set_shape(ov::Shape shape) {
     m_layout.set_partial_shape(ov::PartialShape{shape});
     m_shape = shape;
+    m_memory_manager->reinterpret(m_layout);
 
-    if (ov::shape_size(shape) > m_memory_object->count()) {
-        OPENVINO_ASSERT(!is_shared(), "Cannot call setShape for Tensor created on top of preallocated memory if shape was increased.");
+    if (ov::shape_size(shape) > m_memory_manager->get_actual_size()) {
+        OPENVINO_ASSERT(!is_shared(), "[GPU] Cannot call setShape for Tensor created on top of preallocated memory if shape was increased.");
         if (!deallocate()) {
-            OPENVINO_THROW("Cannot deallocate tensor while an attempt to enlarge tensor area in setShape.");
+            OPENVINO_THROW("[GPU] Cannot deallocate tensor while an attempt to enlarge tensor area in setShape.");
         }
 
         allocate();
@@ -92,12 +95,12 @@ const AnyMap& RemoteTensorImpl::get_properties() const {
 }
 
 bool RemoteTensorImpl::deallocate() noexcept {
-    m_memory_object.reset();
-    return m_memory_object == nullptr;
+    m_memory_manager->deallocate();
+    return m_memory_manager->allocated();
 }
 
 bool RemoteTensorImpl::is_allocated() const noexcept {
-    return m_memory_object != nullptr;
+    return m_memory_manager->allocated();
 }
 
 void RemoteTensorImpl::allocate() {
@@ -107,62 +110,68 @@ void RemoteTensorImpl::allocate() {
     auto enable_caching = supports_caching();
 
     if (enable_caching) {
-        m_memory_object = context->try_get_cached_memory(m_hash);
-        if (m_memory_object)
+        auto memory_object = context->try_get_cached_memory(m_hash);
+        if (memory_object) {
+            m_memory_manager->set_memory(memory_object);
             return;
+        }
     }
 
     auto& engine = context->get_engine();
 
+    cldnn::memory::ptr memory_object = nullptr;
+
     switch (m_mem_type) {
     case TensorType::BT_BUF_INTERNAL: {
-        m_memory_object = engine.allocate_memory(m_layout, cldnn::allocation_type::cl_mem);
+        memory_object = engine.allocate_memory(m_layout, cldnn::allocation_type::cl_mem);
         break;
     }
     case TensorType::BT_USM_HOST_INTERNAL: {
-        m_memory_object = engine.allocate_memory(m_layout, cldnn::allocation_type::usm_host);
+        memory_object = engine.allocate_memory(m_layout, cldnn::allocation_type::usm_host);
         break;
     }
     case TensorType::BT_USM_DEVICE_INTERNAL: {
-        m_memory_object = engine.allocate_memory(m_layout, cldnn::allocation_type::usm_device);
+        memory_object = engine.allocate_memory(m_layout, cldnn::allocation_type::usm_device);
         break;
     }
     case TensorType::BT_BUF_SHARED: {
-        m_memory_object = engine.share_buffer(m_layout, m_mem);
+        memory_object = engine.share_buffer(m_layout, m_mem);
         break;
     }
     case TensorType::BT_USM_SHARED: {
-        m_memory_object = engine.share_usm(m_layout, m_mem);
+        memory_object = engine.share_usm(m_layout, m_mem);
         break;
     }
 #ifdef _WIN32
     case TensorType::BT_SURF_SHARED: {
         m_layout.format = cldnn::format::nv12; // Other formats are not supported
-        m_memory_object = engine.share_surface(m_layout, m_mem, m_plane);
+        memory_object = engine.share_surface(m_layout, m_mem, m_plane);
         break;
     }
     case TensorType::BT_DX_BUF_SHARED: {
-        m_memory_object = engine.share_dx_buffer(m_layout, m_mem);
+        memory_object = engine.share_dx_buffer(m_layout, m_mem);
         break;
     }
 #else
     case TensorType::BT_SURF_SHARED: {
         m_layout.format = cldnn::format::nv12; // Other formats are not supported
-        m_memory_object = engine.share_surface(m_layout, m_surf, m_plane);
+        memory_object = engine.share_surface(m_layout, m_surf, m_plane);
         break;
     }
 #endif
     case TensorType::BT_IMG_SHARED: {
         m_layout.format = cldnn::format::nv12; // Other formats are not supported
-        m_memory_object = engine.share_image(m_layout, m_mem);
+        memory_object = engine.share_image(m_layout, m_mem);
         break;
     }
     default:
-        m_memory_object.reset();
+        memory_object.reset();
     }
 
+    m_memory_manager->set_memory(memory_object);
+
     if (enable_caching)
-        context->add_to_cache(m_hash, m_memory_object);
+        context->add_to_cache(m_hash, memory_object);
 }
 
 const std::string& RemoteTensorImpl::get_device_name() const {
@@ -188,12 +197,17 @@ bool RemoteTensorImpl::is_surface() const noexcept {
 }
 
 cldnn::memory::ptr RemoteTensorImpl::get_memory() const {
-    auto engine = m_memory_object->get_engine();
-    return engine->reinterpret_buffer(*m_memory_object, m_layout);
+    auto mem = m_memory_manager->get_memory();
+    auto engine = mem->get_engine();
+    return engine->reinterpret_buffer(*mem, m_layout);
 }
 
 cldnn::memory::ptr RemoteTensorImpl::get_original_memory() const {
-    return m_memory_object;
+    return m_memory_manager->get_memory();
+}
+
+MemoryManager::Ptr RemoteTensorImpl::get_memory_manager() const {
+    return m_memory_manager;
 }
 
 std::shared_ptr<RemoteContextImpl> RemoteTensorImpl::get_context() const {
@@ -202,7 +216,7 @@ std::shared_ptr<RemoteContextImpl> RemoteTensorImpl::get_context() const {
 
 void RemoteTensorImpl::init_properties() {
     OPENVINO_ASSERT(is_allocated(), "[GPU] Can't initialize RemoteTensorImpl parameters as memory was not allocated");
-    auto params = m_memory_object->get_internal_params();
+    auto params = m_memory_manager->get_memory()->get_internal_params();
 
     switch (m_mem_type) {
     case TensorType::BT_BUF_INTERNAL:

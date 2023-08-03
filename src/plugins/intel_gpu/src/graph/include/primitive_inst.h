@@ -9,7 +9,9 @@
 #include "intel_gpu/runtime/memory.hpp"
 #include "intel_gpu/runtime/lru_cache.hpp"
 #include "intel_gpu/graph/network.hpp"
+#include "intel_gpu/runtime/memory_manager.hpp"
 #include "intel_gpu/runtime/utils.hpp"
+#include "openvino/core/except.hpp"
 #include "program_node.h"
 #include "primitive_type.h"
 #include "intel_gpu/graph/serialization/binary_buffer.hpp"
@@ -133,14 +135,15 @@ public:
         auto dep = dependencies().at(index);
         return dep.first->output_memory_ptr(dep.second);
     }
-    memory& output_memory(size_t index = 0) const { return *_outputs[index]; }
-    memory::ptr output_memory_ptr(size_t index = 0) const { return _outputs[index]; }
+    memory& output_memory(size_t index = 0) const { return *get_mem_manager(index).get_memory(); }
+    memory::ptr output_memory_ptr(size_t index = 0) const { return get_mem_manager(index).get_memory(); }
     size_t inputs_memory_count() const { return _inputs_memory_count; }
     size_t outputs_memory_count() const { return _outputs_memory_count; }
     bool outputs_allocated() const {
-        if (_outputs.empty()) return false;
-        for (const auto& output : _outputs) {
-            if (!output) return false;
+        if (m_outputs.empty()) return false;
+        for (const auto& output : m_outputs) {
+            if (!output->allocated())
+                return false;
         }
         return true;
     }
@@ -158,6 +161,7 @@ public:
     network& get_network() const { return _network; }
     uint32_t get_network_id() const;
     virtual event::ptr set_output_memory(memory::ptr mem, bool check = true, size_t idx = 0);
+    virtual event::ptr set_output_memory(ov::intel_gpu::MemoryManager::Ptr mem_manager, bool check = true, size_t idx = 0);
     void check_memory_to_set(const memory& mem, const layout& layout) const;
     const std::list<const cldnn::program_node *>& get_users() const { return _node->get_users(); }
     std::vector<std::shared_ptr<primitive_inst>> get_user_insts() const {
@@ -306,7 +310,12 @@ protected:
     // _output is optional because its initialization might be postponed (reshape_inst may either allocate it's own
     // buffer or attach input as output
     // depending on reshape_node.is_in_place())
-    std::vector<memory::ptr> _outputs;
+    std::vector<ov::intel_gpu::MemoryManager::Ptr> m_outputs;
+
+    ov::intel_gpu::MemoryManager& get_mem_manager(size_t i = 0) const {
+        OPENVINO_ASSERT(m_outputs.size() >= i);
+        return *m_outputs.at(i);
+    }
 
     std::vector<memory::ptr> _intermediates_memory;
 
@@ -339,7 +348,7 @@ protected:
     size_t max_output_layout_size = 0;
     std::vector<size_t> max_intermediates_memory_sizes;
 
-    std::vector<memory::ptr> allocate_outputs(kernel_impl_params* updated_params = nullptr, bool reset_mem = true, bool runtime_alloc = false);
+    void allocate_outputs(kernel_impl_params* updated_params = nullptr, bool reset_mem = true, bool runtime_alloc = false);
     memory::ptr allocate_internal_buffer(size_t idx, bool reset = true);
     static std::vector<std::shared_ptr<primitive_inst>> build_exec_deps(
         std::vector<std::pair<std::shared_ptr<primitive_inst>, int32_t>> const& mem_deps);
@@ -502,7 +511,7 @@ protected:
 
     typed_primitive_inst_base(network& network, typed_node const& node, memory::ptr buffer)
         : typed_primitive_inst_base(network, node, false) {
-        _outputs[0] = buffer;
+        get_mem_manager(0).set_memory(buffer);
     }
 
 private:

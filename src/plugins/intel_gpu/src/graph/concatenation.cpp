@@ -156,7 +156,7 @@ concatenation_inst::typed_primitive_inst(network& network, concatenation_node co
 
             for (auto processed_nodes : *nodes_list) {
                 auto processed_node = processed_nodes.first;
-                processed_node->_outputs = _outputs;
+                processed_node->m_outputs = m_outputs;
                 if (processed_node->type() == concatenation::type_id() && processed_node->can_be_optimized()) {
                     if (!processed_node->_deps.empty())
                         stack.push_back(&processed_node->_deps);

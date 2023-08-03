@@ -15,7 +15,7 @@
 #endif
 #include "openvino/runtime/iremote_tensor.hpp"
 
-#include "intel_gpu/runtime/memory.hpp"
+#include "intel_gpu/runtime/memory_manager.hpp"
 #include "intel_gpu/runtime/engine.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
 
@@ -54,6 +54,7 @@ public:
     bool is_surface() const noexcept;
     cldnn::memory::ptr get_memory() const;
     cldnn::memory::ptr get_original_memory() const;
+    MemoryManager::Ptr get_memory_manager() const;
 
     std::shared_ptr<RemoteContextImpl> get_context() const;
 
@@ -65,7 +66,7 @@ private:
     ov::Strides m_strides{};
     ov::AnyMap m_properties;
 
-    cldnn::memory::ptr m_memory_object = nullptr;
+    MemoryManager::Ptr m_memory_manager = nullptr;
     cldnn::layout m_layout;
     TensorType m_mem_type;
 

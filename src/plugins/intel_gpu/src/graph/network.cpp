@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#include "intel_gpu/runtime/memory_manager.hpp"
 #include "openvino/util/file_util.hpp"
 
 #include "intel_gpu/primitives/data.hpp"
@@ -900,8 +901,11 @@ network::output_chains_map::iterator network::add_output_chain(std::shared_ptr<p
     return _output_chains.insert({ p_inst->id(), chain }).first;
 }
 
-std::vector<event::ptr> network::set_output_memory(const primitive_id& id, memory::ptr mem_new) {
-    GPU_DEBUG_TRACE_DETAIL << "Set output " << id << " " << mem_new->get_layout().to_short_string() << std::endl;
+std::vector<event::ptr> network::set_output_memory(const primitive_id& id, memory::ptr mem) {
+    return set_output_memory(id, std::make_shared<ov::intel_gpu::MemoryManager>(mem));
+}
+std::vector<event::ptr> network::set_output_memory(const primitive_id& id, ov::intel_gpu::MemoryManager::Ptr mem_manager) {
+    GPU_DEBUG_TRACE_DETAIL << "Set output " << id << " " << mem_manager->get_layout().to_short_string() << std::endl;
     std::shared_ptr<primitive_inst> p_inst;
     std::vector<event::ptr> ret_ev;
     p_inst = find_primitive(id);
@@ -913,7 +917,6 @@ std::vector<event::ptr> network::set_output_memory(const primitive_id& id, memor
     if (iter == _outputs.end())
         throw std::runtime_error("primitive: " + id + " is not a network output");
 
-    auto& eng = get_engine();
     // locate primitive chain for this output
     // if no chain found - add it
     auto o_iter = _output_chains.find(id);
@@ -922,11 +925,10 @@ std::vector<event::ptr> network::set_output_memory(const primitive_id& id, memor
     }
 
     for (auto& prim : o_iter->second) {
-        auto mem = mem_new;
-        if (!prim->is_dynamic() && mem_new && prim->output_memory_ptr())
-            mem = eng.reinterpret_buffer(*mem_new, prim->output_memory().get_layout());
+        if (!prim->is_dynamic() && mem_manager->allocated() && prim->output_memory_ptr())
+            mem_manager->reinterpret(prim->output_memory().get_layout());
 
-        ret_ev.push_back(prim->set_output_memory(mem));
+        ret_ev.push_back(prim->set_output_memory(mem_manager));
         if (!_reset_arguments &&
             (prim->type() != cldnn::data::type_id() && !(prim->type() == cldnn::mutable_data::type_id() && prim->dependencies().empty()))) {
             prim->set_arguments();

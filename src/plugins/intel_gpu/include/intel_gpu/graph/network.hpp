@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "intel_gpu/runtime/memory_manager.hpp"
 #include "openvino/runtime/threading/cpu_streams_executor.hpp"
 
 #include "intel_gpu/graph/topology.hpp"
@@ -29,20 +30,31 @@ namespace cldnn {
 
 /// @brief Represents network output returned by @ref network::get_output().
 struct network_output {
+    network_output(event::ptr evt, memory::ptr mem, stream::ptr stream, const layout& layout)
+        : _event(evt)
+        , _result(std::make_shared<ov::intel_gpu::MemoryManager>(mem))
+        , _stream(stream)
+        , _layout(layout) {}
+
+    network_output(event::ptr evt, ov::intel_gpu::MemoryManager::Ptr mem_manager, stream::ptr stream, const layout& layout)
+        : _event(evt)
+        , _result(mem_manager)
+        , _stream(stream)
+        , _layout(layout) {}
+
     /// @brief Returns @ref event associated with the output.
     event::ptr get_event() const { return _event; }
 
     /// @brief Returns @ref memory object of the output. Blocked until associated @ref event is not complete.
     memory::ptr get_memory(bool do_sync = true) const {
-        // TODO: in_order queue doesn't create proper output event in some cases which leads to syncronization issues with user app
-        // So call finish for associated stream to enusre that the output data is ready.
-        if (do_sync) {
-            if (_stream->get_queue_type() == QueueTypes::in_order) {
-                _stream->finish();
-            } else {
-                _event->wait();
-            }
-        }
+        if (do_sync)
+            sync();
+
+        return _result->get_memory();
+    }
+    ov::intel_gpu::MemoryManager::Ptr get_memory_manager(bool do_sync = true) const {
+        if (do_sync)
+            sync();
         return _result;
     }
 
@@ -52,11 +64,19 @@ struct network_output {
 
 private:
     event::ptr _event;
-    memory::ptr _result;
+    ov::intel_gpu::MemoryManager::Ptr _result;
     stream::ptr _stream;
     layout _layout;
-    network_output(event::ptr evt, memory::ptr mem, stream::ptr stream, const layout& layout) : _event(evt), _result(mem), _stream(stream), _layout(layout) {}
-    friend struct network;
+
+    void sync() const {
+        // TODO: in_order queue doesn't create proper output event in some cases which leads to syncronization issues with user app
+        // So call finish for associated stream to enusre that the output data is ready.
+        if (_stream->get_queue_type() == QueueTypes::in_order) {
+            _stream->finish();
+        } else {
+            _event->wait();
+        }
+    }
 };
 
 class primitive_inst;
@@ -132,6 +152,7 @@ public:
     void reset_execution(bool wait = true);
     event::ptr set_input_data(const primitive_id& id, memory::ptr data);
     std::vector<event::ptr> set_output_memory(const primitive_id& id, memory::ptr mem);
+    std::vector<event::ptr> set_output_memory(const primitive_id& id, ov::intel_gpu::MemoryManager::Ptr mem_manager);
 
     std::vector<std::shared_ptr<primitive_inst>> const& get_outputs() { return _outputs; }
 

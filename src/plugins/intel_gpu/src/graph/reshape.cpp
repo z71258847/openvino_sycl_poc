@@ -177,7 +177,7 @@ reshape_inst::typed_primitive_inst(network& network, reshape_node const& node) :
     // then create new memory object as the reinterpreted output of the previous primitive
     if (input_layout.is_static() && output_layout.is_static()) {
         if (!node.can_be_optimized()) {
-            _outputs = allocate_outputs();
+            allocate_outputs();
             _mem_allocated = true;
         } else {
             reuse_input();
@@ -192,7 +192,7 @@ void reshape_inst::on_execute() {
     if (!can_be_optimized())
         return;
 
-    if (_outputs[0] && _network.get_engine().is_the_same_buffer(output_memory(), input_memory()))
+    if (get_mem_manager(0).allocated() && _network.get_engine().is_the_same_buffer(output_memory(), input_memory()))
         return;
 
     reuse_input();
@@ -206,12 +206,12 @@ void reshape_inst::update_output_memory() {
     if (!can_be_optimized())
         return;
 
-    if (_outputs[0] && _network.get_engine().is_the_same_buffer(output_memory(), input_memory()))
+    if (get_mem_manager(0).allocated() && _network.get_engine().is_the_same_buffer(output_memory(), input_memory()))
         return;
 
     build_deps();  // reshape need deps
     OPENVINO_ASSERT(input_memory_ptr() != nullptr, "[GPU] Failed to reuse input in ", id(), " primitive: input memory was not allocated");
-    _outputs = {_network.get_engine().reinterpret_buffer(input_memory(), _impl_params->get_output_layout())};
+    get_mem_manager(0).set_memory(_network.get_engine().reinterpret_buffer(input_memory(), _impl_params->get_output_layout()));
 }
 
 }  // namespace cldnn
