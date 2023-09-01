@@ -214,6 +214,11 @@ std::string fully_connected_inst::to_string(fully_connected_node const& node) {
     json_composite fc_info;
     fc_info.add("weights id", weights_id);
     fc_info.add("bias id", bias_id);
+    fc_info.add("compressed weights", desc->compressed_weights ? "true" : "false");
+    if (desc->compressed_weights) {
+        fc_info.add("compression scale id", desc->compression_scale);
+        fc_info.add("compression zp id", desc->compression_zero_point);
+    }
 
     node_info->add("fully connected info", fc_info);
     node_info->dump(primitive_description);

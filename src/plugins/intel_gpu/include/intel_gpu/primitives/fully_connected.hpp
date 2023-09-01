@@ -76,10 +76,42 @@ struct fully_connected : public primitive_base<fully_connected> {
           weights_rank(weights_rank)
     {}
 
+    /// @brief Constructs fully connected compressed layer.
+    /// @param id This primitive id.
+    /// @param input Input primitive id.
+    /// @param weights Primitive id containing weights data.
+    /// @param bias Primitive id containing bias data.
+    /// @param compression_scale Primitive id containing scale factors for weights decompression.
+    /// @param compression_zero_point Primitive id containing zero points for weights decompression.
+    fully_connected(const primitive_id& id,
+                    const input_info& input,
+                    const primitive_id& weights,
+                    const primitive_id& bias,
+                    const primitive_id& compression_scale,
+                    const primitive_id& compression_zero_point,
+                    const data_types data_type,
+                    const padding& output_padding = padding(),
+                    const size_t input_size = 2,
+                    const size_t weights_rank = 2)
+        : primitive_base(id, { input }, {output_padding}, {optional_data_type{data_type}}),
+          weights(weights),
+          bias(bias),
+          compressed_weights(true),
+          compression_scale(compression_scale),
+          compression_zero_point(compression_zero_point),
+          input_size(input_size),
+          weights_rank(weights_rank)
+    {}
+
     /// @brief Primitive id containing weights data.
     primitive_id weights;
     /// @brief Primitive id containing bias data.
     primitive_id bias;
+
+    bool compressed_weights = false;
+    primitive_id compression_scale = "";
+    primitive_id compression_zero_point = "";
+
     /// @brief Primitive dimension size.
     size_t input_size = 2;
     /// @brief Primitive weights rank.
@@ -90,6 +122,9 @@ struct fully_connected : public primitive_base<fully_connected> {
         seed = hash_combine(seed, input_size);
         seed = hash_combine(seed, weights_rank);
         seed = hash_combine(seed, bias.empty());
+        seed = hash_combine(seed, compressed_weights);
+        seed = hash_combine(seed, !compression_scale.empty());
+        seed = hash_combine(seed, !compression_zero_point.empty());
         return seed;
     }
 
@@ -108,6 +143,9 @@ struct fully_connected : public primitive_base<fully_connected> {
         primitive_base<fully_connected>::save(ob);
         ob << weights;
         ob << bias;
+        ob << compressed_weights;
+        ob << compression_scale;
+        ob << compression_zero_point;
         ob << input_size;
         ob << weights_rank;
     }
@@ -116,6 +154,9 @@ struct fully_connected : public primitive_base<fully_connected> {
         primitive_base<fully_connected>::load(ib);
         ib >> weights;
         ib >> bias;
+        ib >> compressed_weights;
+        ib >> compression_scale;
+        ib >> compression_zero_point;
         ib >> input_size;
         ib >> weights_rank;
     }
@@ -127,6 +168,12 @@ protected:
 
         if (!bias.empty())
             ret.push_back(bias);
+
+        if (!compression_scale.empty())
+            ret.push_back(compression_scale);
+
+        if (!compression_zero_point.empty())
+            ret.push_back(compression_zero_point);
 
         return ret;
     }
