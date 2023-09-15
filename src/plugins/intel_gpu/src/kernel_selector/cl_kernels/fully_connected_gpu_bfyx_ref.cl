@@ -5,6 +5,9 @@
 #include "include/batch_headers/fetch_data.cl"
 #include "include/batch_headers/fetch_weights.cl"
 
+#undef ACCUMULATOR_TYPE
+#define ACCUMULATOR_TYPE float
+
 KERNEL(fc)(
     OPTIONAL_SHAPE_INFO_ARG
     const __global INPUT0_TYPE* input,
