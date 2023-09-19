@@ -942,6 +942,15 @@ std::vector<event::ptr> network::set_output_memory(const primitive_id& id, memor
     return ret_ev;
 }
 
+Output cldnn::network::detach_output_memory(const primitive_id& id) {
+    auto primitive = find_primitive(id);
+    Output out = primitive->get_output(0);
+    if (primitive->get_node_output_layout().is_dynamic())
+        set_output_memory(id, nullptr, false);
+
+    return out;
+}
+
 void cldnn::network::check_names() {
     for (auto const& prim : _primitives) {
         if (find_in_internal_networks(prim.first) != nullptr)

@@ -132,7 +132,8 @@ public:
 
     void reset_execution(bool wait = true);
     event::ptr set_input_data(const primitive_id& id, memory::ptr data);
-    std::vector<event::ptr> set_output_memory(const primitive_id& id, memory::ptr mem);
+    std::vector<event::ptr> set_output_memory(const primitive_id& id, memory::ptr mem, bool is_external = false);
+    Output detach_output_memory(const primitive_id& id);
 
     std::vector<std::shared_ptr<primitive_inst>> const& get_outputs() { return _outputs; }
 

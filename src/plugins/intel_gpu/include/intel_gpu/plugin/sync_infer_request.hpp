@@ -25,8 +25,17 @@ enum class TensorOwner : uint8_t {
 };
 
 struct TensorWrapper {
+    TensorWrapper(const std::shared_ptr<ov::ITensor>& _ptr, TensorOwner _owner)
+        : ptr(_ptr)
+        , owner(_owner)
+        , actual_size(_ptr ? _ptr->get_byte_size() : 0) {}
+
+    TensorWrapper(const TensorWrapper& other) = default;
+    TensorWrapper() = default;
+
     std::shared_ptr<ov::ITensor> ptr;
     TensorOwner owner;
+    size_t actual_size;
 };
 
 class SyncInferRequest : public ov::ISyncInferRequest {
@@ -91,6 +100,8 @@ private:
     std::shared_ptr<ov::ITensor> reinterpret_device_tensor(std::shared_ptr<RemoteTensorImpl> tensor, const ov::Shape new_shape) const;
     std::shared_ptr<ov::ITensor> create_host_tensor(const ov::PartialShape& port_shape, const ov::element::Type& port_element_type) const;
     std::shared_ptr<ov::ITensor> create_device_tensor(const ov::PartialShape& pshape, ov::element::Type element_type, bool need_lockable_memory = false) const;
+
+    void attach_memory_to_output_tensors(const ov::Output<const ov::Node>& port, const std::string& name, const Output& output, cldnn::memory::ptr memory);
 
     void allocate_inputs();
     void allocate_outputs();
