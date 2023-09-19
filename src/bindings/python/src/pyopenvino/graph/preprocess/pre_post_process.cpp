@@ -252,7 +252,7 @@ static void regclass_graph_InputTensorInfo(py::module m) {
         },
         py::arg("layout"),
         R"(
-            Set layout for input tensor info 
+            Set layout for input tensor info
             :param layout: layout to be set
             :type layout: Union[str, openvino.runtime.Layout]
         )");
@@ -344,6 +344,13 @@ static void regclass_graph_OutputTensorInfo(py::module m) {
     info.doc() = "openvino.runtime.preprocess.OutputTensorInfo wraps ov::preprocess::OutputTensorInfo";
 
     info.def(
+        "set_memory_type",
+        [](ov::preprocess::OutputTensorInfo& self, const std::string& memory_type) {
+            return &self.set_memory_type(memory_type);
+        },
+        py::arg("memory_type"));
+
+    info.def(
         "set_element_type",
         [](ov::preprocess::OutputTensorInfo& self, const ov::element::Type& type) {
             return &self.set_element_type(type);
@@ -366,7 +373,7 @@ static void regclass_graph_OutputTensorInfo(py::module m) {
         },
         py::arg("layout"),
         R"(
-            Set layout for output tensor info 
+            Set layout for output tensor info
             :param layout: layout to be set
             :type layout: Union[str, openvino.runtime.Layout]
         )");
@@ -419,7 +426,7 @@ static void regclass_graph_OutputModelInfo(py::module m) {
         },
         py::arg("layout"),
         R"(
-            Set layout for output model info 
+            Set layout for output model info
             :param layout: layout to be set
             :type layout: Union[str, openvino.runtime.Layout]
         )");

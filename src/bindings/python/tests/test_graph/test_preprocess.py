@@ -330,7 +330,7 @@ def test_graph_preprocess_set_from_np_infer():
         assert op in model_operators
 
 
-def test_graph_preprocess_set_memory_type():
+def test_graph_preprocess_postprocess_set_memory_type():
     shape = [1, 1, 1]
     parameter_a = ops.parameter(shape, dtype=np.int32, name="A")
     op = ops.relu(parameter_a)
@@ -339,9 +339,11 @@ def test_graph_preprocess_set_memory_type():
 
     ppp = PrePostProcessor(function)
     ppp.input().tensor().set_memory_type("some_memory_type")
+    ppp.output().tensor().set_memory_type("some_memory_type")
     function = ppp.build()
 
     assert any(key for key in function.input().rt_info if "memory_type" in key)
+    assert any(key for key in function.output().rt_info if "memory_type" in key)
 
 
 @pytest.mark.parametrize(

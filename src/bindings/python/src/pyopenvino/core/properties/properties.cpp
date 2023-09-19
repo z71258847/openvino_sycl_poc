@@ -223,8 +223,10 @@ void regmodule_properties(py::module m) {
         "MemoryType",
         "openvino.runtime.properties.intel_gpu.MemoryType submodule that simulates ov::intel_gpu::memory_type");
 
-    m_memory_type.attr("surface") = ov::intel_gpu::memory_type::surface;
-    m_memory_type.attr("buffer") = ov::intel_gpu::memory_type::buffer;
+    m_memory_type.attr("surface") = (std::string)ov::intel_gpu::memory_type::surface;
+    m_memory_type.attr("buffer") = (std::string)ov::intel_gpu::memory_type::buffer;
+    m_memory_type.attr("host") = (std::string)ov::intel_gpu::memory_type::host;
+    m_memory_type.attr("remote") = (std::string)ov::intel_gpu::memory_type::remote;
 
     // Submodule capability (intel_gpu)
     class FakeCapabilityGPU {};

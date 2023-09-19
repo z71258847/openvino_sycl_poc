@@ -548,7 +548,11 @@ void SyncInferRequest::allocate_input(const ov::Output<const ov::Node>& port, co
     const auto& shape = port.get_partial_shape();
     auto element_type = port.get_element_type();
 
-    m_user_inputs[name] = { create_host_tensor(shape, element_type), TensorOwner::PLUGIN };
+    if (has_remote_flag(port)) {
+        m_user_inputs[name] = { create_device_tensor(shape.get_shape(), element_type), TensorOwner::PLUGIN };
+    } else {
+        m_user_inputs[name] = { create_host_tensor(shape, element_type), TensorOwner::PLUGIN };
+    }
     ov::ISyncInferRequest::set_tensor(port, m_user_inputs.at(name).ptr);
 }
 
@@ -556,7 +560,11 @@ void SyncInferRequest::allocate_output(const ov::Output<const ov::Node>& port, c
     const auto& shape = port.get_partial_shape();
     auto element_type = port.get_element_type();
 
-    m_user_outputs[name] = { create_host_tensor(shape, element_type), TensorOwner::PLUGIN };
+    if (has_remote_flag(port)) {
+        m_user_outputs[name] = { create_device_tensor(shape.get_shape(), element_type), TensorOwner::PLUGIN };
+    } else {
+        m_user_outputs[name] = { create_host_tensor(shape, element_type), TensorOwner::PLUGIN };
+    }
     ov::ISyncInferRequest::set_tensor(port, m_user_outputs.at(name).ptr);
 }
 
@@ -811,6 +819,18 @@ void SyncInferRequest::init_mappings(bool is_legacy_api) {
 
 bool SyncInferRequest::is_batched_input(const ov::Output<const ov::Node>& port) const {
     return m_batched_tensors.count(port.get_tensor_ptr()) > 0;
+}
+
+bool SyncInferRequest::has_remote_flag(const ov::Output<const ov::Node>& port) const {
+    using namespace ov::preprocess;
+    using namespace ov::intel_gpu::memory_type;
+    if (port.get_rt_info().count(ov::preprocess::TensorInfoMemoryType::get_type_info_static())) {
+        std::string mem_type = port.get_rt_info().at(ov::preprocess::TensorInfoMemoryType::get_type_info_static())
+                                                 .as<ov::preprocess::TensorInfoMemoryType>().value;
+        return (MemoryType(mem_type) & remote) == remote;
+    }
+
+    return false;
 }
 
 }  // namespace intel_gpu

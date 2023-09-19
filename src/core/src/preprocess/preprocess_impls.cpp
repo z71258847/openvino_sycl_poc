@@ -361,6 +361,15 @@ void OutputInfo::OutputInfoImpl::build(ov::ResultVector& results) {
         node = std::get<0>(action_result);
         post_processing_applied = true;
     }
+
+    if (get_tensor_data()->is_memory_type_set()) {
+        if (get_tensor_data()->get_memory_type().empty()) {
+            result->output(0).get_rt_info().erase(TensorInfoMemoryType::get_type_info_static());
+        } else {
+            result->output(0).get_rt_info()[TensorInfoMemoryType::get_type_info_static()] = TensorInfoMemoryType(get_tensor_data()->get_memory_type());
+        }
+    }
+
     // Restore tensor names
     node.get_tensor().set_names(start_out_node_names);
     auto orig_parent = result->get_input_source_output(0).get_node_shared_ptr();
@@ -439,6 +448,9 @@ void OutputInfo::OutputInfoImpl::dump(std::ostream& str) const {
     str << "Output ";
     if (!start_out_node_names.empty()) {
         str << "\"" << *start_out_node_names.begin() << "\"";
+    }
+    if (get_tensor_data()->is_memory_type_set()) {
+        str << " memory type=" << get_tensor_data()->get_memory_type();
     }
     str << ":" << std::endl;
     str << "    Model's data tensor: ";

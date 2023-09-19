@@ -141,6 +141,8 @@ std::shared_ptr<ov::Model> Plugin::clone_and_transform_model(const std::shared_p
 
         new_res->output(0).set_names(old_res->output(0).get_names());
         new_res->set_friendly_name(old_res->get_friendly_name());
+        new_res->output(0).get_rt_info() = old_res->output(0).get_rt_info();
+        new_res->get_rt_info() = old_res->get_rt_info();
     }
 
     GPU_DEBUG_IF(!debug_config->dump_graphs.empty()) {

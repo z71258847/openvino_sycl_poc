@@ -111,7 +111,25 @@ protected:
     bool m_layout_set = false;
 };
 
-class OutputTensorInfo::OutputTensorInfoImpl : public TensorInfoImplBase {};
+class OutputTensorInfo::OutputTensorInfoImpl : public TensorInfoImplBase {
+public:
+    void set_memory_type(const std::string& mem_type) {
+        m_memory_type_set = true;
+        m_memory_type = mem_type;
+    }
+
+    const std::string& get_memory_type() const {
+        return m_memory_type;
+    }
+
+    bool is_memory_type_set() const {
+        return m_memory_type_set;
+    }
+
+private:
+    std::string m_memory_type = {};
+    bool m_memory_type_set = false;
+};
 
 /// \brief InputTensorInfoImpl - internal data structure
 class InputTensorInfo::InputTensorInfoImpl : public TensorInfoImplBase {

@@ -122,17 +122,71 @@ static constexpr Property<int64_t> available_device_mem{"AVAILABLE_DEVICE_MEM_SI
  */
 namespace memory_type {
 
-/**
- * @brief Native video decoder surface
- * @ingroup ov_runtime_ocl_gpu_prop_cpp_api
- */
-static constexpr auto surface = "GPU_SURFACE";
+class MemoryType {
+public:
+    constexpr MemoryType(uint8_t m) : mask(m) {}
 
-/*
- * @brief OpenCL buffer
- * @ingroup ov_runtime_ocl_gpu_prop_cpp_api
- */
-static constexpr auto buffer = "GPU_BUFFER";
+    explicit MemoryType(const std::string& smask) {
+        for (size_t i = 0; i < max_memory_properties; i++) {
+            auto storage_type = storage_types[i];
+            if (smask.find(storage_type) != std::string::npos) {
+                mask |= static_cast<uint8_t>(i) & storage_type_mask;
+            }
+        }
+        for (size_t i = 0; i < max_memory_properties; i++) {
+            auto allocation_type = allocation_types[i];
+            if (smask.find(allocation_type) != std::string::npos) {
+                mask |= (static_cast<uint8_t>(i) << 4) & allocation_type_mask;
+            }
+        }
+    }
+
+    operator std::string() const {
+        auto storage_type_idx = mask & storage_type_mask;
+        auto allocation_type_idx = (mask & allocation_type_mask) >> 4;
+
+        return std::string(allocation_types[allocation_type_idx]) + "|" + std::string(storage_types[storage_type_idx]);
+    }
+
+    friend inline MemoryType operator|(const MemoryType& a, const MemoryType& b);
+    friend inline MemoryType operator&(const MemoryType& a, const MemoryType& b);
+    friend inline bool operator==(const MemoryType& a, const MemoryType& b);
+
+private:
+    constexpr static size_t max_memory_properties = 2;
+    uint8_t mask = 0x00;
+
+    const char* storage_types[max_memory_properties] = {
+        "GPU_BUFFER",
+        "GPU_SURFACE"
+    };
+
+    const char* allocation_types[max_memory_properties] = {
+        "HOST",
+        "REMOTE"
+    };
+
+    static const uint8_t storage_type_mask = 0x0f;
+    static const uint8_t allocation_type_mask = 0xf0;
+};
+
+inline MemoryType operator|(const MemoryType& a,  const MemoryType& b) {
+    return MemoryType(a.mask | b.mask);
+}
+
+inline MemoryType operator&(const MemoryType& a, const MemoryType& b) {
+    return MemoryType(a.mask & b.mask);
+}
+
+inline bool operator==(const MemoryType& a, const MemoryType& b) {
+    return a.mask == b.mask;
+}
+
+static constexpr MemoryType buffer = 0x00;
+static constexpr MemoryType surface = 0x01;
+
+static constexpr MemoryType remote = 0x10;
+static constexpr MemoryType host = 0x00;
 
 }  // namespace memory_type
 

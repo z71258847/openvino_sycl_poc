@@ -101,6 +101,8 @@ private:
 
     void init_mappings(bool is_legacy_api);
     bool is_batched_input(const ov::Output<const ov::Node>& port) const;
+
+    bool has_remote_flag(const ov::Output<const ov::Node>& port) const;
 };
 
 }  // namespace intel_gpu

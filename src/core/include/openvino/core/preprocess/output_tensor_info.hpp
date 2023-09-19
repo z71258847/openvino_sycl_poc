@@ -47,6 +47,13 @@ public:
     ///
     /// \return Reference to 'this' to allow chaining with other calls in a builder-like manner
     OutputTensorInfo& set_layout(const ov::Layout& layout);
+
+    /// \brief Set memory type runtime information for user's input tensor
+    ///
+    /// \param memory_type Memory type. Refer to specific plugin's documentation for exact string format
+    ///
+    /// \return Reference to 'this' to allow chaining with other calls in a builder-like manner
+    OutputTensorInfo& set_memory_type(const std::string& memory_type);
 };
 
 }  // namespace preprocess

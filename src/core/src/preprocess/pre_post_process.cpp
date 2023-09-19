@@ -352,6 +352,11 @@ OutputTensorInfo& OutputTensorInfo::set_layout(const Layout& layout) {
     return *this;
 }
 
+OutputTensorInfo& OutputTensorInfo::set_memory_type(const std::string& memory_type) {
+    m_impl->set_memory_type(memory_type);
+    return *this;
+}
+
 // --------------------- OutputModelInfo ------------------
 OutputModelInfo::OutputModelInfo() : m_impl(std::unique_ptr<OutputModelInfoImpl>(new OutputModelInfoImpl())) {}
 OutputModelInfo::~OutputModelInfo() = default;
