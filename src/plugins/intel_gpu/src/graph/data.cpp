@@ -57,20 +57,20 @@ data_inst::typed_primitive_inst(network& network, data_node const& node)
 //     [ data stored in memory ]
 void data_inst::save(cldnn::BinaryOutputBuffer& ob) const {
     parent::save(ob);
-    ob << _outputs[0]->get_layout();
+    ob << get_output(0).get_layout();
 
-    const auto _allocation_type = _outputs[0]->get_allocation_type();
+    const auto _allocation_type = get_output(0).get_allocation_type();
     ob << make_data(&_allocation_type, sizeof(_allocation_type));
 
-    size_t data_size = _outputs[0]->size();
+    size_t data_size = get_output(0).size();
     ob << make_data(&data_size, sizeof(size_t));
 
     if (_allocation_type == allocation_type::usm_host || _allocation_type == allocation_type::usm_shared) {
-        ob << make_data(_outputs[0]->buffer_ptr(), data_size);
+        ob << make_data(output_memory_ptr(0)->buffer_ptr(), data_size);
     } else {
         std::vector<uint8_t> _buf;
         _buf.resize(data_size);
-        _outputs[0]->copy_to(get_network().get_stream(), _buf.data());
+        output_memory_ptr(0)->copy_to(get_network().get_stream(), _buf.data());
         ob << make_data(_buf.data(), data_size);
     }
 }
@@ -87,23 +87,23 @@ void data_inst::load(BinaryInputBuffer& ib) {
     ib >> make_data(&data_size, sizeof(size_t));
 
     if (!get_network().is_primary_stream()) {
-        _outputs[0] = ib.getConstData(_network.get_local_id(), id());
+        get_output(0).set_memory(ib.getConstData(_network.get_local_id(), id()));
         auto pos = ib.tellg();
         pos += data_size;
         ib.seekg(pos);
     } else {
-        _outputs[0] = get_network().get_engine().allocate_memory(output_layout, _allocation_type, false);
-
+        get_output(0).allocate(output_layout, _allocation_type, false);
+        auto mem = output_memory_ptr(0);
         if (_allocation_type == allocation_type::usm_host || _allocation_type == allocation_type::usm_shared) {
-            ib >> make_data(_outputs[0]->buffer_ptr(), data_size);
+            ib >> make_data(mem->buffer_ptr(), data_size);
         } else {
             std::vector<uint8_t> _buf;
             _buf.resize(data_size);
             ib >> make_data(_buf.data(), data_size);
-            _outputs[0]->copy_from(get_network().get_stream(), _buf.data());
+            mem->copy_from(get_network().get_stream(), _buf.data());
         }
 
-        ib.addConstData(_network.get_local_id(), id(), _outputs[0]);
+        ib.addConstData(_network.get_local_id(), id(), mem);
     }
 }
 

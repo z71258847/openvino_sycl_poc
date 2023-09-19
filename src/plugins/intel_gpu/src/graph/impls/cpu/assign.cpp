@@ -73,7 +73,8 @@ public:
 namespace detail {
 
 attach_assign_impl::attach_assign_impl() {
-    implementation_map<assign>::add(impl_types::cpu, assign_impl::create, {});
+    implementation_map<assign>::add(impl_types::cpu, shape_types::static_shape, assign_impl::create, {});
+    implementation_map<assign>::add(impl_types::cpu, shape_types::dynamic_shape, assign_impl::create, {});
 }
 
 }  // namespace detail

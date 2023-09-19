@@ -904,11 +904,14 @@ network::output_chains_map::iterator network::add_output_chain(std::shared_ptr<p
     return _output_chains.insert({ p_inst->id(), chain }).first;
 }
 
-std::vector<event::ptr> network::set_output_memory(const primitive_id& id, memory::ptr mem_new) {
-    GPU_DEBUG_TRACE_DETAIL << "Set output " << id << " " << mem_new->get_layout().to_short_string() << std::endl;
-    std::shared_ptr<primitive_inst> p_inst;
+std::vector<event::ptr> network::set_output_memory(const primitive_id& id, memory::ptr mem_new, bool is_external) {
+    if (mem_new) {
+        GPU_DEBUG_TRACE_DETAIL << "Set output " << id << " " << mem_new->get_layout().to_short_string() << std::endl;
+    } else {
+        GPU_DEBUG_TRACE_DETAIL << "Reset output " << id << std::endl;
+    }
     std::vector<event::ptr> ret_ev;
-    p_inst = find_primitive(id);
+    std::shared_ptr<primitive_inst> p_inst = find_primitive(id);
 
     OPENVINO_ASSERT(p_inst != nullptr, "[GPU] topology doesn't contain primitive: ", id);
 
@@ -925,12 +928,13 @@ std::vector<event::ptr> network::set_output_memory(const primitive_id& id, memor
     }
 
     for (auto& prim : o_iter->second) {
+        prim->get_output(0).set_external(is_external);
         auto mem = mem_new;
         if (!prim->is_dynamic() && mem_new && prim->output_memory_ptr())
             mem = eng.reinterpret_buffer(*mem_new, prim->output_memory().get_layout());
 
-        ret_ev.push_back(prim->set_output_memory(mem));
-        if (!_reset_arguments &&
+        ret_ev.push_back(prim->set_output_memory(mem, !prim->is_dynamic()));
+        if (!_reset_arguments && mem &&
             (prim->type() != cldnn::data::type_id() && !(prim->type() == cldnn::mutable_data::type_id() && prim->dependencies().empty()))) {
             prim->set_arguments();
         }

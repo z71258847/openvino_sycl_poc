@@ -10,7 +10,9 @@
 #include "intel_gpu/runtime/lru_cache.hpp"
 #include "intel_gpu/runtime/tensor_accessor.hpp"
 #include "intel_gpu/graph/network.hpp"
+#include "intel_gpu/graph/output.hpp"
 #include "intel_gpu/runtime/utils.hpp"
+#include "openvino/core/except.hpp"
 #include "program_node.h"
 #include "primitive_type.h"
 #include "intel_gpu/graph/serialization/binary_buffer.hpp"
@@ -134,14 +136,17 @@ public:
         auto dep = dependencies().at(index);
         return dep.first->output_memory_ptr(dep.second);
     }
-    memory& output_memory(size_t index = 0) const { return *_outputs[index]; }
-    memory::ptr output_memory_ptr(size_t index = 0) const { return _outputs[index]; }
+    const Output& get_output(size_t i = 0) const;
+    Output& get_output(size_t i = 0);
+    memory& output_memory(size_t index = 0) const { return *get_output(index).get_memory(); }
+    memory::ptr output_memory_ptr(size_t index = 0) const { return get_output(index).get_memory(); }
     size_t inputs_memory_count() const { return _inputs_memory_count; }
     size_t outputs_memory_count() const { return _outputs_memory_count; }
     bool outputs_allocated() const {
-        if (_outputs.empty()) return false;
-        for (const auto& output : _outputs) {
-            if (!output) return false;
+        if (m_outputs.empty()) return false;
+        for (const auto& output : m_outputs) {
+            if (!output.allocated())
+                return false;
         }
         return true;
     }
@@ -307,7 +312,7 @@ protected:
     // _output is optional because its initialization might be postponed (reshape_inst may either allocate it's own
     // buffer or attach input as output
     // depending on reshape_node.is_in_place())
-    std::vector<memory::ptr> _outputs;
+    std::vector<Output> m_outputs;
 
     std::vector<memory::ptr> _intermediates_memory;
 
@@ -337,10 +342,9 @@ protected:
     bool _is_constant = false;
     bool _needs_completion_event = false;
 
-    size_t max_output_layout_size = 0;
     std::vector<size_t> max_intermediates_memory_sizes;
 
-    std::vector<memory::ptr> allocate_outputs(kernel_impl_params* updated_params = nullptr, bool reset_mem = true, bool runtime_alloc = false);
+    void allocate_outputs(kernel_impl_params* updated_params = nullptr, bool reset_mem = true, bool runtime_alloc = false);
     memory::ptr allocate_internal_buffer(size_t idx, bool reset = true);
     static std::vector<std::shared_ptr<primitive_inst>> build_exec_deps(
         std::vector<std::pair<std::shared_ptr<primitive_inst>, int32_t>> const& mem_deps);
@@ -513,7 +517,7 @@ protected:
 
     typed_primitive_inst_base(network& network, typed_node const& node, memory::ptr buffer)
         : typed_primitive_inst_base(network, node, false) {
-        _outputs[0] = std::move(buffer);
+        get_output(0).set_memory(buffer);
     }
 
 private:

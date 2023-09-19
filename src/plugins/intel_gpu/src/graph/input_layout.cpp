@@ -40,24 +40,23 @@ event::ptr input_layout_inst::set_data(memory::ptr mem) {
 
     check_memory_to_set(*mem, ol);
     event::ptr ev = nullptr;
-    auto& engine = get_network().get_engine();
+    const auto& engine = get_network().get_engine();
     auto& stream = get_network().get_stream();
 
     if (mem->is_allocated_by(engine)) {
-        OPENVINO_ASSERT(!_outputs.empty(), "[GPU] Can't set data for empty input memory");
-        _outputs[0] = mem;
+        OPENVINO_ASSERT(!m_outputs.empty(), "[GPU] Can't set data for empty input memory");
+        get_output(0).set_memory(mem);
         ev = stream.create_user_event(true);
     } else {
-        if (_outputs.empty() || !_outputs[0]) {
-            _outputs.resize(1);
-            _outputs[0] = engine.allocate_memory(mem->get_layout(), engine.get_preferred_memory_allocation_type(), false);
+        if (!get_output(0).allocated()) {
+            get_output(0).allocate(mem->get_layout(), engine.get_preferred_memory_allocation_type(), false);
         }
 
-        if (ol.is_dynamic() && _outputs[0]->size() < mem->size()) {
-            _outputs[0] = engine.allocate_memory(mem->get_layout(), engine.get_preferred_memory_allocation_type(), false);
+        if (ol.is_dynamic() && get_output(0).size() < mem->size()) {
+            get_output(0).allocate(mem->get_layout(), engine.get_preferred_memory_allocation_type(), false);
         }
         mem_lock<uint8_t> src(mem, stream);
-        ev = _outputs[0]->copy_from(stream, src.data(), false);
+        ev = output_memory_ptr(0)->copy_from(stream, src.data(), false);
     }
     _has_valid_input = true;
     _output_changed = true;
@@ -65,8 +64,8 @@ event::ptr input_layout_inst::set_data(memory::ptr mem) {
 }
 
 void input_layout_inst::update_shape() {
-    OPENVINO_ASSERT(!_outputs.empty() && _outputs[0] != nullptr, "[GPU] input memory is not set");
-    auto mem_layout = _outputs[0]->get_layout();
+    OPENVINO_ASSERT(!m_outputs.empty() && get_output(0).allocated(), "[GPU] input memory is not set");
+    auto mem_layout = get_output(0).get_layout();
     if (_impl_params->get_output_layout() != mem_layout) {
         set_shape_change();
     }

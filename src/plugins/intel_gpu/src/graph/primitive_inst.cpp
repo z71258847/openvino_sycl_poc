@@ -30,6 +30,7 @@
 #include "graph_optimizer/prepare_buffer_fusing.h"
 
 #include "intel_gpu/plugin/common_utils.hpp"
+#include "intel_gpu/graph/output.hpp"
 #include "intel_gpu/graph/network.hpp"
 #include "intel_gpu/graph/serialization/set_serializer.hpp"
 #include "intel_gpu/runtime/engine.hpp"
@@ -218,26 +219,29 @@ void primitive_inst::check_memory_to_set(const memory& mem, const layout& layout
     }
 }
 
-event::ptr primitive_inst::set_output_memory(memory::ptr mem_new, bool check, size_t idx) {
-    auto& eng = _network.get_engine();
-    // skip all the buzz if no action actually required
-    event::ptr ev = nullptr;
-    if (_outputs[idx] && eng.is_the_same_buffer(*mem_new, *_outputs[idx])) {
-        return get_network().get_stream().create_user_event(true);
+
+const ov::intel_gpu::Output& primitive_inst::get_output(size_t i) const {
+    OPENVINO_ASSERT(m_outputs.size() >= i);
+    return m_outputs[i];
+}
+
+ov::intel_gpu::Output& primitive_inst::get_output(size_t i) {
+    OPENVINO_ASSERT(m_outputs.size() >= i);
+    return m_outputs[i];
+}
+
+event::ptr primitive_inst::set_output_memory(memory::ptr mem, bool check, size_t idx) {
+    if (check) {
+        auto ol = _impl_params->get_output_layout(idx);
+        check_memory_to_set(*mem, ol);
     }
-
-    auto ol = _impl_params->get_output_layout(idx);
-
-    if (check)
-        check_memory_to_set(*mem_new, ol);
 
     if (is_constant()) {
-        ev = mem_new->copy_from(_network.get_stream(), *_outputs[idx], false);
+        return mem->copy_from(_network.get_stream(), output_memory(idx), false);
     } else {
-        ev = get_network().get_stream().create_user_event(true);
-        _outputs[idx] = mem_new;
+        get_output(idx).set_memory(mem);
+        return get_network().get_stream().create_user_event(true);
     }
-    return ev;
 }
 
 void primitive_inst::update_shape() {
@@ -390,8 +394,8 @@ event::ptr primitive_inst::realloc_if_needed() {
                 concat_inst->realloc_if_needed();
                 concat_inst->allocation_done_by_other = true;
             }
-            this->_outputs[0] = concat_inst->_outputs[0];
-            GPU_DEBUG_TRACE_DETAIL << id() << ": use concat user's memory " << this->_outputs[0]->buffer_ptr() << std::endl;
+            get_output(0).set_memory(concat_inst->get_output(0).get_memory());
+            GPU_DEBUG_TRACE_DETAIL << id() << ": use concat user's memory " << output_memory_ptr(0)->buffer_ptr() << std::endl;
             return ev;
         }
     }
@@ -414,7 +418,7 @@ event::ptr primitive_inst::realloc_if_needed() {
         return ev;
     }
 
-    bool can_reuse_buffer = _outputs[0] && actual_layout.count() <= max_output_layout_size;
+    bool can_reuse_buffer = get_output(0).can_reinterpret(actual_layout);
 
     // Handle runtime dynamic concat optimization
     if (_node->is_type<concatenation>() && can_be_optimized() && allocation_done_by_other) {
@@ -434,20 +438,23 @@ event::ptr primitive_inst::realloc_if_needed() {
 
     if (can_reuse_buffer) {
         GPU_DEBUG_TRACE_DETAIL << id() << ": reuse previously allocated output buffer" << std::endl;
-        if (_outputs[0]->get_layout() != actual_layout) {
-            _outputs[0]->set_reused(true);
-            _outputs[0] = _network.get_engine().reinterpret_buffer(*_outputs[0], actual_layout);
+        if (get_output(0).get_layout() != actual_layout) {
+            get_output(0).set_reused(true);
+            get_output(0).reinterpret(actual_layout);
         }
         if (need_reset_output_memory() && !can_be_optimized()) {
-            ev = _outputs[0]->fill(_network.get_stream());
+            ev = get_output(0).fill(_network.get_stream());
         }
     } else {
+        OPENVINO_ASSERT(!get_output(0).is_external(), "[GPU] Output tensor set by user has smaller size (",
+                                                      get_output(0).get_actual_size(), ") ",
+                                                      "than required (",
+                                                      actual_layout.count(), ")");
         GPU_DEBUG_TRACE_DETAIL << id() << ": realloc output memory. "
-                               <<  " Current buffer_size=" << max_output_layout_size
+                               <<  " Current buffer_size=" << get_output(0).get_actual_size()
                                <<  " Requested buffer_size=" << actual_layout.count() << std::endl;
-        _outputs = allocate_outputs(&updated_params, need_reset_output_memory(), true);
         // TODO : need to handle multiple outputs
-        max_output_layout_size = updated_params.output_layouts[0].count();
+        allocate_outputs(&updated_params, need_reset_output_memory(), true);
     }
     _mem_allocated = true;
     // intermediate memory allocation is required for primitives consisting of multiple kernels in dynamic case
@@ -676,8 +683,8 @@ void primitive_inst::do_runtime_skip_reorder() {
             auto out_port_idx = u->get_node().get_dependency_with_port(0).second;
             // If current node's output_node is not dynamic, the memory is already allocated at build time
             auto alloc_type = allocation_type::unknown;
-            if (!get_node().is_dynamic_output_layout(out_port_idx) && static_cast<int64_t>(_outputs.size()) > out_port_idx) {
-                alloc_type = _outputs[out_port_idx]->get_allocation_type();
+            if (!get_node().is_dynamic_output_layout(out_port_idx) && static_cast<int64_t>(m_outputs.size()) > out_port_idx) {
+                alloc_type = get_output(out_port_idx).get_allocation_type();
             }
             if (alloc_type == allocation_type::usm_device && u->is_output())
                 continue;
@@ -805,7 +812,7 @@ event::ptr primitive_inst::execute(const std::vector<event::ptr>& events) {
 
             OPENVINO_ASSERT(outputs.find(last_prim_id) != outputs.end(), "[GPU] Can't find output primitive ", last_prim_id, " for unfused subgraph");
 
-            _outputs[0] = outputs.at(last_prim_id).get_memory();
+            get_output(0).set_memory(outputs.at(last_prim_id).get_memory());
 
             _impl_params->output_layouts[0] = subgraph->get_output_layout(last_prim_id);
             return outputs.at(last_prim_id).get_event();
@@ -820,11 +827,11 @@ event::ptr primitive_inst::execute(const std::vector<event::ptr>& events) {
                 auto ev = update_weights();
                 if (ev)
                     dependencies.push_back(ev);
-                auto ev_reset = realloc_if_needed();
-                if (ev_reset)
-                    dependencies.push_back(ev_reset);
             }
         }
+        auto ev_reset = realloc_if_needed();
+        if (ev_reset)
+            dependencies.push_back(ev_reset);
 
         OPENVINO_ASSERT(_impl_params->get_output_layout().is_static(),
                         "[GPU] Can't execute ", primitive_id, " primitive as output layout is dynamic in runtime");
@@ -938,7 +945,7 @@ primitive_inst::primitive_inst(network& network)
     , _impl_params(make_unique<kernel_impl_params>())
     , _impl(nullptr)
     , _dynamic_impl(nullptr)
-    , _outputs({memory::ptr()})
+    , m_outputs({ov::intel_gpu::Output(_network.get_engine())})
     , _reordered_weights_cache(network.get_weights_cache_capacity())
     , _output_changed(false)
     , _mem_allocated(false)
@@ -951,7 +958,6 @@ primitive_inst::primitive_inst(network& network, program_node const& node, bool 
     , _impl_params(node.get_kernel_impl_params())
     , _impl(node.get_selected_impl() ? node.get_selected_impl()->clone() : nullptr)
     , _dynamic_impl(nullptr)
-    , _outputs({memory::ptr()})
     , _reordered_weights_cache(network.get_weights_cache_capacity())
     , _output_changed(false)
     , _mem_allocated(allocate_memory)
@@ -969,6 +975,9 @@ primitive_inst::primitive_inst(network& network, program_node const& node, bool 
     , _can_share_buffer(node.can_share_buffer())
     , _is_constant(node.is_constant())
     , _needs_completion_event(is_any_user_cpu(node.get_users()) || node.is_output()) {
+    for (size_t i = 0; i < _outputs_memory_count; i++) {
+        m_outputs.emplace_back(_network.get_engine());
+    }
     if (allocate_memory) {
         // In case when output is mutable_data primitive, and other users dependencies are only used for
         // suychronization, The output memory of such primitive will be fused with mutable_data
@@ -989,9 +998,9 @@ primitive_inst::primitive_inst(network& network, program_node const& node, bool 
                                                        && !node.is_type<experimental_detectron_roi_feature_extractor>()) {
             for (auto& user : node.get_users())
                 if (user->is_type<mutable_data>())
-                    _outputs[0] = user->as<mutable_data>().get_attached_memory_ptr();
+                    get_output(0).set_memory(user->as<mutable_data>().get_attached_memory_ptr());
         } else {
-            _outputs = allocate_outputs();
+            allocate_outputs();
         }
     }
     if (_impl) {
@@ -1017,12 +1026,10 @@ primitive_inst::primitive_inst(network& network, program_node const& node, bool 
         }
     }
     _impl_params->strm = _network.get_stream_ptr();
-    if (_outputs[0])
-        max_output_layout_size = _outputs[0]->get_layout().get_tensor().count();
 }
 
 memory::ptr primitive_inst::allocate_internal_buffer(size_t idx, bool reset) {
-    if (_impl == nullptr || _outputs.empty() || _outputs[0] == nullptr)
+    if (_impl == nullptr || m_outputs.empty() || !get_output(0).allocated())
         return nullptr;
     const auto& ibuf_layouts = _impl->get_internal_buffer_layouts();
     if (ibuf_layouts.empty())
@@ -1047,9 +1054,9 @@ memory::ptr primitive_inst::allocate_internal_buffer(size_t idx, bool reset) {
     const auto& inst_deps = _network.get_primitives(_node->get_dependencies());
 
     auto total_device_mem_size = std::accumulate(inst_deps.begin(), inst_deps.end(), size_t(0), device_mem_acc);
-    for (const auto& output : _outputs) {
-        if (output->get_allocation_type() == allocation_type::usm_device)
-            total_device_mem_size += output->size();
+    for (const auto& output : m_outputs) {
+        if (output.get_allocation_type() == allocation_type::usm_device)
+            total_device_mem_size += output.size();
     }
 
     int64_t available_device_mem_size = engine.get_device_info().max_global_mem_size - total_device_mem_size;
@@ -1098,7 +1105,7 @@ memory::ptr primitive_inst::allocate_internal_buffer(size_t idx, bool reset) {
 }
 
 void primitive_inst::allocate_internal_buffers(bool reset) {
-    if (_impl == nullptr || _outputs.empty() || _outputs[0] == nullptr)
+    if (_impl == nullptr || m_outputs.empty() || !get_output(0).allocated())
         return;
     const auto& ibuf_layouts = _impl->get_internal_buffer_layouts();
     if (ibuf_layouts.empty())
@@ -1319,15 +1326,15 @@ memory::ptr primitive_inst::allocate_output(engine& _engine, memory_pool& pool, 
     }
 }
 
-std::vector<memory::ptr> primitive_inst::allocate_outputs(kernel_impl_params* updated_params, bool reset_mem, bool runtime_alloc) {
-    std::vector<memory::ptr> outputs;
-    for (size_t i = 0; i < get_node().get_outputs_count() ; ++i) {
-        outputs.push_back(allocate_output(get_network().get_engine(), _network.get_memory_pool(),
-                         *_node, (updated_params != nullptr) ? *updated_params : *_impl_params,
-                         get_network_id(), _network.is_internal(), i, reset_mem, is_output_buffer(this, runtime_alloc),
-                         (_outputs.size() > i) ? output_memory_ptr(i).get() : nullptr, runtime_alloc));
+void primitive_inst::allocate_outputs(kernel_impl_params* updated_params, bool reset_mem, bool runtime_alloc) {
+    for (size_t i = 0; i < m_outputs.size(); ++i) {
+        auto mem = allocate_output(get_network().get_engine(), _network.get_memory_pool(),
+                    *_node, (updated_params != nullptr) ? *updated_params : *_impl_params,
+                    get_network_id(), _network.is_internal(), i, reset_mem, is_output_buffer(this, runtime_alloc),
+                    (m_outputs.size() > i) ? output_memory_ptr(i).get() : nullptr, runtime_alloc);
+
+        get_output(i).set_memory(mem);
     }
-    return outputs;
 }
 
 std::vector<std::shared_ptr<primitive_inst>> primitive_inst::build_exec_deps(
@@ -1602,14 +1609,14 @@ void primitive_inst::save(cldnn::BinaryOutputBuffer& ob) const {
         return;
     }
 
-    ob << _outputs.size();
-    for (size_t i = 0; i < _outputs.size(); ++i) {
-        if (_outputs[i] == nullptr) {
+    ob << m_outputs.size();
+    for (size_t i = 0; i < m_outputs.size(); ++i) {
+        if (!get_output(i).allocated()) {
             ob << true;
         } else {
             ob << false;
-            ob << _outputs[i]->get_layout();
-            const auto _allocation_type = _outputs[i]->get_allocation_type();
+            ob << get_output(i).get_layout();
+            const auto _allocation_type = get_output(i).get_allocation_type();
             ob << make_data(&_allocation_type, sizeof(_allocation_type));
         }
     }
@@ -1633,8 +1640,8 @@ void primitive_inst::save(cldnn::BinaryOutputBuffer& ob) const {
         ob << dep->id();
     }
 
-    for (size_t i = 0; i < _outputs.size(); ++i) {
-        if (_outputs[i] != nullptr) {
+    for (size_t i = 0; i < m_outputs.size(); ++i) {
+        if (get_output(i).allocated()) {
             if (!mem_allocated())
                 ob << find_dep_by_mem(this, output_memory(i));
         }
@@ -1693,6 +1700,8 @@ void primitive_inst::load(cldnn::BinaryInputBuffer& ib) {
         return;
     }
 
+    auto& engine = get_network().get_engine();
+
     // mem_allocated : it is true if the output memory is allocated by this layer, and
     //                 false if this layer reuses output memory that is allocated by other layer.
     // is_output_null : it is true if the output memory is not allocated yet and false otherwise.
@@ -1739,24 +1748,26 @@ void primitive_inst::load(cldnn::BinaryInputBuffer& ib) {
         ib >> el;
     }
 
-    _outputs.resize(num_outputs);
+    m_outputs.clear();
+    for (size_t i = 0; i < num_outputs; i++) {
+        m_outputs.emplace_back(_network.get_engine());
+    }
     for (size_t i = 0; i < num_outputs; ++i) {
-        _outputs[i] = nullptr;
         if (!is_output_null[i]) {
             if (!_mem_allocated) {
                 std::string dep_id;
                 ib >> dep_id;
                 if (dep_id.compare("NOT_FOUND") != 0 && get_network().get_primitive(dep_id)->output_memory_ptr() != nullptr) {
-                    _outputs[i] = get_network().get_engine().reinterpret_buffer(get_network().get_primitive(dep_id)->output_memory(), output_layouts[i]);
+                    get_output(i).set_memory(engine.reinterpret_buffer(get_network().get_primitive(dep_id)->output_memory(), output_layouts[i]));
                 } else if (type() == cldnn::mutable_data::type_id()) {
-                    _outputs[i] = get_network().get_engine().allocate_memory(output_layouts[i], allocation_types[i]);
+                    get_output(i).set_memory(engine.allocate_memory(output_layouts[i], allocation_types[i]));
                 }
             } else {
                 if ((!can_share_buffer()) || can_be_optimized() || is_output()) {
-                    _outputs[i] = get_network().get_engine().allocate_memory(output_layouts[i], allocation_types[i]);
+                    get_output(i).set_memory(engine.allocate_memory(output_layouts[i], allocation_types[i]));
                 } else {
-                    _outputs[i] = get_network().get_memory_pool().get_memory(output_layouts[i], id(), get_network_id(), _node_mem_deps,
-                                                                            allocation_types[i], can_reuse_memory);
+                    get_output(i).set_memory(get_network().get_memory_pool().get_memory(output_layouts[i], id(), get_network_id(), _node_mem_deps,
+                                                                                        allocation_types[i], can_reuse_memory));
                 }
             }
         }
