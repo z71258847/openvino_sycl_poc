@@ -763,7 +763,7 @@ void network::reset_execution(bool wait) {
 }
 
 event::ptr network::set_input_data(const primitive_id& id, memory::ptr data) {
-    GPU_DEBUG_TRACE_DETAIL << "Set input " << id << " " << data->get_layout().to_short_string() << std::endl;
+    GPU_DEBUG_TRACE_DETAIL << "Set input " << id << " " << data->get_layout().to_short_string() << " (" << data->buffer_ptr() << ")" << std::endl;
     std::shared_ptr<primitive_inst> primitive_inst;
 
     primitive_inst = find_primitive(id);
@@ -906,7 +906,7 @@ network::output_chains_map::iterator network::add_output_chain(std::shared_ptr<p
 
 std::vector<event::ptr> network::set_output_memory(const primitive_id& id, memory::ptr mem_new, bool is_external) {
     if (mem_new) {
-        GPU_DEBUG_TRACE_DETAIL << "Set output " << id << " " << mem_new->get_layout().to_short_string() << std::endl;
+        GPU_DEBUG_TRACE_DETAIL << "Set output " << id << " " << mem_new->get_layout().to_short_string() << " (" << mem_new->buffer_ptr() << ")" << std::endl;
     } else {
         GPU_DEBUG_TRACE_DETAIL << "Reset output " << id << std::endl;
     }
@@ -929,6 +929,7 @@ std::vector<event::ptr> network::set_output_memory(const primitive_id& id, memor
 
     for (auto& prim : o_iter->second) {
         prim->get_output(0).set_external(is_external);
+
         auto mem = mem_new;
         if (!prim->is_dynamic() && mem_new && prim->output_memory_ptr())
             mem = eng.reinterpret_buffer(*mem_new, prim->output_memory().get_layout());

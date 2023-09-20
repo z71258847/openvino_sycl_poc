@@ -13,6 +13,7 @@
 #include "openvino/runtime/intel_gpu/ocl/ocl.hpp"
 #include "openvino/runtime/core.hpp"
 #include "openvino/runtime/intel_gpu/properties.hpp"
+#include "openvino/runtime/properties.hpp"
 #include "openvino/runtime/remote_tensor.hpp"
 
 #include "remote_blob_tests/remote_blob_helpers.hpp"
@@ -23,6 +24,7 @@
 #include "ngraph_functions/subgraph_builders.hpp"
 #include "functional_test_utils/plugin_cache.hpp"
 #include "functional_test_utils/blob_utils.hpp"
+#include "subgraphs_builders.hpp"
 #include "transformations/utils/utils.hpp"
 
 using namespace ::testing;
@@ -752,29 +754,212 @@ TEST(OVRemoteTensorTests, smoke_RemoteMemTypePreproc) {
 #endif
     auto core = ov::Core();
     auto model = ov::test::behavior::getDefaultNGraphFunctionForTheDevice();
-    // std::map<size_t, ov::PartialShape> dynamic_shape = {{0, ov::PartialShape::dynamic(4)}};
-    // model->reshape(dynamic_shape);
+
+    auto compiled_model_regular = core.compile_model(model, ov::test::utils::DEVICE_GPU);
 
     using namespace ov::preprocess;
     auto p = PrePostProcessor(model);
     p.input().tensor().set_memory_type(ov::intel_gpu::memory_type::remote);
     p.output().tensor().set_memory_type(ov::intel_gpu::memory_type::remote);
 
-    model = p.build();
+    auto model_remote_io = p.build();
+    auto compiled_model_remote_io = core.compile_model(model_remote_io, ov::test::utils::DEVICE_GPU);
 
-    auto dynamic_compiled_model = core.compile_model(model, ov::test::utils::DEVICE_GPU);
+    auto input = model_remote_io->get_parameters().at(0);
+    auto output = model_remote_io->get_results().at(0);
 
-    auto input = model->get_parameters().at(0);
-    auto output = model->get_results().at(0);
+    auto gpu_context = compiled_model_remote_io.get_context().as<ov::intel_gpu::ocl::ClContext>();
+    cl_context ctx = gpu_context;
+    auto ocl_instance = std::make_shared<OpenCL>(ctx);
+
+    auto infer_request_regular = compiled_model_regular.create_infer_request();
+    auto input_tensor_regular = infer_request_regular.get_tensor(input);
+    auto output_tensor_regular = infer_request_regular.get_tensor(output);
+    ASSERT_FALSE(input_tensor_regular.is<ov::intel_gpu::ocl::ClBufferTensor>() || input_tensor_regular.is<ov::intel_gpu::ocl::USMTensor>());
+    ASSERT_FALSE(output_tensor_regular.is<ov::intel_gpu::ocl::ClBufferTensor>() || output_tensor_regular.is<ov::intel_gpu::ocl::USMTensor>());
+
+    auto infer_request_remote_io = compiled_model_remote_io.create_infer_request();
+    auto input_tensor_remote_io = infer_request_remote_io.get_tensor(input);
+    auto output_tensor_remote_io = infer_request_remote_io.get_tensor(output);
+
+    ASSERT_TRUE(input_tensor_remote_io.is<ov::intel_gpu::ocl::ClBufferTensor>() || input_tensor_remote_io.is<ov::intel_gpu::ocl::USMTensor>());
+    ASSERT_TRUE(output_tensor_remote_io.is<ov::intel_gpu::ocl::ClBufferTensor>() || output_tensor_remote_io.is<ov::intel_gpu::ocl::USMTensor>());
+
+    auto input_data = ov::test::utils::create_and_fill_tensor(input->get_element_type(), input->get_shape());
 
     {
-        auto infer_request = dynamic_compiled_model.create_infer_request();
+        std::memcpy(input_tensor_regular.data(), input_data.data(), input_data.get_byte_size());
 
-        auto input_tensor = infer_request.get_tensor(input);
-        auto output_tensor = infer_request.get_tensor(output);
+        if (input_tensor_remote_io.is<ov::intel_gpu::ocl::ClBufferTensor>()) {
+            auto cl_tensor = input_tensor_remote_io.as<ov::intel_gpu::ocl::ClBufferTensor>();
+            cl::Buffer buf = cl_tensor;
+            ocl_instance->_queue.enqueueWriteBuffer(buf, true, 0, input_data.get_byte_size(), input_data.data());
+        } else if (input_tensor_remote_io.is<ov::intel_gpu::ocl::USMTensor>()) {
+            auto cl_tensor = input_tensor_remote_io.as<ov::intel_gpu::ocl::USMTensor>();
+            void* shared_buffer = cl_tensor.get();
+            ASSERT_EQ(ocl_instance->get_allocation_type(shared_buffer), CL_MEM_TYPE_DEVICE_INTEL);
+            auto err = ocl_instance->memcpy(ocl_instance->_queue, shared_buffer, input_data.data(), input_data.get_byte_size(), true, nullptr, nullptr);
+            ASSERT_EQ(err, CL_SUCCESS);
+        }
+    }
 
-        ASSERT_TRUE(input_tensor.is<ov::intel_gpu::ocl::ClBufferTensor>() || input_tensor.is<ov::intel_gpu::ocl::USMTensor>());
-        ASSERT_TRUE(output_tensor.is<ov::intel_gpu::ocl::ClBufferTensor>() || output_tensor.is<ov::intel_gpu::ocl::USMTensor>());
+    infer_request_regular.infer();
+    infer_request_remote_io.infer();
+
+    ov::Tensor host_out(output->get_element_type(), output->get_shape());
+    if (output_tensor_remote_io.is<ov::intel_gpu::ocl::ClBufferTensor>()) {
+        auto cl_tensor = output_tensor_remote_io.as<ov::intel_gpu::ocl::ClBufferTensor>();
+        cl::Buffer buf = cl_tensor;
+        ocl_instance->_queue.enqueueReadBuffer(buf, true, 0, host_out.get_byte_size(), host_out.data());
+    } else if (output_tensor_remote_io.is<ov::intel_gpu::ocl::USMTensor>()) {
+        auto cl_tensor = output_tensor_remote_io.as<ov::intel_gpu::ocl::USMTensor>();
+        void* shared_buffer = cl_tensor.get();
+        ASSERT_EQ(ocl_instance->get_allocation_type(shared_buffer), CL_MEM_TYPE_DEVICE_INTEL);
+        auto err = ocl_instance->memcpy(ocl_instance->_queue, host_out.data(), shared_buffer, host_out.get_byte_size(), true, nullptr, nullptr);
+        ASSERT_EQ(err, CL_SUCCESS);
+    }
+    ASSERT_EQ(std::memcmp(host_out.data(), output_tensor_regular.data(), output_tensor_regular.get_byte_size()), 0);
+}
+
+TEST(OVRemoteTensorTests, smoke_RemoteMemTypePreprocKVCache) {
+#if defined(ANDROID)
+    GTEST_SKIP();
+#endif
+    auto core = ov::Core();
+    ov::PartialShape kv_cache_size_dyn = {-1, 32, -1, 80};
+    ov::PartialShape new_token_size_dyn = {-1, -1, 32, 80};
+    ov::PartialShape matmul_in_size_dyn = {-1, 32, -1, -1};
+
+    ov::Shape kv_cache_size_initial = {1, 32, 0, 80};
+    ov::Shape new_token_size_initial = {1, 20, 32, 80};
+    ov::Shape matmul_in_size_initial = {1, 32, 1, 20};
+
+    ov::element::Type element_type = ov::element::f16;
+
+    auto model = tests::make_llm_kv_cache_pattern(kv_cache_size_dyn, new_token_size_dyn, matmul_in_size_dyn, element_type);
+
+    auto compiled_model_regular = core.compile_model(model, ov::test::utils::DEVICE_GPU, ov::hint::inference_precision(ov::element::f16));
+
+    using namespace ov::preprocess;
+    auto p = PrePostProcessor(model);
+    p.input(0).tensor().set_memory_type(ov::intel_gpu::memory_type::remote);
+    p.output(0).tensor().set_memory_type(ov::intel_gpu::memory_type::remote);
+
+    auto model_remote_io = p.build();
+    auto compiled_model_remote_io = core.compile_model(model_remote_io, ov::test::utils::DEVICE_GPU, ov::hint::inference_precision(ov::element::f16));
+
+    auto input0 = model_remote_io->get_parameters().at(0);
+    auto input1 = model_remote_io->get_parameters().at(1);
+    auto input2 = model_remote_io->get_parameters().at(2);
+    auto output0 = model_remote_io->get_results().at(0);
+    auto output1 = model_remote_io->get_results().at(1);
+
+    auto gpu_context = compiled_model_remote_io.get_context().as<ov::intel_gpu::ocl::ClContext>();
+    cl_context ctx = gpu_context;
+    auto ocl_instance = std::make_shared<OpenCL>(ctx);
+
+    auto infer_request_regular = compiled_model_regular.create_infer_request();
+    auto input0_tensor_regular = infer_request_regular.get_tensor(input0);
+    auto input1_tensor_regular = infer_request_regular.get_tensor(input1);
+    auto input2_tensor_regular = infer_request_regular.get_tensor(input2);
+    auto output0_tensor_regular = infer_request_regular.get_tensor(output0);
+    auto output1_tensor_regular = infer_request_regular.get_tensor(output1);
+
+    ASSERT_FALSE(input0_tensor_regular.is<ov::RemoteTensor>());
+    ASSERT_FALSE(input1_tensor_regular.is<ov::RemoteTensor>());
+    ASSERT_FALSE(input2_tensor_regular.is<ov::RemoteTensor>());
+    ASSERT_FALSE(output0_tensor_regular.is<ov::RemoteTensor>());
+    ASSERT_FALSE(output1_tensor_regular.is<ov::RemoteTensor>());
+
+    auto infer_request_remote_io = compiled_model_remote_io.create_infer_request();
+    auto input0_tensor_remote_io = infer_request_remote_io.get_tensor(input0);
+    auto input1_tensor_remote_io = infer_request_remote_io.get_tensor(input1);
+    auto input2_tensor_remote_io = infer_request_remote_io.get_tensor(input2);
+    auto output0_tensor_remote_io = infer_request_remote_io.get_tensor(output0);
+    auto output1_tensor_remote_io = infer_request_remote_io.get_tensor(output1);
+
+    ASSERT_TRUE(input0_tensor_remote_io.is<ov::intel_gpu::ocl::ClBufferTensor>() || input0_tensor_remote_io.is<ov::intel_gpu::ocl::USMTensor>());
+    ASSERT_FALSE(input1_tensor_regular.is<ov::RemoteTensor>());
+    ASSERT_FALSE(input2_tensor_regular.is<ov::RemoteTensor>());
+    ASSERT_TRUE(output0_tensor_remote_io.is<ov::intel_gpu::ocl::ClBufferTensor>() || output0_tensor_remote_io.is<ov::intel_gpu::ocl::USMTensor>());
+    ASSERT_FALSE(output1_tensor_regular.is<ov::RemoteTensor>());
+
+    auto get_host_tensor = [&](const ov::Tensor& t) {
+        if (t.is<ov::RemoteTensor>()) {
+            ov::Tensor host_tensor(t.get_element_type(), t.get_shape());
+            if (t.is<ov::intel_gpu::ocl::ClBufferTensor>()) {
+                auto cl_tensor = t.as<ov::intel_gpu::ocl::ClBufferTensor>();
+                cl::Buffer buf = cl_tensor;
+                ocl_instance->_queue.enqueueReadBuffer(buf, true, 0, host_tensor.get_byte_size(), host_tensor.data());
+            } else if (t.is<ov::intel_gpu::ocl::USMTensor>()) {
+                auto cl_tensor = t.as<ov::intel_gpu::ocl::USMTensor>();
+                void* shared_buffer = cl_tensor.get();
+                ocl_instance->memcpy(ocl_instance->_queue, host_tensor.data(), shared_buffer, host_tensor.get_byte_size(), true, nullptr, nullptr);
+            }
+            return host_tensor;
+        } else {
+            return t;
+        }
+    };
+
+    auto compare_tensors = [&](const ov::Tensor& t1, const ov::Tensor& t2) {
+        auto host_t1 = get_host_tensor(t1);
+        auto host_t2 = get_host_tensor(t2);
+
+        return std::memcmp(host_t1.data(), host_t2.data(), host_t1.get_byte_size()) == 0;
+    };
+
+    {
+        auto new_token_input = ov::test::utils::create_and_fill_tensor(element_type, new_token_size_initial);
+        auto matmul_input = ov::test::utils::create_and_fill_tensor(element_type, matmul_in_size_initial);
+
+        auto kv_cache_input_regular = infer_request_regular.get_tensor(input0);
+        kv_cache_input_regular.set_shape(kv_cache_size_initial);
+        auto kv_cache_input_remote_io = infer_request_remote_io.get_tensor(input0);
+        kv_cache_input_remote_io.set_shape(kv_cache_size_initial);
+
+        infer_request_regular.set_tensor(input0, kv_cache_input_regular);
+        infer_request_regular.set_tensor(input1, new_token_input);
+        infer_request_regular.set_tensor(input2, matmul_input);
+
+        infer_request_regular.infer();
+
+
+        infer_request_remote_io.set_tensor(input0, kv_cache_input_remote_io);
+        infer_request_remote_io.set_tensor(input1, new_token_input);
+        infer_request_remote_io.set_tensor(input2, matmul_input);
+
+        infer_request_remote_io.infer();
+
+        ASSERT_TRUE(compare_tensors(infer_request_regular.get_tensor(output0), infer_request_remote_io.get_tensor(output0)));
+        ASSERT_TRUE(compare_tensors(infer_request_regular.get_tensor(output1), infer_request_remote_io.get_tensor(output1)));
+    }
+
+    const ov::Shape new_token_size_loop = {1, 1, 32, 80};
+    ov::Shape matmul_in_size_loop = matmul_in_size_initial;
+    for (size_t i = 0; i < 20; i++) {
+        matmul_in_size_loop[3]++;
+
+        auto new_token_input = ov::test::utils::create_and_fill_tensor(element_type, new_token_size_loop);
+        auto matmul_input = ov::test::utils::create_and_fill_tensor(element_type, matmul_in_size_loop);
+
+        auto kv_cache_input_regular = infer_request_regular.get_tensor(output0);
+        auto kv_cache_input_remote_io = infer_request_remote_io.get_tensor(output0);
+
+        infer_request_regular.set_tensor(input0, kv_cache_input_regular);
+        infer_request_regular.set_tensor(input1, new_token_input);
+        infer_request_regular.set_tensor(input2, matmul_input);
+
+        infer_request_regular.infer();
+
+        infer_request_remote_io.set_tensor(input0, kv_cache_input_remote_io);
+        infer_request_remote_io.set_tensor(input1, new_token_input);
+        infer_request_remote_io.set_tensor(input2, matmul_input);
+
+        infer_request_remote_io.infer();
+
+        ASSERT_TRUE(compare_tensors(infer_request_regular.get_tensor(output0), infer_request_remote_io.get_tensor(output0)));
+        ASSERT_TRUE(compare_tensors(infer_request_regular.get_tensor(output1), infer_request_remote_io.get_tensor(output1)));
     }
 }
 

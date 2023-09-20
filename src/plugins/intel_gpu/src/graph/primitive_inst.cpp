@@ -231,9 +231,18 @@ ov::intel_gpu::Output& primitive_inst::get_output(size_t i) {
 }
 
 event::ptr primitive_inst::set_output_memory(memory::ptr mem, bool check, size_t idx) {
+    if (!mem) {
+        GPU_DEBUG_TRACE_DETAIL << id() << " reset output memory!\n";
+    }
     if (check) {
         auto ol = _impl_params->get_output_layout(idx);
         check_memory_to_set(*mem, ol);
+    }
+
+    if (_is_dynamic && can_be_optimized() && !_node->is_type<concatenation>()) {
+        for (auto& dep : _deps) {
+            dep.first->set_output_memory(mem, check, idx);
+        }
     }
 
     if (is_constant()) {

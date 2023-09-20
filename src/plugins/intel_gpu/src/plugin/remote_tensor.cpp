@@ -164,33 +164,33 @@ void RemoteTensorImpl::allocate() {
         break;
     }
     case TensorType::BT_BUF_SHARED: {
-        m_memory_object = engine.share_buffer(m_layout, m_mem);
+        m_memory_object = engine.share_buffer(layout, m_mem);
         break;
     }
     case TensorType::BT_USM_SHARED: {
-        m_memory_object = engine.share_usm(m_layout, m_mem);
+        m_memory_object = engine.share_usm(layout, m_mem);
         break;
     }
 #ifdef _WIN32
     case TensorType::BT_SURF_SHARED: {
         m_layout.format = cldnn::format::nv12; // Other formats are not supported
-        m_memory_object = engine.share_surface(m_layout, m_mem, m_plane);
+        m_memory_object = engine.share_surface(layout, m_mem, m_plane);
         break;
     }
     case TensorType::BT_DX_BUF_SHARED: {
-        m_memory_object = engine.share_dx_buffer(m_layout, m_mem);
+        m_memory_object = engine.share_dx_buffer(layout, m_mem);
         break;
     }
 #else
     case TensorType::BT_SURF_SHARED: {
         m_layout.format = cldnn::format::nv12; // Other formats are not supported
-        m_memory_object = engine.share_surface(m_layout, m_surf, m_plane);
+        m_memory_object = engine.share_surface(layout, m_surf, m_plane);
         break;
     }
 #endif
     case TensorType::BT_IMG_SHARED: {
         m_layout.format = cldnn::format::nv12; // Other formats are not supported
-        m_memory_object = engine.share_image(m_layout, m_mem);
+        m_memory_object = engine.share_image(layout, m_mem);
         break;
     }
     default:

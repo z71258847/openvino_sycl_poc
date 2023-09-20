@@ -3,6 +3,7 @@
 //
 
 #include "openvino/runtime/make_tensor.hpp"
+#include "openvino/core/partial_shape.hpp"
 #include "openvino/core/preprocess/input_tensor_info.hpp"
 #include "openvino/core/parallel.hpp"
 #include "openvino/op/util/op_types.hpp"
@@ -565,7 +566,7 @@ void SyncInferRequest::allocate_input(const ov::Output<const ov::Node>& port, co
     auto element_type = port.get_element_type();
 
     if (has_remote_flag(port)) {
-        m_user_inputs[name] = { create_device_tensor(shape.get_shape(), element_type), TensorOwner::PLUGIN };
+        m_user_inputs[name] = { create_device_tensor(shape, element_type), TensorOwner::PLUGIN };
     } else {
         m_user_inputs[name] = { create_host_tensor(shape, element_type), TensorOwner::PLUGIN };
     }
@@ -577,7 +578,7 @@ void SyncInferRequest::allocate_output(const ov::Output<const ov::Node>& port, c
     auto element_type = port.get_element_type();
 
     if (has_remote_flag(port)) {
-        m_user_outputs[name] = { create_device_tensor(shape.get_shape(), element_type), TensorOwner::PLUGIN };
+        m_user_outputs[name] = { create_device_tensor(shape, element_type), TensorOwner::PLUGIN };
     } else {
         m_user_outputs[name] = { create_host_tensor(shape, element_type), TensorOwner::PLUGIN };
     }
@@ -650,14 +651,11 @@ void SyncInferRequest::attach_memory_to_output_tensors(const ov::Output<const ov
 
     if (!plugin_output_tensor_wrapper.ptr) {
         plugin_output_tensor_wrapper.ptr = std::make_shared<RemoteTensorImpl>(m_context, shape, element_type, memory);
-        plugin_output_tensor_wrapper.actual_size = output.get_actual_size();
     }
 
     auto device_tensor = std::dynamic_pointer_cast<RemoteTensorImpl>(plugin_output_tensor_wrapper.ptr);
-    if (memory->get_engine()->is_the_same_buffer(*device_tensor->get_memory(), *memory))
-        return;
-
     device_tensor->set_memory(memory, output.get_actual_size());
+    plugin_output_tensor_wrapper.actual_size = output.get_actual_size();
 
     if (user_output_tensor_wrapper.owner == TensorOwner::USER)
         return;
@@ -666,7 +664,7 @@ void SyncInferRequest::attach_memory_to_output_tensors(const ov::Output<const ov
         user_output_tensor_wrapper.ptr = device_tensor;
     } else if (memory->get_allocation_type() == cldnn::allocation_type::usm_host) {
         if (!user_output_tensor_wrapper.ptr) {
-            user_output_tensor_wrapper.ptr = std::make_shared<USMHostTensor>(m_context, element_type, shape);
+            user_output_tensor_wrapper.ptr = std::make_shared<USMHostTensor>(device_tensor);
         } else if (auto t = std::dynamic_pointer_cast<USMHostTensor>(user_output_tensor_wrapper.ptr)) {
             t->set_memory(device_tensor);
         }
@@ -742,6 +740,7 @@ std::vector<cldnn::event::ptr> SyncInferRequest::prepare_input(const std::string
                     ") are incompatible");
 
     if (is_remote) {
+        GPU_DEBUG_TRACE_DETAIL << name << " prepare remote input: " << remote_ptr->get_original_memory()->buffer_ptr() << std::endl;
         m_plugin_inputs[name] = user_tensor_wrapper;
     } else if (auto usm_host_ptr = std::dynamic_pointer_cast<USMHostTensor>(user_tensor)) {
         m_plugin_inputs[name] = {usm_host_ptr->get_impl(), user_tensor_wrapper.owner};
@@ -847,6 +846,7 @@ std::vector<cldnn::event::ptr> SyncInferRequest::prepare_output(const std::strin
     bool convert_needed = is_convert_required(device_tensor_et, element_type);
     cldnn::primitive_id internal_name = m_output_names_map.at(name);
     if (is_remote && !convert_needed) {
+        GPU_DEBUG_TRACE_DETAIL << name << " prepare remote output: " << remote_ptr->get_original_memory()->buffer_ptr() << std::endl;
         m_plugin_outputs[name] = user_tensor_wrapper;
     }
 
@@ -874,7 +874,7 @@ std::vector<cldnn::event::ptr> SyncInferRequest::prepare_output(const std::strin
         actual_layout.set_partial_shape({ov::Dimension(output_tensor_wrapper.actual_size)});
         output_memory = network->get_engine().reinterpret_buffer(*output_memory, actual_layout);
     }
-    return network->set_output_memory(internal_name, output_memory, output_tensor_wrapper.owner == TensorOwner::USER );
+    return network->set_output_memory(internal_name, output_memory, output_tensor_wrapper.owner == TensorOwner::USER);
 }
 
 void SyncInferRequest::init_mappings(bool is_legacy_api) {
