@@ -59,14 +59,14 @@ void scatter_update_inst::reuse_input() {
 }
 
 void scatter_update_inst::update_output_memory() {
-    if (_outputs.size() > 0 && static_cast<bool>(_outputs[0])
+    if (get_outputs_count() > 0 && get_output(0).allocated()
         && _network.get_engine().is_the_same_buffer(output_memory(), input_memory()))
         return;
 
     if (_node != nullptr)
         build_deps();
 
-    _outputs = {_network.get_engine().reinterpret_buffer(input_memory(), _impl_params->get_output_layout())};
+    get_output(0).set_memory(_network.get_engine().reinterpret_buffer(input_memory(), _impl_params->get_output_layout()));
     _mem_allocated = false;
 }
 }  // namespace cldnn

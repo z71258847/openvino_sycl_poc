@@ -420,7 +420,6 @@ void SyncInferRequest::wait() {
         auto remote_ptr = std::dynamic_pointer_cast<RemoteTensorImpl>(output_tensor);
         bool is_remote = remote_ptr != nullptr;
 
-
         GPU_DEBUG_TRACE_DETAIL << name << " model output: " << output_memory->buffer_ptr() << std::endl;
         if (is_remote) {
             GPU_DEBUG_TRACE_DETAIL << name << " handle output tensor (remote): " << remote_ptr->get_original_memory()->buffer_ptr() << std::endl;
@@ -510,7 +509,6 @@ std::shared_ptr<ov::ITensor> SyncInferRequest::create_device_tensor(const ov::Pa
     } else {
         tensor_type = TensorType::BT_BUF_INTERNAL;
     }
-    tensor_type = TensorType::BT_BUF_INTERNAL;
 
     return std::make_shared<RemoteTensorImpl>(m_context,
                                               get_tensor_shape(port_shape),

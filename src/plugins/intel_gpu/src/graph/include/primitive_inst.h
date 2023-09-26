@@ -138,6 +138,7 @@ public:
     }
     const Output& get_output(size_t i = 0) const;
     Output& get_output(size_t i = 0);
+    size_t get_outputs_count() const { return m_outputs.size(); }
     memory& output_memory(size_t index = 0) const { return *get_output(index).get_memory(); }
     memory::ptr output_memory_ptr(size_t index = 0) const { return get_output(index).get_memory(); }
     size_t inputs_memory_count() const { return _inputs_memory_count; }

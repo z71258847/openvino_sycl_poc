@@ -7,6 +7,7 @@
 #include <vector>
 #include <memory>
 
+#include "openvino/core/dimension.hpp"
 #include "openvino/core/except.hpp"
 #include "openvino/core/model.hpp"
 #include "openvino/core/preprocess/pre_post_process.hpp"
@@ -826,17 +827,16 @@ TEST(OVRemoteTensorTests, smoke_RemoteMemTypePreprocKVCache) {
     GTEST_SKIP();
 #endif
     auto core = ov::Core();
-    ov::PartialShape kv_cache_size_dyn = {-1, 32, -1, 80};
-    ov::PartialShape new_token_size_dyn = {-1, -1, 32, 80};
-    ov::PartialShape matmul_in_size_dyn = {-1, 32, -1, -1};
 
-    ov::Shape kv_cache_size_initial = {1, 32, 0, 80};
-    ov::Shape new_token_size_initial = {1, 20, 32, 80};
-    ov::Shape matmul_in_size_initial = {1, 32, 1, 20};
+    const size_t batch = 1;
+    const size_t n_heads = 32;
+    const size_t n_features = 80;
+    const size_t context_size = 20;
+    size_t cache_size = 0;
 
     ov::element::Type element_type = ov::element::f16;
 
-    auto model = tests::make_llm_kv_cache_pattern(kv_cache_size_dyn, new_token_size_dyn, matmul_in_size_dyn, element_type);
+    auto model = tests::make_llm_kv_cache_pattern(ov::Dimension::dynamic(), n_heads, n_features, element_type);
 
     auto compiled_model_regular = core.compile_model(model, ov::test::utils::DEVICE_GPU, ov::hint::inference_precision(ov::element::f16));
 
@@ -910,6 +910,10 @@ TEST(OVRemoteTensorTests, smoke_RemoteMemTypePreprocKVCache) {
     };
 
     {
+        const ov::Shape kv_cache_size_initial = {batch, n_heads, cache_size, n_features};
+        const ov::Shape new_token_size_initial = {batch, context_size, n_heads, n_features};
+        const ov::Shape matmul_in_size_initial = {batch, n_heads, context_size, context_size};
+
         auto new_token_input = ov::test::utils::create_and_fill_tensor(element_type, new_token_size_initial);
         auto matmul_input = ov::test::utils::create_and_fill_tensor(element_type, matmul_in_size_initial);
 
@@ -924,7 +928,6 @@ TEST(OVRemoteTensorTests, smoke_RemoteMemTypePreprocKVCache) {
 
         infer_request_regular.infer();
 
-
         infer_request_remote_io.set_tensor(input0, kv_cache_input_remote_io);
         infer_request_remote_io.set_tensor(input1, new_token_input);
         infer_request_remote_io.set_tensor(input2, matmul_input);
@@ -933,15 +936,19 @@ TEST(OVRemoteTensorTests, smoke_RemoteMemTypePreprocKVCache) {
 
         ASSERT_TRUE(compare_tensors(infer_request_regular.get_tensor(output0), infer_request_remote_io.get_tensor(output0)));
         ASSERT_TRUE(compare_tensors(infer_request_regular.get_tensor(output1), infer_request_remote_io.get_tensor(output1)));
+
+        cache_size += context_size;
     }
 
-    const ov::Shape new_token_size_loop = {1, 1, 32, 80};
-    ov::Shape matmul_in_size_loop = matmul_in_size_initial;
-    for (size_t i = 0; i < 20; i++) {
-        matmul_in_size_loop[3]++;
+    const size_t input_tokens = 1;
+    const size_t niters = 10;
+    const ov::Shape new_token_size = {batch, input_tokens, n_heads, n_features};
+    size_t context_length = cache_size + input_tokens;
 
-        auto new_token_input = ov::test::utils::create_and_fill_tensor(element_type, new_token_size_loop);
-        auto matmul_input = ov::test::utils::create_and_fill_tensor(element_type, matmul_in_size_loop);
+    for (size_t i = 0; i < niters; i++, context_length += input_tokens) {
+        ov::Shape matmul_in_size = {batch, n_heads, input_tokens, context_length};
+        auto new_token_input = ov::test::utils::create_and_fill_tensor(element_type, new_token_size);
+        auto matmul_input = ov::test::utils::create_and_fill_tensor(element_type, matmul_in_size);
 
         auto kv_cache_input_regular = infer_request_regular.get_tensor(output0);
         auto kv_cache_input_remote_io = infer_request_remote_io.get_tensor(output0);
