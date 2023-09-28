@@ -134,6 +134,9 @@ void ParamsKey::EnableInputWeightsType(WeightsType wt) {
         case WeightsType::INT8:
             key.inputWeightsType.val.int8 = 1;
             break;
+        case WeightsType::NF4:
+            key.inputWeightsType.val.nf4 = 1;
+            break;
         case WeightsType::BINARY:
             key.inputWeightsType.val.binary = 1;
             break;
@@ -156,6 +159,9 @@ void ParamsKey::EnableOutputWeightsType(WeightsType wt) {
             break;
         case WeightsType::INT8:
             key.outputWeightsType.val.int8 = 1;
+            break;
+        case WeightsType::NF4:
+            key.outputWeightsType.val.nf4 = 1;
             break;
         case WeightsType::BINARY:
             key.outputWeightsType.val.binary = 1;

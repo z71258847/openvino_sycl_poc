@@ -115,6 +115,8 @@ std::string toCLType(WeightsType wType) {
     switch (wType) {
         case WeightsType::BINARY:
             return GetTypeName<uint32_t>();
+        case WeightsType::NF4:
+            return GetTypeName<uint8_t>();
         case WeightsType::INT8:
             return GetTypeName<int8_t>();
         case WeightsType::UINT8:
@@ -1453,6 +1455,21 @@ JitConstants MakeTypeJitConstants(Datatype dataType, const std::string& macroNam
             type_size = "8";
             is_fp = false;
             break;
+        case Datatype::NF4:
+            type = "char";
+            max_val = "undefined";
+            min_val = "undefined";
+            val_one = "undefined";
+            val_zero = "undefined";
+            to_type = "undefined";
+            to_type_sat = "undefined";
+            as_type = "undefined";
+            max_func = "undefined";
+            min_func = "undefined";
+            abs_func = "undefined";
+            type_size = "0.5f";
+            is_fp = true;
+            break;
         case Datatype::F16:
             type = "half";
             max_val = "HALF_MAX";
@@ -1513,6 +1530,8 @@ JitConstants MakeTypeJitConstants(WeightsType weightsType, const std::string& ma
             return MakeTypeJitConstants(Datatype::INT8, macroName);
         case WeightsType::UINT8:
             return MakeTypeJitConstants(Datatype::UINT8, macroName);
+        case WeightsType::NF4:
+            return MakeTypeJitConstants(Datatype::NF4, macroName);
         case WeightsType::BINARY:
             return MakeTypeJitConstants(Datatype::UINT32, macroName);
         case WeightsType::INT32:

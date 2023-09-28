@@ -34,6 +34,7 @@ inline uint32_t BytesPerElement(Datatype dt) {
 
 inline uint32_t BytesPerElement(WeightsType wt) {
     switch (wt) {
+        case WeightsType::NF4:
         case WeightsType::INT8:
         case WeightsType::UINT8:
             return 1;

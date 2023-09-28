@@ -25,7 +25,7 @@ TEST_P(shape_predictor_tests, prediction) {
 
     ShapePredictor sp(&engine, p.buffers_preallocation_ratio);
     std::pair<bool, ov::Shape> result;
-    const auto dt_size = 4;
+    const auto dt_size = 4*8;
 
     for (auto& shape : in_shapes)
         result = sp.predict_preallocation_shape("dummy_name", shape, dt_size, p.can_reuse_buffer);

@@ -104,6 +104,7 @@ enum class KernelType {
 enum class Datatype {
     UNSUPPORTED,
     BINARY,
+    NF4,
     INT8,
     UINT8,
     INT16,
@@ -121,6 +122,7 @@ enum class Datatype {
 enum class WeightsType {
     UNSUPPORTED,
     BINARY,
+    NF4,
     F16,
     F32,
     INT8,

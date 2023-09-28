@@ -165,6 +165,8 @@ kernel_selector::weights_type to_weights_type(data_types dt) {
     switch (dt) {
         case cldnn::data_types::u1:
             return kernel_selector::weights_type::BINARY;
+        case cldnn::data_types::nf4:
+            return kernel_selector::weights_type::NF4;
         case cldnn::data_types::i8:
             return kernel_selector::weights_type::INT8;
         case cldnn::data_types::u8:
@@ -184,6 +186,8 @@ data_types from_weights_type(kernel_selector::weights_type dt) {
     switch (dt) {
         case kernel_selector::weights_type::BINARY:
             return data_types::u1;
+        case kernel_selector::weights_type::NF4:
+            return data_types::nf4;
         case kernel_selector::weights_type::INT8:
             return data_types::i8;
         case kernel_selector::weights_type::UINT8:

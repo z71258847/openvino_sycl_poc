@@ -22,6 +22,7 @@ ParamsKey FullyConnected_bfyx_Ref::GetSupportedKey() const {
     k.EnableInputWeightsType(WeightsType::F32);
     k.EnableInputWeightsType(WeightsType::UINT8);
     k.EnableInputWeightsType(WeightsType::INT8);
+    k.EnableInputWeightsType(WeightsType::NF4);
     k.EnableAllInputLayout();
     k.EnableDifferentInputWeightsTypes();
     k.EnableDifferentTypes();

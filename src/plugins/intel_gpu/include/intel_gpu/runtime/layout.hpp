@@ -31,6 +31,7 @@ namespace cldnn {
 constexpr size_t float_type_mask = 0x80;
 constexpr size_t uint_type_mask = 0x40;
 constexpr size_t bin_type_mask = 0x20;
+constexpr size_t nf4_type_mask = 0x10;
 
 /// @brief Possible data types could be stored in memory.
 using data_types = ov::element::Type_t;
@@ -41,6 +42,8 @@ struct data_type_to_type;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 template <>
 struct data_type_to_type<data_types::u1> { typedef uint32_t type; };
+template <>
+struct data_type_to_type<data_types::nf4> { typedef uint8_t type; };
 template <>
 struct data_type_to_type<data_types::u8> { typedef uint8_t type; };
 template <>
@@ -76,6 +79,8 @@ struct data_type_traits {
         switch (data_type) {
             case data_types::u1:
                 return alignof(data_type_to_type<data_types::u1>::type);
+            case data_types::nf4:
+                return alignof(data_type_to_type<data_types::nf4>::type);
             case data_types::i8:
                 return alignof(data_type_to_type<data_types::i8>::type);
             case data_types::u8:
@@ -98,19 +103,21 @@ struct data_type_traits {
     }
 
     static data_types max_type(data_types dt1, data_types dt2) {
-        if (dt1 == data_types::u1)
+        ov::element::Type et1(dt1);
+        ov::element::Type et2(dt2);
+        if (et1 == ov::element::u1)
             return dt2;
 
-        if (dt2 == data_types::u1)
+        if (et2 == ov::element::u1)
             return dt1;
 
-        if (size_of(dt1) < size_of(dt2))
+        if (et1.bitwidth() < et2.bitwidth())
             return dt2;
 
-        if (size_of(dt1) > size_of(dt2))
+        if (et1.bitwidth() > et2.bitwidth())
             return dt1;
 
-        if (is_floating_point(dt2))
+        if (et2.is_real())
             return dt2;
 
         return dt1;
@@ -187,6 +194,8 @@ inline data_types element_type_to_data_type(ov::element::Type t) {
         return cldnn::data_types::i64;
     case ov::element::Type_t::boolean:
         return cldnn::data_types::u8;
+    case ov::element::Type_t::nf4:
+        return cldnn::data_types::nf4;
     case ov::element::Type_t::u1:
         return cldnn::data_types::u1;
     default:
