@@ -120,7 +120,7 @@ KERNEL(fc)(
     uint input_offset = out_b * TILE_IN_B_PITCH + INPUT0_OFFSET;
     uint weights_offset = out_f * INPUT_ELEMENTS_COUNT;
 
-#if COMPRESSED_WEIGHTS
+#if COMPRESSED_WEIGHTS_INT8
     #if DECOMPRESSION_SCALE_LENGTH > 1 && DECOMPRESSION_SCALE_LENGTH % SIMD == 0
         ACCUMULATOR_VEC_TYPE d_scale = BLOCK_READN(ACCUMULATOR_TYPE, TILE_OFM, decompression_scale, out_f);
     #elif DECOMPRESSION_SCALE_LENGTH > 1 && DECOMPRESSION_SCALE_LENGTH % SIMD != 0
@@ -158,9 +158,12 @@ KERNEL(fc)(
     // To do this solve first input feature separately.
     {
         INPUT0_TYPE tmp_input = input[input_offset + get_sub_group_local_id() % TILE_B * TILE_IN_B_PITCH];
-        ACCUMULATOR_VEC_TYPE tmp_wei = TO_ACCUMULATOR_VEC_TYPE(BLOCK_READN(FILTER_TYPE, TILE_OFM, weights, weights_offset));
-        #if COMPRESSED_WEIGHTS
-            tmp_wei = (tmp_wei - d_zp) * d_scale;
+        #if COMPRESSED_WEIGHTS_NF4
+        #else
+            ACCUMULATOR_VEC_TYPE tmp_wei = TO_ACCUMULATOR_VEC_TYPE(BLOCK_READN(FILTER_TYPE, TILE_OFM, weights, weights_offset));
+            #if COMPRESSED_WEIGHTS_INT8
+                tmp_wei = (tmp_wei - d_zp) * d_scale;
+            #endif
         #endif
         unroll_for(uint bi = 0; bi < TILE_B; ++bi) {
             acc[bi] = _sub_group_shuffle(tmp_input, bi) * tmp_wei;
@@ -188,14 +191,17 @@ KERNEL(fc)(
         //       but significantly degrades readability and generality of code.
         //       It doesn't also show noticable performance improvement on tested configurations.
         unroll_for(uint ki = 0; ki < (TILE_IFM * SIMD) / TILE_K; ++ki) {
-            wei = TO_FILTER_VEC_TYPE(FILTER_BLOCK_READ(weights, weights_offset));
-            #if COMPRESSED_WEIGHTS
+            #if COMPRESSED_WEIGHTS_INT8
+                wei = TO_FILTER_VEC_TYPE(FILTER_BLOCK_READ(weights, weights_offset));
                 ACCUMULATOR_TYPE* w = (ACCUMULATOR_TYPE*)(&wei);
                 unroll_for(uint kii = 0; kii < TILE_K; ++kii) {
                     unroll_for(uint fi = 0; fi < TILE_OFM; ++fi) {
                         w[kii * TILE_OFM + fi] = (w[kii * TILE_OFM + fi] - dzp[fi]) * ds[fi];
                     }
                 }
+            #elif COMPRESSED_WEIGHTS_NF4
+            #else
+                wei = TO_FILTER_VEC_TYPE(FILTER_BLOCK_READ(weights, weights_offset));
             #endif
             weights_offset += TILE_K_OFM * SIMD;
 
@@ -226,13 +232,14 @@ KERNEL(fc)(
         input_offset += TILE_IFM * SIMD - TILE_IN_B_PITCH * TILE_B;
         unroll_for(uint ki = 0; ki < CEIL_DIV(LEFTOVER_IFM, TILE_K); ++ki) {
             wei = TO_FILTER_VEC_TYPE(FILTER_BLOCK_READ(weights, weights_offset));
-            #if COMPRESSED_WEIGHTS
+            #if COMPRESSED_WEIGHTS_INT8
                 ACCUMULATOR_TYPE* w = (ACCUMULATOR_TYPE*)(&wei);
                 unroll_for(uint kii = 0; kii < TILE_K; ++kii) {
                     unroll_for(uint fi = 0; fi < TILE_OFM; ++fi) {
                         w[kii * TILE_OFM + fi] = (w[kii * TILE_OFM + fi] - dzp[fi]) * ds[fi];
                     }
                 }
+            #elif COMPRESSED_WEIGHTS_NF4
             #endif
             weights_offset += TILE_K_OFM * SIMD;
 
