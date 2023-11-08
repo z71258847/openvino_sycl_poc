@@ -64,7 +64,7 @@ void VariableState::set_state(const ov::SoPtr<ov::ITensor>& state) {
 }
 
 void VariableState::update_device_buffer() {
-    if (m_layout.is_dynamic())
+    if (m_layout.is_dynamic() || m_layout.bytes_count() == 0)
         return;
 
     if (actual_size < m_layout.bytes_count()) {

@@ -75,7 +75,8 @@ public:
 namespace detail {
 
 attach_read_value_impl::attach_read_value_impl() {
-    implementation_map<read_value>::add(impl_types::cpu, read_value_impl::create, {});
+    implementation_map<read_value>::add(impl_types::cpu, shape_types::dynamic_shape, read_value_impl::create, {});
+    implementation_map<read_value>::add(impl_types::cpu, shape_types::static_shape, read_value_impl::create, {});
 }
 
 }  // namespace detail
