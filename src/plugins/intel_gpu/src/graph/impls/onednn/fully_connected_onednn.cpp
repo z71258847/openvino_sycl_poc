@@ -3,6 +3,8 @@
 //
 
 #include "fully_connected_inst.h"
+#include "oneapi/dnnl/dnnl_common.hpp"
+#include "oneapi/dnnl/dnnl_common_types.h"
 #include "primitive_onednn_base.h"
 #include "implementation_map.hpp"
 
@@ -76,7 +78,7 @@ protected:
         return std::make_shared<WeightsReorderParams>(weights_layout, output_weights_layout, false);
     }
 
-    static std::shared_ptr<dnnl::inner_product_forward::primitive_desc> get_fully_connected_primitive_descriptor(const kernel_impl_params& impl_params,
+    static std::shared_ptr<dnnl::matmul::primitive_desc> get_fully_connected_primitive_descriptor(const kernel_impl_params& impl_params,
                                                                                                 cldnn::engine& engine, size_t prim_input_size, bool has_bias,
                                                                                                 const dnnl::primitive_attr& attr = dnnl::primitive_attr()) {
         auto input_layout = impl_params.get_input_layout(0);
@@ -109,24 +111,22 @@ protected:
             combine_bf_with_first_spatial_dim(output_layout);
         }
 
-        auto input_md = onednn::layout_to_memory_desc(input_layout, dnnl::memory::format_tag::undef, false);
-        auto weights_md = onednn::layout_to_memory_desc(weights_layout, dnnl::memory::format_tag::any);
+        auto input_md = onednn::layout_to_memory_desc(input_layout, dnnl::memory::format_tag::ab, false);
+        auto weights_md = onednn::layout_to_memory_desc(weights_layout, dnnl::memory::format_tag::ba);
         auto output_md = onednn::layout_to_memory_desc(output_layout, dnnl::memory::format_tag::ab, false);
 
         if (has_bias) {
             auto bias_md = onednn::layout_to_memory_desc(impl_params.get_input_layout(2), dnnl::memory::format_tag::any, true);
-            return std::make_shared<dnnl::inner_product_forward::primitive_desc>(
+            return std::make_shared<dnnl::matmul::primitive_desc>(
                 engine.get_onednn_engine(),
-                dnnl::prop_kind::forward_inference,
                 input_md,
                 weights_md,
                 bias_md,
                 output_md,
                 attr);
         } else {
-            return std::make_shared<dnnl::inner_product_forward::primitive_desc>(
+            return std::make_shared<dnnl::matmul::primitive_desc>(
                 engine.get_onednn_engine(),
-                dnnl::prop_kind::forward_inference,
                 input_md,
                 weights_md,
                 output_md,
@@ -178,11 +178,16 @@ public:
         auto& engine = impl_params.prog->get_engine();
         auto& config = impl_params.prog->get_config();
         auto attr = arg.get_onednn_primitive_attributes();
+        attr->set_fpmath_mode(dnnl::fpmath_mode::f16, true);
+        attr->set_scales_mask(DNNL_ARG_WEIGHTS, 1 << 1);
+        attr->set_zero_points_mask(DNNL_ARG_WEIGHTS, 1 << 1);
+        attr->set_scales(DNNL_ARG_WEIGHTS, 1 << 1, dnnl::memory::dims{}, dnnl::memory::data_type::f16);
+        attr->set_zero_points(DNNL_ARG_WEIGHTS, 1 << 1, dnnl::memory::dims{}, dnnl::memory::data_type::u8);
         auto prim = impl_params.typed_desc<fully_connected>();
         auto prim_desc = get_fully_connected_primitive_descriptor(impl_params, impl_params.prog->get_engine(),
                                                                   prim->input_size, !prim->bias.empty(), *attr);
 
-        return cldnn::make_unique<fully_connected_onednn>(engine, config, attr, *prim_desc, get_weights_reorder(impl_params, *prim_desc));
+        return cldnn::make_unique<fully_connected_onednn>(engine, config, attr, *prim_desc);
     }
 };
 
