@@ -49,6 +49,8 @@
 #include <memory>
 #include <algorithm>
 
+#include "impls/ocl/kernel_selector_helper.h"
+
 #ifdef ENABLE_ONEDNN_FOR_GPU
 #include <impls/onednn/utils.hpp>
 #endif

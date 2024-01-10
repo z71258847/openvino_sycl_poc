@@ -11,6 +11,7 @@
 #include <intel_gpu/primitives/data.hpp>
 #include <intel_gpu/primitives/reorder.hpp>
 #include <intel_gpu/primitives/grid_sample.hpp>
+#include <intel_gpu/primitives/eltwise.hpp>
 
 #include <algorithm>
 #include <cmath>

@@ -5,6 +5,7 @@
 #include "program_helpers.h"
 #include "pass_manager.h"
 
+#include "activation_inst.h"
 #include "convolution_inst.h"
 #include "deconvolution_inst.h"
 #include "depth_to_space_inst.h"

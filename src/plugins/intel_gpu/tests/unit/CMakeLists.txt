@@ -20,6 +20,8 @@ file(GLOB_RECURSE SOURCES_MAIN
     # openvino graph transformation
     "${CMAKE_HOME_DIRECTORY}/src/plugins/intel_gpu/src/plugin/transformations/*.hpp"
     "${CMAKE_HOME_DIRECTORY}/src/plugins/intel_gpu/src/plugin/transformations/*.cpp"
+    "${CMAKE_HOME_DIRECTORY}/src/plugins/intel_gpu/src/plugin/gpu_opset/*.cpp"
+    "${CMAKE_HOME_DIRECTORY}/src/plugins/intel_gpu/src/plugin/gpu_opset/*.hpp"
     "${CMAKE_HOME_DIRECTORY}/src/plugins/intel_gpu/src/plugin/variable_state.cpp"
     "${CMAKE_HOME_DIRECTORY}/src/plugins/intel_gpu/src/plugin/multi_tensor_variable_state.cpp"
     "${CMAKE_HOME_DIRECTORY}/src/plugins/intel_gpu/src/plugin/remote_context.cpp"
@@ -76,6 +78,7 @@ target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
                                                   $<TARGET_PROPERTY:openvino_intel_gpu_kernels,INTERFACE_INCLUDE_DIRECTORIES>
                                                   $<TARGET_PROPERTY:openvino_intel_gpu_runtime,INTERFACE_INCLUDE_DIRECTORIES>
                                                   ${CMAKE_HOME_DIRECTORY}/src/core/reference/include/
+                                                  ${MAIN_DIR}/src/plugin/
                                                   ${TEST_COMMON_INCLUDE_DIR})
 
 if(WIN32)

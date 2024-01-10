@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "intel_gpu/runtime/error_handler.hpp"
 #include "pass_manager.h"
 #include "program_helpers.h"
 #include "strided_slice_inst.h"
@@ -13,6 +12,8 @@
 #include "mutable_data_inst.h"
 #include <vector>
 #include <memory>
+
+#include "impls/ocl/kernel_selector_helper.h"
 
 using namespace cldnn;
 

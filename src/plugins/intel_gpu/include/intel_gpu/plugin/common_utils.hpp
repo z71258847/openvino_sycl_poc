@@ -6,10 +6,12 @@
 
 #include <ostream>
 #include <tuple>
+#include <utility>
 #include "intel_gpu/runtime/layout.hpp"
 #include "intel_gpu/runtime/memory.hpp"
 #include "intel_gpu/runtime/optionals.hpp"
 #include "intel_gpu/runtime/shape_predictor.hpp"
+#include "intel_gpu/primitives/implementation_desc.hpp"
 #include "openvino/core/layout.hpp"
 #include "openvino/core/node.hpp"
 #include "openvino/core/type/element_type.hpp"
@@ -131,4 +133,29 @@ inline std::ostream& operator<<(std::ostream& os, const ov::AnyMap& params) {
     }
     return os;
 }
+
+inline std::string to_str(const std::set<cldnn::impl_types>& impls) {
+    std::stringstream s;
+    s << "[";
+    size_t i = 0;
+    for (auto it = impls.begin(); it != impls.end(); i++, it++) {
+        s << *it << (i == impls.size() - 1 ? "" : ", ");
+    }
+    s << "]";
+
+    return s.str();
+}
+
+inline std::string to_str(const std::vector<cldnn::format>& formats) {
+    std::stringstream s;
+    s << "[";
+    size_t i = 0;
+    for (auto it = formats.begin(); it != formats.end(); i++, it++) {
+        s << *it << (i == formats.size() - 1 ? "" : ", ");
+    }
+    s << "]";
+
+    return s.str();
+}
+
 }  // namespace ov

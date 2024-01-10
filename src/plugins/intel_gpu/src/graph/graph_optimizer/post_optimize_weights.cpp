@@ -11,6 +11,8 @@
 #include "deformable_convolution_inst.h"
 #include "fully_connected_inst.h"
 
+#include "impls/ocl/kernel_selector_helper.h"
+
 namespace cldnn {
 
 post_optimize_weights::post_optimize_weights(reorder_factory& rf_ref)

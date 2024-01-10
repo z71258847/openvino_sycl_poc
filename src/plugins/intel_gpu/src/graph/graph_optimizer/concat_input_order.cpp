@@ -4,6 +4,7 @@
 
 #include "pass_manager.h"
 #include "pooling_inst.h"
+#include "activation_inst.h"
 #include "convolution_inst.h"
 #include "fully_connected_inst.h"
 #include "data_inst.h"
