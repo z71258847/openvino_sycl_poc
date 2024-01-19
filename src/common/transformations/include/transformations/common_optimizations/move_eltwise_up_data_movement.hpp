@@ -5,15 +5,16 @@
 #pragma once
 
 #include "openvino/pass/graph_rewrite.hpp"
+#include "transformations_visibility.hpp"
 
 namespace ov {
-namespace intel_cpu {
+namespace pass {
 
-class MoveEltwiseUpThroughDataMov : public ov::pass::MatcherPass {
+class TRANSFORMATIONS_API MoveEltwiseUpThroughDataMov : public ov::pass::MatcherPass {
 public:
     OPENVINO_RTTI("MoveEltwiseUpThroughDataMov", "0");
     MoveEltwiseUpThroughDataMov();
 };
 
-}   // namespace intel_cpu
+}   // namespace pass
 }   // namespace ov
