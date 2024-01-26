@@ -3,6 +3,7 @@
 //
 
 #include "intel_gpu/plugin/variable_state.hpp"
+#include "intel_gpu/runtime/memory.hpp"
 #include "openvino/core/shape.hpp"
 #include "openvino/core/type/element_type.hpp"
 #include "openvino/runtime/make_tensor.hpp"
@@ -65,13 +66,56 @@ void VariableStateIndirectKVCache::set_state(const ov::SoPtr<ov::ITensor>& state
     OPENVINO_ASSERT(m_states.size() == 2, "[GPU] Corrupted VariableStateIndirectKVCache. Expected 2 internal states. Got: ", m_states.size());
     auto kv_cache_state = m_states[0];
     m_states[0]->set_state(state); // user can set only KV cache itself
-    ov::Tensor default_beam_table(ov::element::i32, ov::Shape{1});
+    ov::Tensor default_beam_table(ov::element::i32, get_beam_table_shape(state->get_shape()).to_shape());
     m_states[1]->set_state(ov::get_tensor_impl(default_beam_table));
     m_states[1]->set();
 }
 
+static void rearrange_cache(cldnn::memory::ptr kv_in_mem, cldnn::memory::ptr bt_mem, cldnn::memory::ptr kv_out_mem, cldnn::stream& stream) {
+    auto kv_shape = kv_in_mem->get_layout().get_shape();
+    cldnn::mem_lock<ov::float16, cldnn::mem_lock_type::read> kv_in_ptr(kv_in_mem, stream);
+    cldnn::mem_lock<int32_t, cldnn::mem_lock_type::read> bt_in_ptr(bt_mem, stream);
+    cldnn::mem_lock<ov::float16, cldnn::mem_lock_type::write> kv_out_ptr(kv_out_mem, stream);
+
+    std::cerr << kv_in_mem->get_layout().to_short_string() << std::endl;
+    std::cerr << bt_mem->get_layout().to_short_string() << std::endl;
+    std::cerr << kv_out_mem->get_layout().to_short_string() << std::endl;
+    for (size_t b = 0; b < kv_shape[0]; b++) {
+        for (size_t f = 0; f < kv_shape[1]; f++) {
+            for (size_t y = 0; y < kv_shape[2]; y++) {
+                for (size_t x = 0; x < kv_shape[3]; x++) {
+                    size_t b_kv = bt_in_ptr[b* kv_shape[2] + y];
+
+                    auto in_idx = std::vector<int>{static_cast<int>(b_kv), static_cast<int>(f), static_cast<int>(y), static_cast<int>(x)};
+                    auto out_idx = std::vector<int>{static_cast<int>(b), static_cast<int>(f), static_cast<int>(y), static_cast<int>(x)};
+
+                    cldnn::tensor in(cldnn::format::bfyx, in_idx, 0);
+                    cldnn::tensor out(cldnn::format::bfyx, out_idx, 0);
+
+                    size_t out_offset = kv_out_mem->get_layout().get_linear_offset(out);
+                    size_t in_offset = kv_in_mem->get_layout().get_linear_offset(in);
+
+                    kv_out_ptr[out_offset] = kv_in_ptr[in_offset];
+                }
+            }
+        }
+    }
+}
+
 ov::SoPtr<ov::ITensor> VariableStateIndirectKVCache::get_state() const {
-    return m_states[0]->get_state();
+    auto kv_layout = m_states[0]->get_layout();
+    auto kv_mem = m_states[0]->get_memory();
+    auto bt_mem = m_states[1]->get_memory();
+    auto tensor = m_context->create_host_tensor(m_states[0]->get_user_specified_type(), kv_layout.get_shape());
+
+    auto& engine = m_context->get_engine();
+    auto tmp_mem = engine.allocate_memory(kv_layout, engine.get_lockable_preferred_memory_allocation_type(), false);
+
+    rearrange_cache(kv_mem, bt_mem, tmp_mem, m_context->get_engine().get_service_stream());
+
+    convert_and_copy(tmp_mem, tensor._ptr.get(), m_context->get_engine().get_service_stream());
+
+    return tensor;
 }
 
 void VariableStateIndirectKVCache::set_memory(const cldnn::memory::ptr& new_mem, const cldnn::layout& actual_layout) {

@@ -116,6 +116,11 @@ KERNEL(gemm_ref)(
         ACCUMULATOR_TYPE val1 = TO_ACCUMULATOR_TYPE(input1[in1_idx]);
 
         acc += val0 * val1;
+
+        if (b == 2 && f == 0 && y == 0 && x == 0)
+            printf("[%d %d %d %d ki=%d | offset = %d, b0 = %d b1 = %d] new_off=%d orig_off=%d | %f x %f -> %f\n", b, f, y, x, ki, b*BEAM_TABLE_SIZE_X + ki, b0, b1,
+            in1_idx, FUNC_CALL(get_input1_index)(OPTIONAL_SHAPE_INFO_TENSOR b, f, w, z, ki, x),
+            val0, val1, acc);
     }
 
     acc = TO_ACCUMULATOR_TYPE(ALPHA) * acc;

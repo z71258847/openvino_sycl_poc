@@ -35,6 +35,7 @@
 #include "openvino/pass/manager.hpp"
 #include "openvino/pass/constant_folding.hpp"
 #include "openvino/core/deprecated.hpp"
+#include "plugin/transformations/indirect_kv_cache.hpp"
 #include "validation_util.hpp"
 
 #include "openvino/pass/visualize_tree.hpp"
@@ -706,6 +707,7 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
         if (!device_info.supports_immad)
             manager.register_pass<ov::intel_gpu::TransposeMatMulFusion>();
 
+        manager.register_pass<ov::intel_gpu::IndirectKVCache>();
         // This is supposed to be the last pass to ensure that we don't have name collisions until
         // GPU plugin stops using friendly names for program creation
         manager.register_pass<ov::pass::ResolveNameCollisions>(true);

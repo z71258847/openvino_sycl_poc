@@ -638,29 +638,6 @@ void prepare_buffer_fusing::run(program& p) {
         });
         program_helpers::do_for_types<kv_cache>(*node, [](kv_cache_node& node) {
             auto kv_out_layout = node.get_output_layout();
-
-            program_node* rv_prim = nullptr;
-            program_node* gather_prim = nullptr;
-            if (node.get_dependency(0).is_type<read_value>()) {
-                rv_prim = &node.get_dependency(0);
-            } else {
-                if (node.get_dependency(0).is_type<gather>()) {
-                    gather_prim = &node.get_dependency(0);
-                } else {
-                    return;
-                }
-
-                if (gather_prim->get_dependency(0).is_type<read_value>()) {
-                    rv_prim = &gather_prim->get_dependency(0);
-                }
-            }
-
-            if (!rv_prim)
-                return;
-
-            if (kv_out_layout.data_type != rv_prim->get_output_layout().data_type)
-                return;
-
             auto concat_axis_legacy = node.get_primitive()->concat_axis;
             if (concat_axis_legacy < 0)
                 concat_axis_legacy = kv_out_layout.get_partial_shape().size() + concat_axis_legacy;
@@ -679,20 +656,6 @@ void prepare_buffer_fusing::run(program& p) {
                 kv_out_layout.data_padding.set_dynamic_pad(dynamic_pad_mask);
                 node.set_output_layout(kv_out_layout);
                 node.can_share_buffer(false);
-
-                auto update_dep = [&dynamic_pad_mask](program_node* dep) {
-                    auto prev_layout = dep->get_output_layout();
-                    prev_layout.data_padding.set_dynamic_pad(dynamic_pad_mask);
-                    dep->set_output_layout(prev_layout);
-                    dep->can_share_buffer(false);
-                };
-
-                if (rv_prim) {
-                    update_dep(rv_prim);
-                }
-                if (gather_prim) {
-                    update_dep(gather_prim);
-                }
             }
         });
         program_helpers::do_for_types<read_value>(*node, [](read_value_node& node) {

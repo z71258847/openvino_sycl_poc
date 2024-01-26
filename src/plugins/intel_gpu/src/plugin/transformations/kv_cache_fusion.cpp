@@ -9,6 +9,7 @@
 
 #include "intel_gpu/op/read_value.hpp"
 #include "intel_gpu/plugin/common_utils.hpp"
+#include "openvino/core/graph_util.hpp"
 #include "openvino/core/node_vector.hpp"
 #include "openvino/core/rt_info.hpp"
 #include "openvino/op/constant.hpp"
@@ -35,7 +36,7 @@ public:
 KVCacheFusionMatcher::KVCacheFusionMatcher() {
     using namespace ov::pass::pattern;
 
-    auto past = wrap_type<ov::op::v6::ReadValue>();
+    auto past = wrap_type<ov::op::v6::ReadValue>({any_input()});
     auto convert_past = wrap_type<ov::op::v0::Convert>({past});
     auto gather_input = std::make_shared<ov::pass::pattern::op::Or>(OutputVector{past, convert_past});
     auto beam_idx = wrap_type<ov::op::v0::Parameter>();
@@ -66,54 +67,34 @@ KVCacheFusionMatcher::KVCacheFusionMatcher() {
 
         auto variable = past_node->get_variable();
         auto concat_axis = concat_node->get_axis();
+        auto new_token_node = concat_node->get_input_node_shared_ptr(1);
 
-        std::shared_ptr<ov::Node> variable_initializer = nullptr;
+        std::shared_ptr<ov::Node> variable_initializer = past_node->get_input_node_shared_ptr(0);
         std::shared_ptr<ov::Node> kv_cache_node = nullptr;
-        if (past_node->get_input_size() == 1) {
-            variable_initializer = past_node->get_input_node_shared_ptr(0);
-        }
-
-        // Replace common ReadValue op with a custom one as common one expects paired Assign operation which is removed by this transform
-        auto new_read_value_node = variable_initializer ? std::make_shared<ov::intel_gpu::op::ReadValue>(variable_initializer, variable)
-                                                        : std::make_shared<ov::intel_gpu::op::ReadValue>(variable);
-        new_read_value_node->set_friendly_name(past_node->get_friendly_name());
-        ov::copy_runtime_info(past_node, new_read_value_node);
-        ov::replace_node(past_node, new_read_value_node);
 
         if (pattern_map.count(gather_past) > 0) {
-            // TODO: Enable code below once KVCache custom op supports rearrange internally
-            // For now Gather is kept as standalone op
-            #if 0
             auto gather_node = pattern_map.at(gather_past).get_node_shared_ptr();
             auto gather_axis = std::dynamic_pointer_cast<ov::op::v0::Constant>(gather_node->get_input_node_shared_ptr(2))->cast_vector<int64_t>()[0];
-            kv_cache_node = std::make_shared<op::KVCache>(new_read_value_node,
-                                                          concat_node->get_input_node_shared_ptr(1),
-                                                          gather_node->get_input_node_shared_ptr(1),
+            const bool indirect = false;
+            auto beam_idx_node = gather_node->get_input_node_shared_ptr(1);
+            kv_cache_node = std::make_shared<op::KVCache>(variable_initializer,
+                                                          new_token_node,
+                                                          beam_idx_node,
                                                           variable,
                                                           concat_axis,
                                                           gather_axis,
+                                                          indirect,
                                                           concat_node->get_output_element_type(0));
-            #else
-            kv_cache_node = std::make_shared<op::KVCache>(pattern_map.at(gather_past).get_node_shared_ptr(),
-                                                          concat_node->get_input_node_shared_ptr(1),
-                                                          variable,
-                                                          concat_axis,
-                                                          new_read_value_node->get_output_element_type(0));
-            #endif
         } else {
-            kv_cache_node = std::make_shared<op::KVCache>(new_read_value_node,
-                                                          concat_node->get_input_node_shared_ptr(1),
+            kv_cache_node = std::make_shared<op::KVCache>(variable_initializer,
+                                                          new_token_node,
                                                           variable,
                                                           concat_axis,
-                                                          new_read_value_node->get_output_element_type(0));
+                                                          concat_node->get_output_element_type(0));
         }
         kv_cache_node->set_friendly_name(concat_node->get_friendly_name());
         ov::copy_runtime_info(m.get_matched_nodes(), kv_cache_node);
         ov::replace_node(concat_node, kv_cache_node);
-
-        if (pattern_map.count(convert_present) > 0) {
-            present_node->set_argument(0, kv_cache_node->output(0));
-        }
 
         return true;
     };
