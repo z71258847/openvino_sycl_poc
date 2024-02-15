@@ -35,6 +35,7 @@
 #include "openvino/runtime/performance_heuristics.hpp"
 #include "openvino/runtime/properties.hpp"
 #include "openvino/util/common_util.hpp"
+#include "transformations/transformations_context.hpp"
 #include "transformations/transformations_pipeline.hpp"
 #include "transformations/common_optimizations/dimension_tracking.hpp"
 #include "transformations/init_node_info.hpp"
@@ -86,10 +87,11 @@ std::string Plugin::get_device_id(const ov::AnyMap& config) const {
 
 void Plugin::transform_model(std::shared_ptr<ov::Model>& model, const ExecutionConfig& config) const {
     OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "Plugin::transform_model");
-    auto deviceInfo = m_device_map.at(config.get_property(ov::device::id))->get_info();
+    auto device_info = m_device_map.at(config.get_property(ov::device::id))->get_info();
 
     auto start = Time::now();
-    TransformationsPipeline(config, deviceInfo).run_on_model(model);
+    TransformationsContext context(model, config, device_info);
+    TransformationsPipeline(context).run_on_model(model);
     GPU_DEBUG_LOG << "Transformations time: " << std::chrono::duration_cast<ms>(Time::now() - start).count() << " ms" << std::endl;
 }
 
@@ -702,7 +704,8 @@ uint32_t Plugin::get_max_batch_size(const ov::AnyMap& options) const {
             return static_cast<uint32_t>(max_batch_size);
         }
 
-        TransformationsPipeline(config, device_info).run_on_model(cloned_model);
+        TransformationsContext context(model, config, device_info);
+        TransformationsPipeline(context).run_on_model(cloned_model);
         program = std::make_shared<ProgramBuilder>(cloned_model, engine, config, false, true);
         std::pair<int64_t, int64_t> device_memory_usage = program->get_compiled_program()->get_estimated_device_mem_usage();
         if (device_memory_usage.first == static_cast<int64_t>(-1L) && device_memory_usage.second == static_cast<int64_t>(-1L)) {

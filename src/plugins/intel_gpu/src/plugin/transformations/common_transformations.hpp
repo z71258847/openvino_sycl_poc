@@ -9,15 +9,18 @@
 #include "openvino/core/model.hpp"
 #include "openvino/pass/pass.hpp"
 
+#include "intel_gpu/runtime/execution_config.hpp"
+#include "intel_gpu/runtime/device.hpp"
 #include "transformations_context.hpp"
 
 namespace ov {
 namespace intel_gpu {
 
-class TransformationsPipeline : public ov::pass::ModelPass {
+class CommonTransformations : public ov::pass::ModelPass {
 public:
-    OPENVINO_RTTI("ov::intel_gpu::TransformationsPipeline");
-    explicit TransformationsPipeline(const TransformationsContext& context): m_context(context) {}
+    OPENVINO_RTTI("ov::intel_gpu::CommonTransformations");
+    explicit CommonTransformations(const TransformationsContext& context)
+        : m_context(context) {}
 
     bool run_on_model(const std::shared_ptr<ov::Model>& m) override;
 

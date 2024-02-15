@@ -92,3 +92,10 @@ struct device_info {
 /// @}
 
 }  // namespace cldnn
+
+
+namespace ov {
+namespace intel_gpu {
+using DeviceInfo = cldnn::device_info;
+}  // namespace intel_gpu
+}  // namespace ov

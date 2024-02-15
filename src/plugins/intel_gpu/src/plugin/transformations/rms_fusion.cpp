@@ -93,6 +93,7 @@ RMSFusion::RMSFusion(uint64_t max_work_group_size) {
             return false;
 
         const int32_t vec_size = 8;
+        // TODO: move that to callback
         if (static_cast<int32_t>((gamma_shape.back() / vec_size)) > static_cast<int32_t>(max_work_group_size))
             return false;
 

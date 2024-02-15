@@ -14,10 +14,11 @@
 namespace ov {
 namespace intel_gpu {
 
-class TransformationsPipeline : public ov::pass::ModelPass {
+class OptimizeWithInternalOpset : public ov::pass::ModelPass {
 public:
-    OPENVINO_RTTI("ov::intel_gpu::TransformationsPipeline");
-    explicit TransformationsPipeline(const TransformationsContext& context): m_context(context) {}
+    OPENVINO_RTTI("ov::intel_gpu::OptimizeWithInternalOpset");
+    explicit OptimizeWithInternalOpset(const TransformationsContext& context)
+        : m_context(context) {}
 
     bool run_on_model(const std::shared_ptr<ov::Model>& m) override;
 
