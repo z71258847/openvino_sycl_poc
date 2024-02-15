@@ -1,4 +1,4 @@
-// Copyright (C) 2018-2023 Intel Corporation
+// Copyright (C) 2018-2024 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
@@ -12,7 +12,8 @@
 #include <tuple>
 #include <vector>
 
-#include "intel_gpu/plugin/transformations_pipeline.hpp"
+#include "transformations_pipeline.hpp"
+
 #include "intel_gpu/runtime/itt.hpp"
 #include "low_precision/convolution.hpp"
 #include "low_precision/convolution_backprop_data.hpp"
@@ -47,19 +48,25 @@
 #include "openvino/pass/constant_folding.hpp"
 #include "openvino/pass/manager.hpp"
 #include "openvino/pass/visualize_tree.hpp"
-#include "plugin/transformations/binary_conv_to_conv.hpp"
-#include "plugin/transformations/clamp_fp16_output.hpp"
-#include "plugin/transformations/convert_fc_to_compressed.hpp"
-#include "plugin/transformations/convert_gather_to_compressed.hpp"
-#include "plugin/transformations/convert_matmul_to_fc.hpp"
-#include "plugin/transformations/fc_convert_fusion.hpp"
-#include "plugin/transformations/kv_cache_fusion.hpp"
-#include "plugin/transformations/move_convert_after_gather.hpp"
-#include "plugin/transformations/move_fc_reshape_to_weights.hpp"
-#include "plugin/transformations/rms_fusion.hpp"
-#include "plugin/transformations/swiglu_fusion.hpp"
-#include "plugin/transformations/transpose_matmul_fusion.hpp"
-#include "plugin/transformations/indirect_kv_cache.hpp"
+
+#include "binary_conv_to_conv.hpp"
+#include "clamp_fp16_output.hpp"
+#include "convert_fc_to_compressed.hpp"
+#include "convert_gather_to_compressed.hpp"
+#include "convert_matmul_to_fc.hpp"
+#include "fc_convert_fusion.hpp"
+#include "kv_cache_fusion.hpp"
+#include "move_convert_after_gather.hpp"
+#include "move_fc_reshape_to_weights.hpp"
+#include "rms_fusion.hpp"
+#include "swiglu_fusion.hpp"
+#include "transpose_matmul_fusion.hpp"
+#include "indirect_kv_cache.hpp"
+#include "convert_pooling_to_reduce.hpp"
+#include "convert_shapeof.hpp"
+#include "decompose_reduce_for_false_keepdims.hpp"
+#include "einsum_decomposition.hpp"
+
 #include "transformations/common_optimizations/broadcast_elementwise_fusion.hpp"
 #include "transformations/common_optimizations/broadcast_transition.hpp"
 #include "transformations/common_optimizations/common_optimizations.hpp"
@@ -72,11 +79,7 @@
 #include "transformations/common_optimizations/weights_dequantize_to_fake_quantize.hpp"
 #include "transformations/common_optimizations/wrap_interpolate_into_transposes.hpp"
 #include "transformations/control_flow/unroll_tensor_iterator.hpp"
-#include "transformations/convert_pooling_to_reduce.hpp"
 #include "transformations/convert_precision.hpp"
-#include "transformations/convert_shapeof.hpp"
-#include "transformations/decompose_reduce_for_false_keepdims.hpp"
-#include "transformations/einsum_decomposition.hpp"
 #include "transformations/fp16_compression/convert_compression_only_to_legacy.hpp"
 #include "transformations/fp16_compression/mark_decompression_convert_constant_folding.hpp"
 #include "transformations/init_node_info.hpp"
@@ -178,7 +181,7 @@ static bool is_non_supported_decompression_op(const std::shared_ptr<const ov::No
 namespace ov {
 namespace intel_gpu {
 
-void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
+bool TransformationsPipeline::run_on_model(const std::shared_ptr<ov::Model>& model) {
     OV_ITT_SCOPED_TASK(itt::domains::intel_gpu_plugin, "TransformationsPipeline::apply");
     using const_node_ptr = const std::shared_ptr<const ov::Node>;
 
@@ -191,12 +194,12 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
         manager.set_per_pass_validation(false);
 
         // Temporary solution, global rt info cleanup is needed
-        for (auto& node : func->get_ops()) {
+        for (auto& node : model->get_ops()) {
             ov::enable_constant_folding(node);
             ov::disable_keep_const_precision(node);
         }
 
-        auto is_model_quantized = ov::pass::low_precision::LowPrecision::isFunctionQuantized(func);
+        auto is_model_quantized = ov::pass::low_precision::LowPrecision::isFunctionQuantized(model);
         enableInt8 = config.get_property(ov::intel_gpu::enable_lp_transformations) && is_model_quantized;
         if (enableInt8) {
             manager.register_pass<ov::pass::MarkDequantizationSubgraph>(
@@ -559,7 +562,7 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
             });
         }
 
-        manager.run_passes(func);
+        manager.run_passes(model);
     }
 
     if (enableInt8) {
@@ -599,8 +602,8 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
             }
             return false;
         });
-        lptPassConfig->set_callback<ConvolutionBackpropDataTransformation>([func, defaultPrecisions](const_node_ptr& node) -> bool {
-            auto fillStaticChannel = [func](const ov::PartialShape& shape, size_t& channel) -> bool {
+        lptPassConfig->set_callback<ConvolutionBackpropDataTransformation>([defaultPrecisions](const_node_ptr& node) -> bool {
+            auto fillStaticChannel = [](const ov::PartialShape& shape, size_t& channel) -> bool {
                 const auto rank = shape.rank();
                 if (rank.is_dynamic()) {
                     return false;
@@ -672,7 +675,7 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
             reshapeIgnorePerTensorQuantizationCheck = true;
         auto params = LayerTransformation::Params(true, element::f32, defaultPrecisions, reshapeIgnorePerTensorQuantizationCheck);
         lptManager.register_pass<LowPrecision>(supportedPrecisions, perTensorQuantization, params);
-        lptManager.run_passes(func);
+        lptManager.run_passes(model);
     }
 
     {
@@ -693,7 +696,7 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
                 return num_iter >= 16;
             });
 
-        manager.run_passes(func);
+        manager.run_passes(model);
     }
 
     {
@@ -715,8 +718,10 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
         // GPU plugin stops using friendly names for program creation
         manager.register_pass<ov::pass::ResolveNameCollisions>(true);
 
-        manager.run_passes(func);
+        manager.run_passes(model);
     }
+
+    return true;
 }
 }  // namespace intel_gpu
 }  // namespace ov

@@ -1,4 +1,4 @@
-// Copyright (C) 2018-2023 Intel Corporation
+// Copyright (C) 2018-2024 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "openvino/core/model.hpp"
+#include "openvino/pass/pass.hpp"
 
 #include "intel_gpu/runtime/execution_config.hpp"
 #include "intel_gpu/runtime/device.hpp"
@@ -14,11 +15,13 @@
 namespace ov {
 namespace intel_gpu {
 
-class TransformationsPipeline {
+class TransformationsPipeline : public ov::pass::ModelPass {
 public:
+    OPENVINO_RTTI("ov::intel_gpu::TransformationsPipeline");
     explicit TransformationsPipeline(const ExecutionConfig &conf, const cldnn::device_info &device_info)
         : config(conf), device_info(device_info) {}
-    void apply(std::shared_ptr<ov::Model> func);
+
+    bool run_on_model(const std::shared_ptr<ov::Model>& m) override;
 
 private:
     const ExecutionConfig& config;

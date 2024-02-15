@@ -11,7 +11,6 @@
 #include "openvino/op/loop.hpp"
 
 #include "intel_gpu/plugin/program_builder.hpp"
-#include "intel_gpu/plugin/transformations_pipeline.hpp"
 #include "intel_gpu/runtime/itt.hpp"
 #include "intel_gpu/runtime/debug_configuration.hpp"
 #include "intel_gpu/primitives/mutable_data.hpp"
