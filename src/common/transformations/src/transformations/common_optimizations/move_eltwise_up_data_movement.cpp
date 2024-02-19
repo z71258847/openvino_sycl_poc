@@ -10,17 +10,17 @@
 
 #include "itt.hpp"
 #include "openvino/core/rt_info.hpp"
+#include "openvino/core/type.hpp"
 #include "openvino/pass/pattern/op/wrap_type.hpp"
 
 namespace {
-bool is_data_movement_operation(const std::shared_ptr<ov::Node>& node) {
-    return ov::is_type<ov::op::v0::Squeeze>(node) || ov::is_type<ov::op::v0::Unsqueeze>(node) ||
-           ov::is_type<ov::op::v1::Reshape>(node) || ov::is_type<ov::op::v1::Transpose>(node) ||
-           ov::is_type<ov::op::v0::ShuffleChannels>(node) || ov::is_type<ov::op::v7::Roll>(node) ||
-           ov::is_type<ov::op::v0::ReverseSequence>(node) || ov::is_type<ov::op::v0::DepthToSpace>(node) ||
-           ov::is_type<ov::op::v1::BatchToSpace>(node) || ov::is_type<ov::op::v1::Broadcast>(node) ||
-           ov::is_type<ov::op::v3::Broadcast>(node) || ov::is_type<ov::op::v1::Gather>(node) ||
-           ov::is_type<ov::op::v7::Gather>(node) || ov::is_type<ov::op::v8::Gather>(node);
+bool is_data_movement_operation(const std::shared_ptr<ov::Node>& node, const std::vector<ov::DiscreteTypeInfo>& allowed_data_movement_ops) {
+    for (auto& allowed_type : allowed_data_movement_ops) {
+        if (node->get_type_info().is_castable(allowed_type))
+            return true;
+    }
+
+    return false;
 }
 
 bool is_scalar_like(const std::shared_ptr<ov::Node>& node) {
@@ -29,7 +29,26 @@ bool is_scalar_like(const std::shared_ptr<ov::Node>& node) {
 }
 }  // namespace
 
-ov::pass::MoveEltwiseUpThroughDataMov::MoveEltwiseUpThroughDataMov() {
+std::vector<ov::DiscreteTypeInfo> ov::pass::MoveEltwiseUpThroughDataMov::get_default_allowed_ops() {
+    return {
+        ov::op::v0::Squeeze::get_type_info_static(),
+        ov::op::v0::Unsqueeze::get_type_info_static(),
+        ov::op::v1::Reshape::get_type_info_static(),
+        ov::op::v1::Transpose::get_type_info_static(),
+        ov::op::v0::ShuffleChannels::get_type_info_static(),
+        ov::op::v7::Roll::get_type_info_static(),
+        ov::op::v0::ReverseSequence::get_type_info_static(),
+        ov::op::v0::DepthToSpace::get_type_info_static(),
+        ov::op::v1::BatchToSpace::get_type_info_static(),
+        ov::op::v1::Broadcast::get_type_info_static(),
+        ov::op::v3::Broadcast::get_type_info_static(),
+        ov::op::v1::Gather::get_type_info_static(),
+        ov::op::v7::Gather::get_type_info_static(),
+        ov::op::v8::Gather::get_type_info_static(),
+    };
+}
+
+ov::pass::MoveEltwiseUpThroughDataMov::MoveEltwiseUpThroughDataMov(std::vector<DiscreteTypeInfo> allowed_data_movement_ops) {
     MATCHER_SCOPE(MoveEltwiseUpThroughDataMov);
     auto eltwise_pattern = ov::pass::pattern::wrap_type<ov::op::util::UnaryElementwiseArithmetic,
                                                         ov::op::util::BinaryElementwiseArithmetic,
@@ -56,7 +75,7 @@ ov::pass::MoveEltwiseUpThroughDataMov::MoveEltwiseUpThroughDataMov() {
         auto current = eltwise->get_input_node_shared_ptr(0);
         auto child = eltwise;
 
-        while (is_data_movement_operation(current)) {
+        while (is_data_movement_operation(current, allowed_data_movement_ops)) {
             if (current->get_output_size() != 1 || current->get_output_target_inputs(0).size() != 1 ||
                 current->get_output_element_type(0) != current->get_input_element_type(0)) {
                 return false;
