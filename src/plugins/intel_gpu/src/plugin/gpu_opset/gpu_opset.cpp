@@ -4,10 +4,25 @@
 
 #include "gpu_opset.hpp"
 
-#define REGISER_OP(NewOpType, OriginalOpType) \
-    register_converter(OriginalOpType::get_type_info_static(), [](const std::shared_ptr<ov::Node>& node) -> std::shared_ptr<ov::Node> { \
-        return std::make_shared<NewOpType>(std::dynamic_pointer_cast<OriginalOpType>(node)); \
-    });
+#include "openvino/opsets/opset12.hpp"
+#include "intel_gpu/op/kv_cache.hpp"
+#include "intel_gpu/op/read_value.hpp"
+#include "intel_gpu/op/gather_compressed.hpp"
+#include "intel_gpu/op/fully_connected.hpp"
+#include "intel_gpu/op/fully_connected_compressed.hpp"
+#include "intel_gpu/op/rms.hpp"
+#include "intel_gpu/op/reorder.hpp"
+#include "intel_gpu/op/convolution.hpp"
+#include "intel_gpu/op/placeholder.hpp"
+#include "intel_gpu/op/indirect_gemm.hpp"
+#include "intel_gpu/op/gemm.hpp"
+#include "intel_gpu/op/swiglu.hpp"
+#include "intel_gpu/op/swiglu.hpp"
+#include "ov_ops/multiclass_nms_ie_internal.hpp"
+#include "ov_ops/nms_static_shape_ie.hpp"
+#include "ov_ops/nms_ie_internal.hpp"
+#include "ov_ops/generate_proposals_ie_internal.hpp"
+
 
 namespace ov {
 namespace intel_gpu {
@@ -22,19 +37,19 @@ std::shared_ptr<ov::Node> OpConverter::convert_to_gpu_opset(const std::shared_pt
 }
 
 void OpConverter::register_ops() {
-#define _OPENVINO_OP_REG(NewOpType, OriginalOpType) REGISER_OP(NewOpType, OriginalOpType)
+#define REGISTER_FACTORY(NewOpType, OpType) extern void __register_ ## NewOpType ## _factory(); __register_ ## NewOpType ## _factory();
 #include "gpu_opset_tbl.hpp"
-#undef _OPENVINO_OP_REG
+#undef REGISTER_FACTORY
 }
 
-const OpConverter& gpu_op_converter() {
+OpConverter& OpConverter::instance() {
     static OpConverter op_converter;
-    static std::once_flag flag;
-    std::call_once(flag, [&]() {
-        op_converter.register_ops();
-    });
     return op_converter;
 }
+
+#define REGISTER_FACTORY(NewOpType, OpType) DECLARE_GPU_OP(NewOpType, OpType)
+#include "gpu_opset_tbl.hpp"
+#undef REGISTER_FACTORY
 
 }  // namespace intel_gpu
 }  // namespace ov

@@ -6,54 +6,49 @@
 
 #include "node_extension.hpp"
 #include "openvino/core/type.hpp"
-#include "openvino/opsets/opset12.hpp"
-#include "intel_gpu/op/kv_cache.hpp"
-#include "intel_gpu/op/read_value.hpp"
-#include "intel_gpu/op/gather_compressed.hpp"
-#include "intel_gpu/op/fully_connected.hpp"
-#include "intel_gpu/op/fully_connected_compressed.hpp"
-#include "intel_gpu/op/rms.hpp"
-#include "intel_gpu/op/reorder.hpp"
-#include "intel_gpu/op/convolution.hpp"
-#include "intel_gpu/op/placeholder.hpp"
 
 #define DECLARE_GPU_OP(NewOpType, OriginalOpType) \
     class NewOpType : public OriginalOpType, public ov::intel_gpu::TypedNodeExtension<OriginalOpType, TypedNodeParams<OriginalOpType>> { \
     public: \
-        explicit NewOpType(std::shared_ptr<OriginalOpType> op) : OriginalOpType(*op) {} \
-    };
-
+        using TypedNode = ov::intel_gpu::TypedNodeExtension<OriginalOpType, TypedNodeParams<OriginalOpType>>; \
+        explicit NewOpType(std::shared_ptr<OriginalOpType> op) : OriginalOpType(*op) { \
+            TypedNode::set_node_ptr(this); \
+        } \
+    }; \
+    extern void __register_ ## NewOpType ## _factory() { \
+        OpConverter::instance().register_converter(OriginalOpType::get_type_info_static(), \
+        [](const std::shared_ptr<ov::Node>& node) -> std::shared_ptr<ov::Node> { \
+            return std::make_shared<NewOpType>(std::dynamic_pointer_cast<OriginalOpType>(node)); \
+        }); \
+    }
 
 namespace ov {
 namespace intel_gpu {
 
 class OpConverter {
 public:
-    void register_converter(ov::DiscreteTypeInfo source_type, std::function<std::shared_ptr<ov::Node>(const std::shared_ptr<ov::Node>&)> f);
+    using FactoryType = std::function<std::shared_ptr<ov::Node>(const std::shared_ptr<ov::Node>&)>;
+    void register_converter(ov::DiscreteTypeInfo source_type, FactoryType f);
     std::shared_ptr<ov::Node> convert_to_gpu_opset(const std::shared_ptr<ov::Node>& op) const;
-
+    static OpConverter& instance();
     void register_ops();
 
 private:
-    std::unordered_map<ov::DiscreteTypeInfo, std::function<std::shared_ptr<ov::Node>(const std::shared_ptr<ov::Node>&)>> m_conversion_map;
+    OpConverter() = default;
+    std::unordered_map<ov::DiscreteTypeInfo, FactoryType> m_conversion_map;
 };
 
-const OpConverter& gpu_op_converter();
 
 template<typename T, typename... Args>
 std::shared_ptr<ov::Node> make_gpu_op(Args... args) {
     auto common_op = std::make_shared<T>(std::forward<Args>(args)...);
-    auto gpu_op = intel_gpu::gpu_op_converter().convert_to_gpu_opset(common_op);
+    auto gpu_op = OpConverter::instance().convert_to_gpu_opset(common_op);
     gpu_op->set_output_size(common_op->get_output_size());
     gpu_op->set_friendly_name(common_op->get_friendly_name());
     gpu_op->validate_and_infer_types();
 
     return gpu_op;
 }
-
-#define _OPENVINO_OP_REG(NewOpType, OriginalOpType) DECLARE_GPU_OP(NewOpType, OriginalOpType)
-#include "gpu_opset_tbl.hpp"
-#undef _OPENVINO_OP_REG
 
 }  // namespace intel_gpu
 }  // namespace ov

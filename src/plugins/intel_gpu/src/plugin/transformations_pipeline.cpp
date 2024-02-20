@@ -785,7 +785,7 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
 
         ov::pass::Manager manager;
         manager.register_pass<ov::intel_gpu::ConvertToGpuOpset>();
-        // manager.register_pass<ov::intel_gpu::LayoutAssignment>(optimizer);
+        manager.register_pass<ov::intel_gpu::LayoutAssignment>();
         // manager.register_pass<ov::intel_gpu::LayoutPropagation>(optimizer);
         // // manager.register_pass<ov::intel_gpu::ApplyFusions>();
         // manager.register_pass<ov::intel_gpu::InsertReorders>(optimizer);
