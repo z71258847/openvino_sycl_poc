@@ -11,7 +11,7 @@
 
 #include "openvino/core/type.hpp"
 #include "transformations/utils/utils.hpp"
-#include "gpu_opset/gpu_op_extension.hpp"
+#include "gpu_opset/node_extension.hpp"
 #include "layout_optimizer.hpp"
 
 #include <memory>

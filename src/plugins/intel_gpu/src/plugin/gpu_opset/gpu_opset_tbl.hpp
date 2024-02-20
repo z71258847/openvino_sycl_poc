@@ -276,3 +276,5 @@ _OPENVINO_OP_REG(Reorder, ov::intel_gpu::op::Reorder);
 _OPENVINO_OP_REG(GatherCompressed_internal, ov::intel_gpu::op::GatherCompressed);
 _OPENVINO_OP_REG(KVCache_internal, ov::intel_gpu::op::KVCache);
 _OPENVINO_OP_REG(ReadValue_internal, ov::intel_gpu::op::ReadValue);
+_OPENVINO_OP_REG(Placeholder_internal, ov::intel_gpu::op::Placeholder);
+_OPENVINO_OP_REG(Convolution_internal, ov::intel_gpu::op::Convolution);

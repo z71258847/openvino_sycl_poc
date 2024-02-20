@@ -16,7 +16,7 @@
 #include "ov_ops/type_relaxed.hpp"
 
 #include "gpu_opset/gpu_opset.hpp"
-#include "gpu_opset/gpu_op_extension.hpp"
+#include "gpu_opset/node_extension.hpp"
 
 #include "intel_gpu/runtime/debug_configuration.hpp"
 

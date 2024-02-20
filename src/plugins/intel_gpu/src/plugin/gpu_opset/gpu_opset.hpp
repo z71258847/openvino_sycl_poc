@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "gpu_op_extension.hpp"
+#include "node_extension.hpp"
 #include "openvino/core/type.hpp"
 #include "openvino/opsets/opset12.hpp"
 #include "intel_gpu/op/kv_cache.hpp"
@@ -14,9 +14,11 @@
 #include "intel_gpu/op/fully_connected_compressed.hpp"
 #include "intel_gpu/op/rms.hpp"
 #include "intel_gpu/op/reorder.hpp"
+#include "intel_gpu/op/convolution.hpp"
+#include "intel_gpu/op/placeholder.hpp"
 
 #define DECLARE_GPU_OP(NewOpType, OriginalOpType) \
-    class NewOpType : public OriginalOpType, public ov::intel_gpu::GPUOpExtension { \
+    class NewOpType : public OriginalOpType, public ov::intel_gpu::TypedNodeExtension<OriginalOpType, TypedNodeParams<OriginalOpType>> { \
     public: \
         explicit NewOpType(std::shared_ptr<OriginalOpType> op) : OriginalOpType(*op) {} \
     };

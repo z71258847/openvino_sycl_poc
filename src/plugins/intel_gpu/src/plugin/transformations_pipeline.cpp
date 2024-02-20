@@ -12,7 +12,7 @@
 #include <tuple>
 #include <vector>
 
-#include "gpu_opset/gpu_op_extension.hpp"
+#include "gpu_opset/node_extension.hpp"
 #include "intel_gpu/plugin/transformations_pipeline.hpp"
 #include "intel_gpu/runtime/itt.hpp"
 #include "low_precision/convolution.hpp"
@@ -756,48 +756,47 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
         manager.run_passes(func);
     }
 
-    if (0)
-    {
-        auto gpu_visualize_modifiers = [](const Node& node, std::vector<std::string>& attributes) -> void {
-            auto label_it = std::find_if(attributes.begin(), attributes.end(), [](const std::string& s) {
-                static const std::string prefix = "label";
-                return !s.compare(0, prefix.size(), prefix);
-            });
-            if (label_it == attributes.end())
-                return;
+    if (1) {
+        // auto gpu_visualize_modifiers = [](const Node& node, std::vector<std::string>& attributes) -> void {
+        //     auto label_it = std::find_if(attributes.begin(), attributes.end(), [](const std::string& s) {
+        //         static const std::string prefix = "label";
+        //         return !s.compare(0, prefix.size(), prefix);
+        //     });
+        //     if (label_it == attributes.end())
+        //         return;
 
-            if (auto gpu_op = dynamic_cast<const GPUOpExtension*>(&node)) {
-                auto& label = *label_it;
-                auto last_bracket = label.find_last_of("\"");
-                if (last_bracket == std::string::npos)
-                    return;
-                label.replace(last_bracket, 1, " ");
-                label += "\ninput_formats=" + to_str(gpu_op->get_preferred_input_fmts());
-                label += "\noutput_formats=" + to_str(gpu_op->get_preferred_output_fmts());
-                label += "\navailable_impls=" + to_str(gpu_op->get_available_impl_types());
-                label += "\"";
-            }
-        };
+        //     if (auto gpu_op = dynamic_cast<const GPUOpExtension*>(&node)) {
+        //         auto& label = *label_it;
+        //         auto last_bracket = label.find_last_of("\"");
+        //         if (last_bracket == std::string::npos)
+        //             return;
+        //         label.replace(last_bracket, 1, " ");
+        //         label += "\ninput_formats=" + to_str(gpu_op->get_preferred_input_fmts());
+        //         label += "\noutput_formats=" + to_str(gpu_op->get_preferred_output_fmts());
+        //         label += "\navailable_impls=" + to_str(gpu_op->get_available_impl_types());
+        //         label += "\"";
+        //     }
+        // };
 
-        (void)gpu_visualize_modifiers;
+        // (void)gpu_visualize_modifiers;
 
-        LayoutOptimizer::Attributes attrs{false};
-        LayoutOptimizer optimizer(device_info, config, attrs);
+        // LayoutOptimizer::Attributes attrs{false};
+        // LayoutOptimizer optimizer(device_info, config, attrs);
 
         ov::pass::Manager manager;
         manager.register_pass<ov::intel_gpu::ConvertToGpuOpset>();
-        manager.register_pass<ov::intel_gpu::LayoutAssignment>(optimizer);
-        manager.register_pass<ov::intel_gpu::LayoutPropagation>(optimizer);
-        // manager.register_pass<ov::intel_gpu::ApplyFusions>();
-        manager.register_pass<ov::intel_gpu::InsertReorders>(optimizer);
+        // manager.register_pass<ov::intel_gpu::LayoutAssignment>(optimizer);
+        // manager.register_pass<ov::intel_gpu::LayoutPropagation>(optimizer);
+        // // manager.register_pass<ov::intel_gpu::ApplyFusions>();
+        // manager.register_pass<ov::intel_gpu::InsertReorders>(optimizer);
         // manager.register_pass<ov::intel_gpu::ConvolutionBackwardToForward>();
         // manager.register_pass<ov::intel_gpu::OptimizeConcatInputsOrder>();
         // manager.register_pass<ov::intel_gpu::AddBufferPaddings>();
         // manager.register_pass<ov::intel_gpu::OptimizeInplaceOps>();
         // manager.register_pass<ov::intel_gpu::OptimizeFullyConnectedWeightsDecompression>();
         // apply_opt_pass<add_onednn_optimization_attributes>();
-        manager.register_pass<ov::intel_gpu::MarkupNodes>();
-        manager.register_pass<ov::intel_gpu::SelectImplementations>();
+        // manager.register_pass<ov::intel_gpu::MarkupNodes>();
+        // manager.register_pass<ov::intel_gpu::SelectImplementations>();
         // manager.register_pass<ov::intel_gpu::AddReordersForSelectedImpls>();
         // manager.register_pass<ov::intel_gpu::OptimizeReorders>();
         manager.run_passes(func);
