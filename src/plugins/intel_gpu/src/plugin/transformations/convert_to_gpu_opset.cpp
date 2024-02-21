@@ -51,20 +51,15 @@ namespace ov {
 namespace intel_gpu {
 
 ov::intel_gpu::ConvertToGpuOpset::ConvertToGpuOpset() {
-}
-
-bool ConvertToGpuOpset::run_on_model(const std::shared_ptr<ov::Model>& m) {
     static std::once_flag flag;
     std::call_once(flag, []() {
         OpConverter::instance().register_ops();
     });
+}
 
+bool ConvertToGpuOpset::run_on_model(const std::shared_ptr<ov::Model>& m) {
     for (auto& op : m->get_ordered_ops()) {
         auto gpu_op = OpConverter::instance().convert_to_gpu_opset(op);
-        gpu_op->set_output_size(op->get_output_size());
-        gpu_op->set_friendly_name(op->get_friendly_name());
-        ov::copy_runtime_info(op, gpu_op);
-
         std::cerr << "Convert: " << op->get_friendly_name() << "(" << op->get_type_name() << ") to "
                                  << gpu_op->get_friendly_name() << "(" << gpu_op->get_type_name() << ")\n";
 

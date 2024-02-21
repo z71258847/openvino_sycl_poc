@@ -4,6 +4,8 @@
 
 #include "gpu_opset.hpp"
 
+#include "gpu_opset/implementation_registry.hpp"
+#include "openvino/core/rt_info.hpp"
 #include "openvino/opsets/opset12.hpp"
 #include "intel_gpu/op/kv_cache.hpp"
 #include "intel_gpu/op/read_value.hpp"
@@ -33,12 +35,18 @@ void OpConverter::register_converter(ov::DiscreteTypeInfo source_type, std::func
 
 std::shared_ptr<ov::Node> OpConverter::convert_to_gpu_opset(const std::shared_ptr<ov::Node>& op) const {
     OPENVINO_ASSERT(m_conversion_map.count(op->get_type_info()) > 0, "[GPU] Operation ", op->get_type_info(), " is not registered");
-    return m_conversion_map.at(op->get_type_info())(op);
+    auto converted_op = m_conversion_map.at(op->get_type_info())(op);
+    converted_op->set_output_size(op->get_output_size());
+    converted_op->set_friendly_name(op->get_friendly_name());
+    ov::copy_runtime_info(op, converted_op);
+    return converted_op;
 }
 
 void OpConverter::register_ops() {
 #define REGISTER_FACTORY(NewOpType, OpType) extern void __register_ ## NewOpType ## _factory(); __register_ ## NewOpType ## _factory();
 #include "gpu_opset_tbl.hpp"
+REGISTER_FACTORY(Convolution_internal, ov::intel_gpu::op::Convolution);
+REGISTER_FACTORY(FullyConnectedCompressed_internal, ov::intel_gpu::op::FullyConnectedCompressed);
 #undef REGISTER_FACTORY
 }
 
@@ -47,7 +55,16 @@ OpConverter& OpConverter::instance() {
     return op_converter;
 }
 
-#define REGISTER_FACTORY(NewOpType, OpType) DECLARE_GPU_OP(NewOpType, OpType)
+class RegistryStub : public ImplementationsRegistry {
+public:
+    RegistryStub() { }
+    static const RegistryStub& instance() {
+        static RegistryStub instance;
+        return instance;
+    }
+};
+
+#define REGISTER_FACTORY(NewOpType, OpType) REGISTER_OP(NewOpType, OpType, RegistryStub)
 #include "gpu_opset_tbl.hpp"
 #undef REGISTER_FACTORY
 

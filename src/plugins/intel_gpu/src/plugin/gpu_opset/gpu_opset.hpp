@@ -5,22 +5,47 @@
 #pragma once
 
 #include "node_extension.hpp"
+#include "implementation_params.hpp"
 #include "openvino/core/type.hpp"
 
-#define DECLARE_GPU_OP(NewOpType, OriginalOpType) \
-    class NewOpType : public OriginalOpType, public ov::intel_gpu::TypedNodeExtension<OriginalOpType, TypedNodeParams<OriginalOpType>> { \
-    public: \
-        using TypedNode = ov::intel_gpu::TypedNodeExtension<OriginalOpType, TypedNodeParams<OriginalOpType>>; \
-        explicit NewOpType(std::shared_ptr<OriginalOpType> op) : OriginalOpType(*op) { \
-            TypedNode::set_node_ptr(this); \
-        } \
-    }; \
-    extern void __register_ ## NewOpType ## _factory() { \
+
+#define DECLARE_REGISTER_FUNC(NewOpType, OriginalOpType) \
+    extern void __register_ ## NewOpType ## _factory(); \
+    void __register_ ## NewOpType ## _factory() { \
         OpConverter::instance().register_converter(OriginalOpType::get_type_info_static(), \
         [](const std::shared_ptr<ov::Node>& node) -> std::shared_ptr<ov::Node> { \
             return std::make_shared<NewOpType>(std::dynamic_pointer_cast<OriginalOpType>(node)); \
         }); \
     }
+
+#define DECLARE_NEW_OP_CLASS(NewOpType, OriginalOpType, TypedNode, FactoryType) \
+    class NewOpType : public OriginalOpType, public TypedNode { \
+    public: \
+        explicit NewOpType(std::shared_ptr<OriginalOpType> op) : OriginalOpType(*op) { \
+            TypedNode::init_factory<FactoryType>(); \
+            TypedNode::set_node_ptr(this); \
+        } \
+    }; \
+
+#define REGISTER_OP(NewOpType, OriginalOpType, RegistryType) \
+    using FactoryType ## NewOpType = TypedImplementationsFactory<OriginalOpType, TypedNodeParams<OriginalOpType>, RegistryType>; \
+    using TypedNode ## NewOpType = ov::intel_gpu::TypedNodeExtension<OriginalOpType>; \
+    DECLARE_NEW_OP_CLASS(NewOpType, OriginalOpType, TypedNode ## NewOpType, FactoryType ## NewOpType) \
+    DECLARE_REGISTER_FUNC(NewOpType, OriginalOpType)
+
+#define REGISTER_OP_WITH_CUSTOM_FACTORY(NewOpType, OriginalOpType, FactoryType) \
+    using TypedNode ## NewOpType = ov::intel_gpu::TypedNodeExtension<OriginalOpType>; \
+    DECLARE_NEW_OP_CLASS(NewOpType, OriginalOpType, TypedNode ## NewOpType, FactoryType) \
+    DECLARE_REGISTER_FUNC(NewOpType, OriginalOpType)
+
+// Is it needed?
+#define REGISTER_OP_WITH_CUSTOM_PARAMS_AND_REGISTRY(NewOpType, OriginalOpType, ParamsType, RegistryType) \
+    using FactoryType ## NewOpType = TypedImplementationsFactory<OriginalOpType, ParamsType, RegistryType>; \
+    using TypedNode ## NewOpType = ov::intel_gpu::TypedNodeExtension<OriginalOpType>; \
+    DECLARE_NEW_OP_CLASS(NewOpType, OriginalOpType, TypedNode ## NewOpType, FactoryType ## NewOpType) \
+    DECLARE_REGISTER_FUNC(NewOpType, OriginalOpType)
+
+
 
 namespace ov {
 namespace intel_gpu {

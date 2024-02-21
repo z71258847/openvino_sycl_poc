@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <type_traits>
 #include "implementation_registry.hpp"
 #include "implementation_params.hpp"
 
@@ -15,7 +16,7 @@ class ImplementationsFactory {
 public:
     ImplementationsFactory(const ImplementationsList& impls) : m_impls(impls) {}
     std::shared_ptr<OpImplementation> create_impl(const FactoryParameters& params);
-    void filter(const FactoryParameters& params);
+    void filter_unsupported(const FactoryParameters& params);
 
     virtual bool supports(const FactoryParameters& params) const = 0;
 
@@ -23,17 +24,17 @@ protected:
     ImplementationsList m_impls;
 };
 
-template <typename NodeType, typename ParametersType>
+template <typename NodeType, typename ParametersType, typename RegistryType,
+          typename std::enable_if<std::is_base_of<FactoryParameters, ParametersType>::value &&
+                                  std::is_base_of<ov::Node, NodeType>::value &&
+                                  std::is_base_of<ImplementationsRegistry, RegistryType>::value, bool>::type = true>
 class TypedImplementationsFactory : public ImplementationsFactory {
 public:
-    TypedImplementationsFactory() : ImplementationsFactory(TypedImplementationsRegistry<NodeType>::instance().get_all_impls()) {
+    TypedImplementationsFactory() : ImplementationsFactory(RegistryType::instance().get_all_impls()) {
         std::cerr << "Create impls factory for " << NodeType::get_type_info_static().name << std::endl;
         for (auto& impl : m_impls)
             std::cerr << impl->get_implementation_name() << std::endl;
     }
-
-    std::shared_ptr<OpImplementation> create(const FactoryParameters& attr) { return nullptr; }
-    void filter(const FactoryParameters& attr) {}
 
     bool supports(const FactoryParameters& params) const override {
         return supports_impl(static_cast<const ParametersType&>(params));

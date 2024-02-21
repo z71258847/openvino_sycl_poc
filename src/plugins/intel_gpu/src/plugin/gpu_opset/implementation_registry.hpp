@@ -24,46 +24,6 @@ protected:
 
     ImplementationsList m_impls;
 };
-template<typename NodeType>
-class TypedImplementationsRegistry : public ImplementationsRegistry {
-public:
-    static TypedImplementationsRegistry<NodeType>& instance() {
-        static TypedImplementationsRegistry<NodeType> instance;
-        return instance;
-    }
-
-
-private:
-    TypedImplementationsRegistry() {
-        std::cerr << "TypedImplementationsRegistry Default Ctor\n";
-    };
-};
-
-template<>
-class TypedImplementationsRegistry<ov::op::v0::Parameter> : public ImplementationsRegistry {
-public:
-    static TypedImplementationsRegistry<ov::op::v0::Parameter>& instance() {
-        static TypedImplementationsRegistry<ov::op::v0::Parameter> instance;
-        return instance;
-    }
-private:
-    TypedImplementationsRegistry() {
-        register_impl<SomeNodeImpl>();
-    }
-};
-
-template<>
-class TypedImplementationsRegistry<ov::op::v0::Result> : public ImplementationsRegistry {
-public:
-    static TypedImplementationsRegistry<ov::op::v0::Result>& instance() {
-        static TypedImplementationsRegistry<ov::op::v0::Result> instance;
-        return instance;
-    }
-private:
-    TypedImplementationsRegistry() {
-        register_impl<SomeNodeImpl1>();
-    }
-};
 
 }  // namespace op
 }  // namespace ov

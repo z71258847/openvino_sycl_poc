@@ -3,6 +3,9 @@
 //
 
 #include "node_extension.hpp"
+#include <memory>
+#include "gpu_opset/implementation_args.hpp"
+#include "gpu_opset/memory_descriptor.hpp"
 
 namespace ov {
 namespace intel_gpu {
@@ -19,10 +22,22 @@ bool NodeExtension::is_inplace() const { return m_opt_attributes->m_inplace; }
 void NodeExtension::select_preferred_formats() {
     OPENVINO_ASSERT(m_node != nullptr);
     std::cerr << "select format for: " << m_node->get_friendly_name() << " " << m_node->get_type_name() << std::endl;
+
+    for (size_t i = 0; i < m_node->get_input_size(); i++) {
+        m_memory_desc[Argument::input(i)] = MemoryDesc(Format::any);
+    }
+
+    for (size_t i = 0; i < m_node->get_output_size(); i++) {
+        m_memory_desc[Argument::output(i)] = MemoryDesc(Format::any);
+    }
 }
 
 const ov::Node* NodeExtension::get_node_ptr() const { return m_node; }
-void NodeExtension::set_node_ptr(const ov::Node* ptr) { m_node = ptr; }
+void NodeExtension::set_node_ptr(const ov::Node* ptr) {
+    OPENVINO_ASSERT(dynamic_cast<const NodeExtension*>(ptr) != nullptr,
+                    "NodeExtension: Invalid ov::Node ptr type set. Node should be castable to NodeExtension");
+    m_node = ptr;
+}
 
 }  // namespace intel_gpu
 }  // namespace ov

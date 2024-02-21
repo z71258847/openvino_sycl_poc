@@ -270,7 +270,7 @@ REGISTER_FACTORY(GenerateProposalsIEInternal_internal, ov::op::internal::Generat
 REGISTER_FACTORY(NmsStaticShapeIE8_internal, ov::op::internal::NmsStaticShapeIE<ov::op::v8::MatrixNms>);
 REGISTER_FACTORY(MulticlassNmsIEInternal_internal, ov::op::internal::MulticlassNmsIEInternal);
 REGISTER_FACTORY(FullyConnected_internal, ov::intel_gpu::op::FullyConnected);
-REGISTER_FACTORY(FullyConnectedCompressed_internal, ov::intel_gpu::op::FullyConnectedCompressed);
+// REGISTER_FACTORY(FullyConnectedCompressed_internal, ov::intel_gpu::op::FullyConnectedCompressed);
 REGISTER_FACTORY(RMS_internal, ov::intel_gpu::op::RMS);
 REGISTER_FACTORY(GatherCompressed_internal, ov::intel_gpu::op::GatherCompressed);
 REGISTER_FACTORY(KVCache_internal, ov::intel_gpu::op::KVCache);
@@ -278,5 +278,5 @@ REGISTER_FACTORY(ReadValue_internal, ov::intel_gpu::op::ReadValue);
 REGISTER_FACTORY(Gemm_internal, ov::intel_gpu::op::Gemm);
 REGISTER_FACTORY(SwiGLU_internal, ov::intel_gpu::op::SwiGLU);
 REGISTER_FACTORY(IndirectGemm_internal, ov::intel_gpu::op::IndirectGemm);
-REGISTER_FACTORY(Convolution_internal, ov::intel_gpu::op::Convolution);
+// REGISTER_FACTORY(Convolution_internal, ov::intel_gpu::op::Convolution);
 REGISTER_FACTORY(Placeholder_internal, ov::intel_gpu::op::Placeholder);

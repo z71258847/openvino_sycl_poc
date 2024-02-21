@@ -9,7 +9,6 @@
 #include "gpu_opset/implementation_params.hpp"
 #include "gpu_opset/memory_descriptor.hpp"
 #include "gpu_opset/optimization_attributes.hpp"
-#include "intel_gpu/primitives/implementation_desc.hpp"
 
 #include <memory>
 
@@ -32,7 +31,7 @@ public:
     void set_inplace();
     bool is_inplace() const;
 
-    void select_preferred_formats();
+    virtual void select_preferred_formats();
 
     const ov::Node* get_node_ptr() const;
     void set_node_ptr(const ov::Node* ptr);
@@ -45,19 +44,21 @@ protected:
     const ov::Node* m_node;
 };
 
-template <typename NodeType, typename ParametersType>
-class TypedNodeExtension : public NodeExtension {
+template <typename NodeType, typename std::enable_if<std::is_base_of<ov::Node, NodeType>::value, bool>::type = true>
+class TypedNodeExtensionBase : public NodeExtension {
 public:
-    using FactoryType = TypedImplementationsFactory<NodeType, ParametersType>;
-    TypedNodeExtension() {
+    template<typename FactoryType, typename std::enable_if<std::is_base_of<ImplementationsFactory, FactoryType>::value, bool>::type = true>
+    void init_factory() {
         m_factory = std::make_shared<FactoryType>();
     }
-    ~TypedNodeExtension() = default;
-
+    template<typename FactoryType, typename std::enable_if<std::is_base_of<ImplementationsFactory, FactoryType>::value, bool>::type = true>
     FactoryType& get_factory() const {
         return static_cast<FactoryType&>(m_factory);
     }
 };
+
+template <typename NodeType, typename std::enable_if<std::is_base_of<ov::Node, NodeType>::value, bool>::type = true>
+class TypedNodeExtension : public TypedNodeExtensionBase<NodeType> { };
 
 }  // namespace op
 }  // namespace ov
