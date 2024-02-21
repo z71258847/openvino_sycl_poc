@@ -10,7 +10,7 @@
 namespace ov {
 namespace intel_gpu {
 
-class ImplementationsRegistry {
+struct ImplementationsRegistry {
 public:
     virtual ~ImplementationsRegistry() = default;
     ImplementationsList get_all_impls() const { return m_impls; }

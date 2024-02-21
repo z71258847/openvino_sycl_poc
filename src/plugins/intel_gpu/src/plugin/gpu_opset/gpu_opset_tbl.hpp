@@ -7,7 +7,7 @@
 #endif
 
 // ------------------------------ Supported v0 ops ------------------------------ //
-REGISTER_FACTORY(Abs_v0, ov::op::v0::Abs);
+// REGISTER_FACTORY(Abs_v0, ov::op::v0::Abs);
 REGISTER_FACTORY(Acos_v0, ov::op::v0::Acos);
 REGISTER_FACTORY(Asin_v0, ov::op::v0::Asin);
 REGISTER_FACTORY(Atan_v0, ov::op::v0::Atan);
@@ -43,7 +43,7 @@ REGISTER_FACTORY(PriorBox_v0, ov::op::v0::PriorBox);
 REGISTER_FACTORY(PriorBoxClustered_v0, ov::op::v0::PriorBoxClustered);
 REGISTER_FACTORY(Proposal_v0, ov::op::v0::Proposal);
 REGISTER_FACTORY(PSROIPooling_v0, ov::op::v0::PSROIPooling);
-REGISTER_FACTORY(Relu_v0, ov::op::v0::Relu);
+// REGISTER_FACTORY(Relu_v0, ov::op::v0::Relu);
 REGISTER_FACTORY(Result_v0, ov::op::v0::Result);
 REGISTER_FACTORY(RegionYolo_v0, ov::op::v0::RegionYolo);
 REGISTER_FACTORY(ReorgYolo_v0, ov::op::v0::ReorgYolo);
@@ -93,7 +93,7 @@ REGISTER_FACTORY(Unsqueeze_v0, ov::op::v0::Unsqueeze);
 // ------------------------------ Supported v1 ops ------------------------------ //
 REGISTER_FACTORY(Add_v1, ov::op::v1::Add);
 REGISTER_FACTORY(AvgPool_v1, ov::op::v1::AvgPool);
-REGISTER_FACTORY(BatchToSpace_v1, ov::op::v1::BatchToSpace);
+// REGISTER_FACTORY(BatchToSpace_v1, ov::op::v1::BatchToSpace);
 // REGISTER_FACTORY(BinaryConvolution_v1, ov::op::v1::BinaryConvolution); Supported via BinaryConvolution->Convolution conversion
 REGISTER_FACTORY(Broadcast_v1, ov::op::v1::Broadcast);
 REGISTER_FACTORY(ConvertLike_v1, ov::op::v1::ConvertLike);

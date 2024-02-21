@@ -4,11 +4,15 @@
 
 #pragma once
 
+#include "openvino/core/node.hpp"
+
 #include "gpu_opset/implementation_factory.hpp"
 #include "gpu_opset/implementation_args.hpp"
 #include "gpu_opset/implementation_params.hpp"
 #include "gpu_opset/memory_descriptor.hpp"
+#include "gpu_opset/op_implementation.hpp"
 #include "gpu_opset/optimization_attributes.hpp"
+
 
 #include <memory>
 
@@ -32,6 +36,7 @@ public:
     bool is_inplace() const;
 
     virtual void select_preferred_formats();
+    virtual void select_best_implementation() = 0;
 
     const ov::Node* get_node_ptr() const;
     void set_node_ptr(const ov::Node* ptr);
@@ -39,21 +44,27 @@ public:
 protected:
     MemoryDescs m_memory_desc;
     std::shared_ptr<ImplementationsFactory> m_factory;
+    std::shared_ptr<OpImplementation> m_best_implementation = nullptr;
     std::shared_ptr<OptimizationAttributes> m_opt_attributes = nullptr;
     std::shared_ptr<ov::Model> m_fused_ops = nullptr;
     const ov::Node* m_node;
 };
 
-template <typename NodeType, typename std::enable_if<std::is_base_of<ov::Node, NodeType>::value, bool>::type = true>
+template <typename NodeType,
+          typename std::enable_if<std::is_base_of<ov::Node, NodeType>::value, bool>::type = true>
 class TypedNodeExtensionBase : public NodeExtension {
 public:
     template<typename FactoryType, typename std::enable_if<std::is_base_of<ImplementationsFactory, FactoryType>::value, bool>::type = true>
-    void init_factory() {
+    void init() {
         m_factory = std::make_shared<FactoryType>();
     }
     template<typename FactoryType, typename std::enable_if<std::is_base_of<ImplementationsFactory, FactoryType>::value, bool>::type = true>
     FactoryType& get_factory() const {
         return static_cast<FactoryType&>(m_factory);
+    }
+
+    void select_best_implementation() override {
+        m_best_implementation = m_factory->create_impl(m_node);
     }
 };
 

@@ -45,6 +45,9 @@ std::shared_ptr<ov::Node> OpConverter::convert_to_gpu_opset(const std::shared_pt
 void OpConverter::register_ops() {
 #define REGISTER_FACTORY(NewOpType, OpType) extern void __register_ ## NewOpType ## _factory(); __register_ ## NewOpType ## _factory();
 #include "gpu_opset_tbl.hpp"
+REGISTER_FACTORY(Abs_v0, ov::op::v0::Abs);
+REGISTER_FACTORY(Relu_v0, ov::op::v0::Relu);
+REGISTER_FACTORY(BatchToSpace_v1, ov::op::v1::BatchToSpace);
 REGISTER_FACTORY(Convolution_internal, ov::intel_gpu::op::Convolution);
 REGISTER_FACTORY(FullyConnectedCompressed_internal, ov::intel_gpu::op::FullyConnectedCompressed);
 #undef REGISTER_FACTORY

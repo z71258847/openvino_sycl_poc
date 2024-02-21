@@ -39,7 +39,7 @@ public:
     };
 
 protected:
-    virtual bool supports_impl(const ParametersType& params) const { return false; }
+    virtual bool supports_impl(const ParametersType& params) const { return false; };
 };
 
 REGISTER_OP(FullyConnectedCompressed_internal, ov::intel_gpu::op::FullyConnectedCompressed, FullyConnectedImplementationsRegistry);

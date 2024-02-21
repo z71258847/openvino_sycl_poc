@@ -3,9 +3,9 @@
 //
 
 #include "node_extension.hpp"
-#include <memory>
 #include "gpu_opset/implementation_args.hpp"
 #include "gpu_opset/memory_descriptor.hpp"
+
 
 namespace ov {
 namespace intel_gpu {

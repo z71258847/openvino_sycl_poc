@@ -4,17 +4,12 @@
 
 #pragma once
 
-#include "intel_gpu/primitives/implementation_desc.hpp"
-#include "intel_gpu/runtime/format.hpp"
 #include <memory>
 #include <string>
 #include <vector>
 
 namespace ov {
 namespace intel_gpu {
-
-using Format = cldnn::format;
-using ImplTypes = cldnn::impl_types;
 
 class OpImplementation {
 public:
