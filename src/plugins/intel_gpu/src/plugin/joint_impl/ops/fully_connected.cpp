@@ -6,16 +6,12 @@
 #include "joint_impl/implementation_params.hpp"
 #include "joint_impl/implementation_registry.hpp"
 #include "intel_gpu/op/fully_connected.hpp"
-#include <memory>
 
 namespace ov {
 
-using NodeType = ov::intel_gpu::op::FullyConnected;
-using ParametersType = TypedNodeParams<NodeType>;
-
 class SomeFCImpl : public OpImplementation {
 public:
-    SomeFCImpl(const ParametersType& params) : OpImplementation("SomeFCImpl") {}
+    SomeFCImpl(const FactoryParameters& params) : OpImplementation("SomeFCImpl") {}
 
     void execute() override {
         std::cerr << "SomeFCImpl::execute()!\n";
@@ -23,7 +19,7 @@ public:
 };
 
 
-class FullyConnectedImplementationsRegistry : public ImplementationsRegistry<ParametersType> {
+class FullyConnectedImplementationsRegistry : public ImplementationsRegistry<FactoryParameters> {
 public:
     FullyConnectedImplementationsRegistry() {
         register_impl<SomeFCImpl>();
@@ -34,6 +30,6 @@ public:
     }
 };
 
-REGISTER_OP_1(FullyConnected, ov::intel_gpu::op::FullyConnected, TypedNodeParams<NodeType>, FullyConnectedImplementationsRegistry);
+REGISTER_OP_1(FullyConnected, ov::intel_gpu::op::FullyConnected, FactoryParameters, FullyConnectedImplementationsRegistry);
 
 }  // namespace ov

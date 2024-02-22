@@ -15,10 +15,4 @@ struct FactoryParameters {
     virtual ~FactoryParameters() = default;
 };
 
-template <typename NodeType>
-struct TypedNodeParams : public FactoryParameters {
-    explicit TypedNodeParams(const NodeType* node) {}
-    TypedNodeParams() = default;
-};
-
 }  // namespace ov

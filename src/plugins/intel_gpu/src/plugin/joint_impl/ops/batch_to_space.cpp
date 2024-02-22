@@ -10,16 +10,13 @@
 
 namespace ov {
 
-template<>
-struct TypedNodeParams<ov::op::v1::BatchToSpace> : public FactoryParameters {
-    TypedNodeParams() = default;
-    explicit TypedNodeParams(const ov::op::v1::BatchToSpace* node) : some_parameter(node->get_output_size()) {
+struct BatchToSpaceParams : public FactoryParameters {
+    BatchToSpaceParams() = default;
+    explicit BatchToSpaceParams(const ov::op::v1::BatchToSpace* node) : some_parameter(node->get_output_size()) {
 
     }
     int some_parameter = 100500;
 };
-using BatchToSpaceParams = TypedNodeParams<ov::op::v1::BatchToSpace>;
-
 class BatchToSpaceImpl : public OpImplementation {
 public:
     BatchToSpaceImpl(const BatchToSpaceParams& params) : OpImplementation("BatchToSpaceImpl"), m_params(params) {}
@@ -31,7 +28,7 @@ public:
     BatchToSpaceParams m_params;
 };
 
-struct BatchToSpaceImplementationsRegistry : public ImplementationsRegistry<TypedNodeParams<ov::op::v1::BatchToSpace>> {
+struct BatchToSpaceImplementationsRegistry : public ImplementationsRegistry<BatchToSpaceParams> {
     BatchToSpaceImplementationsRegistry() {
         register_impl<BatchToSpaceImpl>();
     }
@@ -41,6 +38,6 @@ struct BatchToSpaceImplementationsRegistry : public ImplementationsRegistry<Type
     }
 };
 
-REGISTER_OP_1(BatchToSpace, ov::op::v1::BatchToSpace, TypedNodeParams<ov::op::v1::BatchToSpace>, BatchToSpaceImplementationsRegistry);
+REGISTER_OP_1(BatchToSpace, ov::op::v1::BatchToSpace, BatchToSpaceParams, BatchToSpaceImplementationsRegistry);
 
 }  // namespace ov

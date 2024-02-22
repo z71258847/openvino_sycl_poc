@@ -4,26 +4,13 @@
 
 #pragma once
 
-#include <type_traits>
 #include "joint_impl/op_implementation.hpp"
 #include "implementation_params.hpp"
+#include "implementation_selector.hpp"
 #include "openvino/core/node.hpp"
 
 
 namespace ov {
-
-struct ImplSelector {
-    static std::shared_ptr<ImplSelector> default_cpu_selector();
-    static std::shared_ptr<ImplSelector> default_gpu_selector();
-};
-
-struct GPUImplSelector : public ImplSelector {
-
-};
-
-struct CPUImplSelector : public ImplSelector {
-
-};
 
 class ImplementationsFactory {
 public:
