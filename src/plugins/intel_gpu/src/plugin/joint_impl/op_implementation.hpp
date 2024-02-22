@@ -7,6 +7,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <functional>
+#include "joint_impl/implementation_params.hpp"
 
 namespace ov {
 
@@ -19,6 +21,9 @@ public:
 private:
     std::string m_impl_name;
 };
+
+using ImplementationBuilder = std::function<std::shared_ptr<OpImplementation>(const FactoryParameters&)>;
+using BuildersList = std::vector<ImplementationBuilder>;
 using ImplementationsList = std::vector<std::shared_ptr<OpImplementation>>;
 
 }  // namespace ov

@@ -18,13 +18,29 @@
         }); \
     }
 
-#define DECLARE_NEW_OP_CLASS(NewOpType, OriginalOpType, TypedNode, FactoryType) \
-    class NewOpType : public OriginalOpType, public TypedNode { \
+#define DECLARE_NEW_OP_CLASS(NewOpType, OriginalOpType, FactoryType) \
+    class NewOpType : public OriginalOpType, public TypedNodeExtension<OriginalOpType> { \
     public: \
         explicit NewOpType(std::shared_ptr<OriginalOpType> op) : OriginalOpType(*op) { \
-            TypedNode::init<FactoryType>(this); \
+            TypedNodeExtension<OriginalOpType>::init<FactoryType>(this); \
         } \
-    }; \
+    } \
+
+#define DECLARE_FACTORY_CLASS(FactoryName, OriginalOpType, TypedParams, Registry) \
+    class FactoryName : public TypedFactory<OriginalOpType, TypedParams> { \
+    public: \
+        using Parent = TypedFactory<OriginalOpType, TypedParams>; \
+        FactoryName(const ov::Node* node) : Parent(node) { \
+            m_available_impls = filter_unsupported(Parent::get_params(), Registry::instance().all()); \
+        } \
+    }
+
+
+#define REGISTER_OP_1(NewOpType, OriginalOpType, TypedParams, Registry) \
+    DECLARE_FACTORY_CLASS(NewOpType ## Factory, OriginalOpType, TypedParams, Registry); \
+    DECLARE_NEW_OP_CLASS(NewOpType ## Extension, OriginalOpType, NewOpType ## Factory); \
+    DECLARE_REGISTER_FUNC(NewOpType ## Extension, OriginalOpType)
+
 
 #define REGISTER_OP(NewOpType, OriginalOpType, RegistryType) \
     using FactoryType ## NewOpType = TypedImplementationsFactory<OriginalOpType, TypedNodeParams<OriginalOpType>, RegistryType>; \

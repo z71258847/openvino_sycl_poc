@@ -50,8 +50,7 @@ protected:
     const ov::Node* m_node;
 };
 
-template <typename NodeType,
-          typename std::enable_if<std::is_base_of<ov::Node, NodeType>::value, bool>::type = true>
+template <typename NodeType, typename std::enable_if<std::is_base_of<ov::Node, NodeType>::value, bool>::type = true>
 class TypedNodeExtensionBase : public NodeExtension {
 public:
     template<typename FactoryType, typename std::enable_if<std::is_base_of<ImplementationsFactory, FactoryType>::value, bool>::type = true>

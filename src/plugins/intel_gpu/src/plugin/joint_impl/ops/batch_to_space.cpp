@@ -3,7 +3,7 @@
 //
 
 #include "openvino/op/batch_to_space.hpp"
-#include "extended_opset.hpp"
+#include "joint_impl/extended_opset.hpp"
 #include "joint_impl/implementation_params.hpp"
 #include "joint_impl/implementation_registry.hpp"
 #include "openvino/op/batch_to_space.hpp"
@@ -22,11 +22,7 @@ using BatchToSpaceParams = TypedNodeParams<ov::op::v1::BatchToSpace>;
 
 class BatchToSpaceImpl : public OpImplementation {
 public:
-    BatchToSpaceImpl() : OpImplementation("BatchToSpaceImpl") {}
-
-    void initialize(const BatchToSpaceParams& params) {
-        m_params = params;
-    }
+    BatchToSpaceImpl(const BatchToSpaceParams& params) : OpImplementation("BatchToSpaceImpl"), m_params(params) {}
 
     void execute() override {
         std::cerr << "BatchToSpaceImpl::execute(): " << m_params.some_parameter << std::endl;
@@ -35,7 +31,7 @@ public:
     BatchToSpaceParams m_params;
 };
 
-struct BatchToSpaceImplementationsRegistry : public ImplementationsRegistry {
+struct BatchToSpaceImplementationsRegistry : public ImplementationsRegistry<TypedNodeParams<ov::op::v1::BatchToSpace>> {
     BatchToSpaceImplementationsRegistry() {
         register_impl<BatchToSpaceImpl>();
     }
@@ -45,7 +41,6 @@ struct BatchToSpaceImplementationsRegistry : public ImplementationsRegistry {
     }
 };
 
-
-REGISTER_OP(BatchToSpace_v1, ov::op::v1::BatchToSpace, BatchToSpaceImplementationsRegistry);
+REGISTER_OP_1(BatchToSpace, ov::op::v1::BatchToSpace, TypedNodeParams<ov::op::v1::BatchToSpace>, BatchToSpaceImplementationsRegistry);
 
 }  // namespace ov

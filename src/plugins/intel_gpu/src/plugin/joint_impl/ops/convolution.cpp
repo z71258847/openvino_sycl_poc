@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "extended_opset.hpp"
+#include "joint_impl/extended_opset.hpp"
 #include "joint_impl/implementation_args.hpp"
 #include "joint_impl/implementation_params.hpp"
+#include "joint_impl/implementation_registry.hpp"
 #include "joint_impl/node_extension.hpp"
 #include "intel_gpu/op/placeholder.hpp"
 #include "intel_gpu/op/convolution.hpp"
@@ -13,16 +14,19 @@
 namespace ov {
 
 using NodeType = ov::intel_gpu::op::Convolution;
+struct SomeCustomParams : FactoryParameters {
+    SomeCustomParams(const ov::intel_gpu::op::Convolution* node) : FactoryParameters(node) {}
+};
 
 class SomeConvolutionImpl : public OpImplementation {
 public:
-    SomeConvolutionImpl() : OpImplementation("SomeConvolutionImpl") {}
+    SomeConvolutionImpl(const SomeCustomParams& params) : OpImplementation("SomeConvolutionImpl") {}
     void execute() override {
         std::cerr << "SomeConvolutionImpl::execute()!\n";
     }
 };
 
-class ConvolutionImplementationsRegistry : public ImplementationsRegistry {
+class ConvolutionImplementationsRegistry : public ImplementationsRegistry<SomeCustomParams> {
 public:
     ConvolutionImplementationsRegistry() {
         register_impl<SomeConvolutionImpl>();
@@ -33,29 +37,6 @@ public:
     }
 };
 
-struct SomeCustomParams : FactoryParameters { };
-class CustomFactory : public ImplementationsFactory {
-public:
-    CustomFactory(const ov::Node* node)
-        : ImplementationsFactory(
-            std::make_shared<TypedNodeParams<intel_gpu::op::Convolution>>(dynamic_cast<const intel_gpu::op::Convolution*>(node)),
-            ConvolutionImplementationsRegistry::instance().get_all_impls()) {
-        std::cerr << "CustomFactory impls factory for " << NodeType::get_type_info_static().name << std::endl;
-        for (auto& impl : m_impls)
-            std::cerr << impl->get_implementation_name() << std::endl;
-    }
-
-    bool supports(const FactoryParameters& params) const override {
-        return supports_impl(static_cast<const SomeCustomParams&>(params));
-    };
-
-    std::shared_ptr<OpImplementation> create_impl(const ov::Node* node) override {
-        return m_impls.front();
-    }
-
-protected:
-    bool supports_impl(const SomeCustomParams& params) const { return false; }
-};
 
 template<>
 class TypedNodeExtension<intel_gpu::op::Convolution> : public TypedNodeExtensionBase<intel_gpu::op::Convolution> {
@@ -80,6 +61,6 @@ public:
     }
 };
 
-REGISTER_OP_WITH_CUSTOM_FACTORY(Convolution_internal, ov::intel_gpu::op::Convolution, CustomFactory);
+REGISTER_OP_1(Convolution, intel_gpu::op::Convolution, SomeCustomParams, ConvolutionImplementationsRegistry);
 
 }  // namespace ov

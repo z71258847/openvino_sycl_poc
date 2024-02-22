@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "extended_opset.hpp"
+#include "joint_impl/extended_opset.hpp"
 #include "joint_impl/implementation_params.hpp"
 #include "joint_impl/implementation_registry.hpp"
 #include "openvino/op/abs.hpp"
@@ -25,11 +25,7 @@ struct ActivationParams : public FactoryParameters {
 
 class SomeActivationImpl : public OpImplementation {
 public:
-    SomeActivationImpl() : OpImplementation("SomeActivationImpl") {}
-
-    void initialize(const ActivationParams& params) {
-        m_params = params;
-    }
+    SomeActivationImpl(const ActivationParams& params) : OpImplementation("SomeActivationImpl"), m_params(params) {}
 
     void execute() override {
         std::cerr << "SomeActivationImpl::execute()!\n";
@@ -38,7 +34,7 @@ public:
     ActivationParams m_params;
 };
 
-struct ActivationImplementationsRegistry : public ImplementationsRegistry {
+struct ActivationImplementationsRegistry : public ImplementationsRegistry<ActivationParams> {
     ActivationImplementationsRegistry() {
         register_impl<SomeActivationImpl>();
     }
@@ -48,7 +44,8 @@ struct ActivationImplementationsRegistry : public ImplementationsRegistry {
     }
 };
 
-REGISTER_OP_WITH_CUSTOM_PARAMS_AND_REGISTRY(Abs_v0, ov::op::v0::Abs, ActivationParams, ActivationImplementationsRegistry);
-REGISTER_OP_WITH_CUSTOM_PARAMS_AND_REGISTRY(Relu_v0, ov::op::v0::Relu, ActivationParams, ActivationImplementationsRegistry);
+
+REGISTER_OP_1(Abs, ov::op::v0::Abs, ActivationParams, ActivationImplementationsRegistry);
+REGISTER_OP_1(Relu, ov::op::v0::Relu, ActivationParams, ActivationImplementationsRegistry);
 
 }  // namespace ov

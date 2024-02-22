@@ -12,6 +12,7 @@ namespace ov {
 struct FactoryParameters {
     explicit FactoryParameters(const ov::Node* node = nullptr) {}
     std::string some_parameter = "";
+    virtual ~FactoryParameters() = default;
 };
 
 template <typename NodeType>

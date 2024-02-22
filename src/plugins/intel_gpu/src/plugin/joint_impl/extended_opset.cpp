@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "extended_opset.hpp"
+#include "joint_impl/extended_opset.hpp"
 
+#include "joint_impl/implementation_params.hpp"
 #include "joint_impl/implementation_registry.hpp"
 #include "openvino/core/rt_info.hpp"
 #include "openvino/opsets/opset12.hpp"
@@ -42,19 +43,21 @@ std::shared_ptr<ov::Node> OpConverter::convert_to_gpu_opset(const std::shared_pt
 }
 
 void OpConverter::register_ops() {
-#define REGISTER_FACTORY(NewOpType, OpType) extern void __register_ ## NewOpType ## _factory(); __register_ ## NewOpType ## _factory();
+#define REGISTER_FACTORY(NewOpType, OpType) \
+    extern void __register_ ## NewOpType ## Extension ## _factory(); __register_ ## NewOpType ## Extension ## _factory();
+
 #include "extended_opset_tbl.hpp"
-REGISTER_FACTORY(Abs_v0, ov::op::v0::Abs);
-REGISTER_FACTORY(Relu_v0, ov::op::v0::Relu);
-REGISTER_FACTORY(BatchToSpace_v1, ov::op::v1::BatchToSpace);
-REGISTER_FACTORY(Convolution_internal, ov::intel_gpu::op::Convolution);
-REGISTER_FACTORY(Result_v0, ov::op::v0::Result);
-REGISTER_FACTORY(Parameter_v0, ov::op::v0::Parameter);
-REGISTER_FACTORY(Constant_v0, ov::op::v0::Constant);
-REGISTER_FACTORY(Placeholder_internal, ov::intel_gpu::op::Placeholder);
+REGISTER_FACTORY(Abs, ov::op::v0::Abs);
+REGISTER_FACTORY(Relu, ov::op::v0::Relu);
+REGISTER_FACTORY(BatchToSpace, ov::op::v1::BatchToSpace);
+REGISTER_FACTORY(Convolution, ov::intel_gpu::op::Convolution);
+REGISTER_FACTORY(Result, ov::op::v0::Result);
+REGISTER_FACTORY(Parameter, ov::op::v0::Parameter);
+REGISTER_FACTORY(Constant, ov::op::v0::Constant);
+REGISTER_FACTORY(Placeholder, ov::intel_gpu::op::Placeholder);
 // REGISTER_FACTORY(FullyConnectedCompressed_internal, ov::intel_gpu::op::FullyConnectedCompressed);
-REGISTER_FACTORY(FullyConnected_internal, ov::intel_gpu::op::FullyConnected);
-REGISTER_FACTORY(Reshape_v1, ov::op::v1::Reshape);
+REGISTER_FACTORY(FullyConnected, ov::intel_gpu::op::FullyConnected);
+REGISTER_FACTORY(Reshape, ov::op::v1::Reshape);
 #undef REGISTER_FACTORY
 }
 
@@ -63,7 +66,7 @@ OpConverter& OpConverter::instance() {
     return op_converter;
 }
 
-class RegistryStub : public ImplementationsRegistry {
+class RegistryStub : public ImplementationsRegistry<FactoryParameters> {
 public:
     RegistryStub() { }
     static const RegistryStub& instance() {
@@ -72,7 +75,7 @@ public:
     }
 };
 
-#define REGISTER_FACTORY(NewOpType, OpType) REGISTER_OP(NewOpType, OpType, RegistryStub)
+#define REGISTER_FACTORY(NewOpType, OpType) REGISTER_OP_1(NewOpType, OpType, FactoryParameters, RegistryStub)
 #include "extended_opset_tbl.hpp"
 #undef REGISTER_FACTORY
 
