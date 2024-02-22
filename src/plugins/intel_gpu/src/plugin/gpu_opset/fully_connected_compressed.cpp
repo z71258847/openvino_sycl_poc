@@ -28,7 +28,9 @@ public:
 template <>
 class TypedImplementationsFactory<NodeType, ParametersType, FullyConnectedImplementationsRegistry> : public ImplementationsFactory {
 public:
-    TypedImplementationsFactory() : ImplementationsFactory(FullyConnectedImplementationsRegistry::instance().get_all_impls()) {
+    TypedImplementationsFactory(const ov::Node* node)
+        : ImplementationsFactory(std::make_shared<ParametersType>(dynamic_cast<const NodeType*>(node)),
+                                 FullyConnectedImplementationsRegistry::instance().get_all_impls()) {
         std::cerr << "Specialized impls factory for " << NodeType::get_type_info_static().name << std::endl;
         for (auto& impl : m_impls)
             std::cerr << impl->get_implementation_name() << std::endl;

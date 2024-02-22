@@ -14,7 +14,7 @@ namespace intel_gpu {
 template<>
 struct TypedNodeParams<ov::op::v1::BatchToSpace> : public FactoryParameters {
     TypedNodeParams() = default;
-    explicit TypedNodeParams(const ov::op::v1::BatchToSpace* node) {
+    explicit TypedNodeParams(const ov::op::v1::BatchToSpace* node) : some_parameter(node->get_output_size()) {
 
     }
     int some_parameter = 100500;

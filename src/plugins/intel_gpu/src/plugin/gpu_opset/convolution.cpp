@@ -37,7 +37,10 @@ public:
 struct SomeCustomParams : FactoryParameters { };
 class CustomFactory : public ImplementationsFactory {
 public:
-    CustomFactory() : ImplementationsFactory(ConvolutionImplementationsRegistry::instance().get_all_impls()) {
+    CustomFactory(const ov::Node* node)
+        : ImplementationsFactory(
+            std::make_shared<TypedNodeParams<op::Convolution>>(dynamic_cast<const op::Convolution*>(node)),
+            ConvolutionImplementationsRegistry::instance().get_all_impls()) {
         std::cerr << "CustomFactory impls factory for " << NodeType::get_type_info_static().name << std::endl;
         for (auto& impl : m_impls)
             std::cerr << impl->get_implementation_name() << std::endl;

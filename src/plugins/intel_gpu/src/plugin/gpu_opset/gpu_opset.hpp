@@ -22,8 +22,7 @@
     class NewOpType : public OriginalOpType, public TypedNode { \
     public: \
         explicit NewOpType(std::shared_ptr<OriginalOpType> op) : OriginalOpType(*op) { \
-            TypedNode::init<FactoryType>(); \
-            TypedNode::set_node_ptr(this); \
+            TypedNode::init<FactoryType>(this); \
         } \
     }; \
 

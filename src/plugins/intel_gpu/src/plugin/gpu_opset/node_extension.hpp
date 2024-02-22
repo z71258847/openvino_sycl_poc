@@ -55,8 +55,9 @@ template <typename NodeType,
 class TypedNodeExtensionBase : public NodeExtension {
 public:
     template<typename FactoryType, typename std::enable_if<std::is_base_of<ImplementationsFactory, FactoryType>::value, bool>::type = true>
-    void init() {
-        m_factory = std::make_shared<FactoryType>();
+    void init(const ov::Node* ptr) {
+        set_node_ptr(ptr);
+        m_factory = std::make_shared<FactoryType>(ptr);
     }
     template<typename FactoryType, typename std::enable_if<std::is_base_of<ImplementationsFactory, FactoryType>::value, bool>::type = true>
     FactoryType& get_factory() const {
