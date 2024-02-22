@@ -18,7 +18,7 @@ public:
     ImplementationsFactory(std::shared_ptr<FactoryParameters> params, const ImplementationsList& impls)
         : m_params(params)
         , m_impls(filter_unsupported(*params, impls)) {}
-    virtual std::shared_ptr<OpImplementation> create_impl(const ov::Node* node) { return nullptr; }
+    virtual std::shared_ptr<OpImplementation> create_impl(const ov::Node* node) = 0;
     virtual bool supports(const FactoryParameters& params) const = 0;
 
 protected:

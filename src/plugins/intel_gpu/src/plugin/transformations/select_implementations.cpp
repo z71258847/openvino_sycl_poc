@@ -54,6 +54,8 @@ bool SelectImplementations::run_on_model(const std::shared_ptr<ov::Model>& model
 
         node->select_best_implementation();
 
+        OPENVINO_ASSERT(node->get_impl() != nullptr, "No impl selected for: ", op->get_friendly_name());
+
     }
 
     return false;

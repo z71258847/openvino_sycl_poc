@@ -801,6 +801,12 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
         // manager.register_pass<ov::intel_gpu::AddReordersForSelectedImpls>();
         // manager.register_pass<ov::intel_gpu::OptimizeReorders>();
         manager.run_passes(func);
+
+        for (auto& op : func->get_ordered_ops()) {
+            auto impl = std::dynamic_pointer_cast<NodeExtension>(op)->get_impl();
+            std::cerr << "execute: " << op->get_friendly_name() << std::endl;
+            impl->execute();
+        }
     }
 }
 }  // namespace intel_gpu

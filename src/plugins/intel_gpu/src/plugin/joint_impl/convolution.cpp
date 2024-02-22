@@ -49,6 +49,10 @@ public:
         return supports_impl(static_cast<const SomeCustomParams&>(params));
     };
 
+    std::shared_ptr<OpImplementation> create_impl(const ov::Node* node) override {
+        return m_impls.front();
+    }
+
 protected:
     bool supports_impl(const SomeCustomParams& params) const { return false; }
 };
@@ -56,6 +60,7 @@ protected:
 template<>
 class TypedNodeExtension<intel_gpu::op::Convolution> : public TypedNodeExtensionBase<intel_gpu::op::Convolution> {
 public:
+
     void select_preferred_formats() override {
         // Basic customization
         m_memory_desc[Argument::input(0)] = MemoryDesc(Format::any);

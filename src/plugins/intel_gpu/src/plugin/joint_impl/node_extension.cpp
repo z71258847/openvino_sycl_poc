@@ -18,6 +18,10 @@ void NodeExtension::set_memory_descs(const MemoryDescs& descs) { m_memory_desc =
 void NodeExtension::set_inplace() { m_opt_attributes->m_inplace = true; }
 bool NodeExtension::is_inplace() const { return m_opt_attributes->m_inplace; }
 
+std::shared_ptr<OpImplementation> NodeExtension::get_impl() const {
+    return m_best_implementation;
+}
+
 void NodeExtension::select_preferred_formats() {
     OPENVINO_ASSERT(m_node != nullptr);
     std::cerr << "select format for: " << m_node->get_friendly_name() << " " << m_node->get_type_name() << std::endl;

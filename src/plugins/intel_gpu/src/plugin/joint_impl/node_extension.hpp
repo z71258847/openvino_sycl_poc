@@ -36,6 +36,7 @@ public:
 
     virtual void select_preferred_formats();
     virtual void select_best_implementation() = 0;
+    std::shared_ptr<OpImplementation> get_impl() const;
 
     const ov::Node* get_node_ptr() const;
     void set_node_ptr(const ov::Node* ptr);
