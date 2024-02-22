@@ -5,12 +5,17 @@
 #pragma once
 
 #include <memory>
+#include "joint_impl/op_implementation.hpp"
 
 namespace ov {
 
 struct ImplSelector {
     static std::shared_ptr<ImplSelector> default_cpu_selector();
     static std::shared_ptr<ImplSelector> default_gpu_selector();
+
+    virtual ImplementationBuilder select_best_implementation(const BuildersList& list) {
+        return list.front();
+    }
 };
 
 struct GPUImplSelector : public ImplSelector {

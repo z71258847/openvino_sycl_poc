@@ -37,7 +37,8 @@ public:
 
     std::shared_ptr<OpImplementation> create_impl(const ov::Node* node) override {
         OPENVINO_ASSERT(m_params != nullptr);
-        return m_available_impls.front()(*m_params);
+        auto best_impl = m_impl_selector->select_best_implementation(m_available_impls);
+        return best_impl(*m_params);
     }
 
 protected:
