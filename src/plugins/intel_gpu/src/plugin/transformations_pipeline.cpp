@@ -12,7 +12,7 @@
 #include <tuple>
 #include <vector>
 
-#include "gpu_opset/node_extension.hpp"
+#include "joint_impl/node_extension.hpp"
 #include "intel_gpu/plugin/transformations_pipeline.hpp"
 #include "intel_gpu/runtime/itt.hpp"
 #include "low_precision/convolution.hpp"
@@ -70,7 +70,7 @@
 #include "plugin/transformations/layout_propagation.hpp"
 #include "plugin/transformations/insert_reorders.hpp"
 #include "plugin/transformations/select_implementations.hpp"
-#include "plugin/transformations/convert_to_gpu_opset.hpp"
+#include "plugin/transformations/convert_to_extended_opset.hpp"
 #include "plugin/transformations/markup_nodes.hpp"
 #include "transformations/common_optimizations/broadcast_elementwise_fusion.hpp"
 #include "transformations/common_optimizations/broadcast_transition.hpp"

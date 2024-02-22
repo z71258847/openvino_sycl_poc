@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "gpu_opset.hpp"
+#include "extended_opset.hpp"
 
-#include "gpu_opset/implementation_registry.hpp"
+#include "joint_impl/implementation_registry.hpp"
 #include "openvino/core/rt_info.hpp"
 #include "openvino/opsets/opset12.hpp"
 #include "intel_gpu/op/kv_cache.hpp"
@@ -27,7 +27,6 @@
 
 
 namespace ov {
-namespace intel_gpu {
 
 void OpConverter::register_converter(ov::DiscreteTypeInfo source_type, std::function<std::shared_ptr<ov::Node>(const std::shared_ptr<ov::Node>&)> f) {
     m_conversion_map[source_type] = f;
@@ -44,7 +43,7 @@ std::shared_ptr<ov::Node> OpConverter::convert_to_gpu_opset(const std::shared_pt
 
 void OpConverter::register_ops() {
 #define REGISTER_FACTORY(NewOpType, OpType) extern void __register_ ## NewOpType ## _factory(); __register_ ## NewOpType ## _factory();
-#include "gpu_opset_tbl.hpp"
+#include "extended_opset_tbl.hpp"
 REGISTER_FACTORY(Abs_v0, ov::op::v0::Abs);
 REGISTER_FACTORY(Relu_v0, ov::op::v0::Relu);
 REGISTER_FACTORY(BatchToSpace_v1, ov::op::v1::BatchToSpace);
@@ -68,8 +67,7 @@ public:
 };
 
 #define REGISTER_FACTORY(NewOpType, OpType) REGISTER_OP(NewOpType, OpType, RegistryStub)
-#include "gpu_opset_tbl.hpp"
+#include "extended_opset_tbl.hpp"
 #undef REGISTER_FACTORY
 
-}  // namespace intel_gpu
 }  // namespace ov

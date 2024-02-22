@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "convert_to_gpu_opset.hpp"
+#include "convert_to_extended_opset.hpp"
 #include <memory>
 
 #include "openvino/core/graph_util.hpp"
@@ -15,8 +15,8 @@
 #include "ov_ops/generate_proposals_ie_internal.hpp"
 #include "ov_ops/type_relaxed.hpp"
 
-#include "gpu_opset/gpu_opset.hpp"
-#include "gpu_opset/node_extension.hpp"
+#include "joint_impl/extended_opset.hpp"
+#include "joint_impl/node_extension.hpp"
 
 #include "intel_gpu/runtime/debug_configuration.hpp"
 

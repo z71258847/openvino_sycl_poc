@@ -7,7 +7,6 @@
 #include <string>
 
 namespace ov {
-namespace intel_gpu {
 
 struct FactoryParameters {
     std::string some_parameter = "";
@@ -19,5 +18,4 @@ struct TypedNodeParams : public FactoryParameters {
     TypedNodeParams() = default;
 };
 
-}  // namespace op
 }  // namespace ov

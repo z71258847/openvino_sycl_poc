@@ -6,19 +6,18 @@
 
 #include "openvino/core/node.hpp"
 
-#include "gpu_opset/implementation_factory.hpp"
-#include "gpu_opset/implementation_args.hpp"
-#include "gpu_opset/implementation_params.hpp"
-#include "gpu_opset/memory_descriptor.hpp"
-#include "gpu_opset/op_implementation.hpp"
-#include "gpu_opset/optimization_attributes.hpp"
+#include "joint_impl/implementation_factory.hpp"
+#include "joint_impl/implementation_args.hpp"
+#include "joint_impl/implementation_params.hpp"
+#include "joint_impl/memory_descriptor.hpp"
+#include "joint_impl/op_implementation.hpp"
+#include "joint_impl/optimization_attributes.hpp"
 
 
 #include <memory>
 
 
 namespace ov {
-namespace intel_gpu {
 
 class NodeExtension {
 public:
@@ -72,5 +71,4 @@ public:
 template <typename NodeType, typename std::enable_if<std::is_base_of<ov::Node, NodeType>::value, bool>::type = true>
 class TypedNodeExtension : public TypedNodeExtensionBase<NodeType> { };
 
-}  // namespace op
 }  // namespace ov

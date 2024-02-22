@@ -4,7 +4,7 @@
 
 #include "insert_reorders.hpp"
 
-#include "gpu_opset/gpu_opset.hpp"
+#include "joint_impl/extended_opset.hpp"
 #include "intel_gpu/runtime/device_info.hpp"
 #include "intel_gpu/runtime/debug_configuration.hpp"
 #include "intel_gpu/runtime/internal_properties.hpp"
@@ -17,7 +17,7 @@
 #include "openvino/op/parameter.hpp"
 #include "transformations/insert_reorders.hpp"
 #include "transformations/utils/utils.hpp"
-#include "gpu_opset/node_extension.hpp"
+#include "joint_impl/node_extension.hpp"
 #include "layout_optimizer.hpp"
 
 #include <memory>

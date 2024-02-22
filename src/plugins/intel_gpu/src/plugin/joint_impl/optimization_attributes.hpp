@@ -5,11 +5,9 @@
 #pragma once
 
 namespace ov {
-namespace intel_gpu {
 
 struct OptimizationAttributes {
     bool m_inplace;
 };
 
-}  // namespace op
 }  // namespace ov

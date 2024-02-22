@@ -29,7 +29,7 @@
 #include "openvino/op/util/reduction_base.hpp"
 #include "transformations/rt_info/is_shape_subgraph.hpp"
 #include "transformations/utils/utils.hpp"
-#include "gpu_opset/node_extension.hpp"
+#include "joint_impl/node_extension.hpp"
 
 #include "intel_gpu/runtime/debug_configuration.hpp"
 #include <memory>

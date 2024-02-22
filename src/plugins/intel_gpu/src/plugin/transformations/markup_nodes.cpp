@@ -4,7 +4,7 @@
 
 #include "markup_nodes.hpp"
 
-#include "gpu_opset/gpu_opset.hpp"
+#include "joint_impl/extended_opset.hpp"
 #include "openvino/core/rt_info.hpp"
 
 #include <memory>

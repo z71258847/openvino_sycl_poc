@@ -2,16 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "gpu_opset.hpp"
-#include "gpu_opset/implementation_args.hpp"
-#include "gpu_opset/implementation_params.hpp"
-#include "gpu_opset/node_extension.hpp"
+#include "extended_opset.hpp"
+#include "joint_impl/implementation_args.hpp"
+#include "joint_impl/implementation_params.hpp"
+#include "joint_impl/node_extension.hpp"
 #include "intel_gpu/op/placeholder.hpp"
 #include "intel_gpu/op/convolution.hpp"
 #include <memory>
 
 namespace ov {
-namespace intel_gpu {
 
 using NodeType = ov::intel_gpu::op::Convolution;
 
@@ -39,7 +38,7 @@ class CustomFactory : public ImplementationsFactory {
 public:
     CustomFactory(const ov::Node* node)
         : ImplementationsFactory(
-            std::make_shared<TypedNodeParams<op::Convolution>>(dynamic_cast<const op::Convolution*>(node)),
+            std::make_shared<TypedNodeParams<intel_gpu::op::Convolution>>(dynamic_cast<const intel_gpu::op::Convolution*>(node)),
             ConvolutionImplementationsRegistry::instance().get_all_impls()) {
         std::cerr << "CustomFactory impls factory for " << NodeType::get_type_info_static().name << std::endl;
         for (auto& impl : m_impls)
@@ -55,7 +54,7 @@ protected:
 };
 
 template<>
-class TypedNodeExtension<op::Convolution> : public TypedNodeExtensionBase<op::Convolution> {
+class TypedNodeExtension<intel_gpu::op::Convolution> : public TypedNodeExtensionBase<intel_gpu::op::Convolution> {
 public:
     void select_preferred_formats() override {
         // Basic customization
@@ -64,7 +63,7 @@ public:
         m_memory_desc[Argument::output(0)] = MemoryDesc(Format::any);
 
         // Check in/out node type
-        if (ov::is_type<op::Placeholder>(m_node->get_input_node_shared_ptr(2))) {
+        if (ov::is_type<intel_gpu::op::Placeholder>(m_node->get_input_node_shared_ptr(2))) {
             m_memory_desc[Argument::bias()] = MemoryDesc(Format::any);
         }
 
@@ -78,5 +77,4 @@ public:
 
 REGISTER_OP_WITH_CUSTOM_FACTORY(Convolution_internal, ov::intel_gpu::op::Convolution, CustomFactory);
 
-}  // namespace intel_gpu
 }  // namespace ov

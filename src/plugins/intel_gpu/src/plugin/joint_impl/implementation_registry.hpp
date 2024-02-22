@@ -8,7 +8,6 @@
 
 
 namespace ov {
-namespace intel_gpu {
 
 struct ImplementationsRegistry {
 public:
@@ -25,5 +24,4 @@ protected:
     ImplementationsList m_impls;
 };
 
-}  // namespace op
 }  // namespace ov

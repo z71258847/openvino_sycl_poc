@@ -4,7 +4,7 @@
 
 #include "select_implementations.hpp"
 
-#include "gpu_opset/gpu_opset.hpp"
+#include "joint_impl/extended_opset.hpp"
 #include "implementation_map.hpp"
 #include "intel_gpu/graph/kernel_impl_params.hpp"
 #include "intel_gpu/primitives/convolution.hpp"
@@ -24,7 +24,7 @@
 #include "openvino/op/parameter.hpp"
 #include "transformations/insert_reorders.hpp"
 #include "transformations/utils/utils.hpp"
-#include "gpu_opset/node_extension.hpp"
+#include "joint_impl/node_extension.hpp"
 #include "layout_optimizer.hpp"
 
 #include <memory>

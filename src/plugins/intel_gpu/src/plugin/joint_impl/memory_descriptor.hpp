@@ -4,13 +4,12 @@
 
 #pragma once
 
-#include "gpu_opset/implementation_args.hpp"
+#include "joint_impl/implementation_args.hpp"
 #include "openvino/core/partial_shape.hpp"
 #include "openvino/core/type/element_type.hpp"
 #include "intel_gpu/runtime/format.hpp"
 
 namespace ov {
-namespace intel_gpu {
 
 using Format = cldnn::format;
 
@@ -53,5 +52,4 @@ inline std::ostream& operator<<(std::ostream& os, const MemoryDescs& val) {
     return os;
 }
 
-}  // namespace op
 }  // namespace ov

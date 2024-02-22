@@ -9,7 +9,6 @@
 #include <vector>
 
 namespace ov {
-namespace intel_gpu {
 
 class OpImplementation {
 public:
@@ -22,5 +21,4 @@ private:
 };
 using ImplementationsList = std::vector<std::shared_ptr<OpImplementation>>;
 
-}  // namespace op
 }  // namespace ov

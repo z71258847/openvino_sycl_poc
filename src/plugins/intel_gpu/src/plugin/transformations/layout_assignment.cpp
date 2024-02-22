@@ -3,7 +3,7 @@
 //
 
 #include "layout_assignment.hpp"
-#include "gpu_opset/node_extension.hpp"
+#include "joint_impl/node_extension.hpp"
 
 #include <memory>
 

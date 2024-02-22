@@ -5,14 +5,13 @@
 #pragma once
 
 #include <type_traits>
-#include "gpu_opset/op_implementation.hpp"
+#include "joint_impl/op_implementation.hpp"
 #include "implementation_registry.hpp"
 #include "implementation_params.hpp"
 #include "openvino/core/node.hpp"
 
 
 namespace ov {
-namespace intel_gpu {
 
 class ImplementationsFactory {
 public:
@@ -68,5 +67,4 @@ protected:
 
 };
 
-}  // namespace op
 }  // namespace ov

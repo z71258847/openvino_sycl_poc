@@ -3,13 +3,12 @@
 //
 
 #include "openvino/op/batch_to_space.hpp"
-#include "gpu_opset.hpp"
-#include "gpu_opset/implementation_params.hpp"
-#include "gpu_opset/implementation_registry.hpp"
+#include "extended_opset.hpp"
+#include "joint_impl/implementation_params.hpp"
+#include "joint_impl/implementation_registry.hpp"
 #include "openvino/op/batch_to_space.hpp"
 
 namespace ov {
-namespace intel_gpu {
 
 template<>
 struct TypedNodeParams<ov::op::v1::BatchToSpace> : public FactoryParameters {
@@ -49,5 +48,4 @@ struct BatchToSpaceImplementationsRegistry : public ImplementationsRegistry {
 
 REGISTER_OP(BatchToSpace_v1, ov::op::v1::BatchToSpace, BatchToSpaceImplementationsRegistry);
 
-}  // namespace intel_gpu
 }  // namespace ov

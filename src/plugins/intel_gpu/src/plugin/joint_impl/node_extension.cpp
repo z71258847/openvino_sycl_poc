@@ -3,12 +3,11 @@
 //
 
 #include "node_extension.hpp"
-#include "gpu_opset/implementation_args.hpp"
-#include "gpu_opset/memory_descriptor.hpp"
+#include "joint_impl/implementation_args.hpp"
+#include "joint_impl/memory_descriptor.hpp"
 
 
 namespace ov {
-namespace intel_gpu {
 
 void NodeExtension::visit_attributes(AttributeVisitor& visitor) {}
 
@@ -39,5 +38,4 @@ void NodeExtension::set_node_ptr(const ov::Node* ptr) {
     m_node = ptr;
 }
 
-}  // namespace intel_gpu
 }  // namespace ov

@@ -8,7 +8,6 @@
 #include "openvino/core/except.hpp"
 
 namespace ov {
-namespace intel_gpu {
 
 struct Argument {
     static Argument input(size_t id) {
@@ -74,5 +73,4 @@ inline std::ostream& operator<<(std::ostream& os, const Argument& arg) {
     return os;
 }
 
-}  // namespace intel_gpu
 }  // namespace ov

@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "gpu_opset.hpp"
-#include "gpu_opset/implementation_params.hpp"
-#include "gpu_opset/implementation_registry.hpp"
+#include "extended_opset.hpp"
+#include "joint_impl/implementation_params.hpp"
+#include "joint_impl/implementation_registry.hpp"
 #include "openvino/op/abs.hpp"
 #include "openvino/op/relu.hpp"
 
 namespace ov {
-namespace intel_gpu {
 
 struct ActivationParams : public FactoryParameters {
     enum class Type {
@@ -52,5 +51,4 @@ struct ActivationImplementationsRegistry : public ImplementationsRegistry {
 REGISTER_OP_WITH_CUSTOM_PARAMS_AND_REGISTRY(Abs_v0, ov::op::v0::Abs, ActivationParams, ActivationImplementationsRegistry);
 REGISTER_OP_WITH_CUSTOM_PARAMS_AND_REGISTRY(Relu_v0, ov::op::v0::Relu, ActivationParams, ActivationImplementationsRegistry);
 
-}  // namespace intel_gpu
 }  // namespace ov
