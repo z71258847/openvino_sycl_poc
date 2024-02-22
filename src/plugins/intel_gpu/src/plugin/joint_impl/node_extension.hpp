@@ -22,7 +22,6 @@ namespace ov {
 class NodeExtension {
 public:
     virtual ~NodeExtension() = default;
-
     NodeExtension() = default;
 
     void visit_attributes(AttributeVisitor& visitor);
@@ -39,7 +38,6 @@ public:
     std::shared_ptr<OpImplementation> get_impl() const;
 
     const ov::Node* get_node_ptr() const;
-    void set_node_ptr(const ov::Node* ptr);
 
 protected:
     MemoryDescs m_memory_desc;
@@ -55,7 +53,7 @@ class TypedNodeExtensionBase : public NodeExtension {
 public:
     template<typename FactoryType, typename std::enable_if<std::is_base_of<ImplementationsFactory, FactoryType>::value, bool>::type = true>
     void init(const ov::Node* ptr) {
-        set_node_ptr(ptr);
+        m_node = ptr;
         m_factory = std::make_shared<FactoryType>(ptr);
     }
     template<typename FactoryType, typename std::enable_if<std::is_base_of<ImplementationsFactory, FactoryType>::value, bool>::type = true>

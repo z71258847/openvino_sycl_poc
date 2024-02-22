@@ -14,4 +14,12 @@ std::shared_ptr<ImplSelector> ImplSelector::default_gpu_selector() {
     return std::make_shared<GPUImplSelector>();
 }
 
+ImplementationBuilder GPUImplSelector::select_best_implementation(const BuildersList& list) {
+    return list.back();
+}
+
+ImplementationBuilder CPUImplSelector::select_best_implementation(const BuildersList& list) {
+    return list.front();
+}
+
 }  // namespace ov

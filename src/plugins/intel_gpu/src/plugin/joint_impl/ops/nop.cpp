@@ -32,16 +32,10 @@ struct NopImplementationsRegistry : public ImplementationsRegistry<FactoryParame
     }
 };
 
-REGISTER_OP_1(Parameter, op::v0::Parameter, FactoryParameters, NopImplementationsRegistry);
-REGISTER_OP_1(Result, op::v0::Result, FactoryParameters, NopImplementationsRegistry);
-REGISTER_OP_1(Constant, op::v0::Constant, FactoryParameters, NopImplementationsRegistry);
-REGISTER_OP_1(Reshape, op::v1::Reshape, FactoryParameters, NopImplementationsRegistry);
-REGISTER_OP_1(Placeholder, intel_gpu::op::Placeholder, FactoryParameters, NopImplementationsRegistry);
-
-// REGISTER_OP_WITH_CUSTOM_PARAMS_AND_REGISTRY(Parameter_v0, ov::op::v0::Parameter, FactoryParameters, NopImplementationsRegistry);
-// REGISTER_OP_WITH_CUSTOM_PARAMS_AND_REGISTRY(Result_v0, ov::op::v0::Result, FactoryParameters, NopImplementationsRegistry);
-// REGISTER_OP_WITH_CUSTOM_PARAMS_AND_REGISTRY(Constant_v0, ov::op::v0::Constant, FactoryParameters, NopImplementationsRegistry);
-// REGISTER_OP_WITH_CUSTOM_PARAMS_AND_REGISTRY(Placeholder_internal, ov::intel_gpu::op::Placeholder, FactoryParameters, NopImplementationsRegistry);
-// REGISTER_OP_WITH_CUSTOM_PARAMS_AND_REGISTRY(Reshape_v1, ov::op::v1::Reshape, FactoryParameters, NopImplementationsRegistry);
+REGISTER_OP(Parameter, op::v0::Parameter, FactoryParameters, NopImplementationsRegistry);
+REGISTER_OP(Result, op::v0::Result, FactoryParameters, NopImplementationsRegistry);
+REGISTER_OP(Constant, op::v0::Constant, FactoryParameters, NopImplementationsRegistry);
+REGISTER_OP(Reshape, op::v1::Reshape, FactoryParameters, NopImplementationsRegistry);
+REGISTER_OP(Placeholder, intel_gpu::op::Placeholder, FactoryParameters, NopImplementationsRegistry);
 
 }  // namespace ov

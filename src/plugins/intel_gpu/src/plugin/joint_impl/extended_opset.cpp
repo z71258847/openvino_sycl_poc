@@ -33,7 +33,7 @@ void OpConverter::register_converter(ov::DiscreteTypeInfo source_type, std::func
     m_conversion_map[source_type] = f;
 }
 
-std::shared_ptr<ov::Node> OpConverter::convert_to_gpu_opset(const std::shared_ptr<ov::Node>& op) const {
+std::shared_ptr<ov::Node> OpConverter::convert_to_extended_opset(const std::shared_ptr<ov::Node>& op) const {
     OPENVINO_ASSERT(m_conversion_map.count(op->get_type_info()) > 0, "[GPU] Operation ", op->get_type_info(), " is not registered");
     auto converted_op = m_conversion_map.at(op->get_type_info())(op);
     converted_op->set_output_size(op->get_output_size());
@@ -75,7 +75,7 @@ public:
     }
 };
 
-#define REGISTER_FACTORY(NewOpType, OpType) REGISTER_OP_1(NewOpType, OpType, FactoryParameters, RegistryStub)
+#define REGISTER_FACTORY(NewOpType, OpType) REGISTER_OP(NewOpType, OpType, FactoryParameters, RegistryStub)
 #include "extended_opset_tbl.hpp"
 #undef REGISTER_FACTORY
 

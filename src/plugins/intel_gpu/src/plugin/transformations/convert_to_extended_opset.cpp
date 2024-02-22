@@ -3,22 +3,15 @@
 //
 
 #include "convert_to_extended_opset.hpp"
-#include <memory>
 
-#include "openvino/core/graph_util.hpp"
-#include "openvino/core/rt_info.hpp"
 #include "openvino/op/parameter.hpp"
-#include "openvino/opsets/opset12.hpp"
-#include "ov_ops/nms_ie_internal.hpp"
-#include "ov_ops/nms_static_shape_ie.hpp"
-#include "ov_ops/multiclass_nms_ie_internal.hpp"
-#include "ov_ops/generate_proposals_ie_internal.hpp"
-#include "ov_ops/type_relaxed.hpp"
+#include "openvino/op/result.hpp"
+#include "openvino/op/sink.hpp"
 
 #include "joint_impl/extended_opset.hpp"
 #include "joint_impl/node_extension.hpp"
 
-#include "intel_gpu/runtime/debug_configuration.hpp"
+#include <memory>
 
 namespace {
 void replace_node_unsafe(const std::shared_ptr<ov::Node>& target, const std::shared_ptr<ov::Node>& replacement) {
@@ -57,22 +50,21 @@ ConvertToExtendedOpset::ConvertToExtendedOpset() {
 
 bool ConvertToExtendedOpset::run_on_model(const std::shared_ptr<ov::Model>& m) {
     for (auto& op : m->get_ordered_ops()) {
-        auto gpu_op = OpConverter::instance().convert_to_gpu_opset(op);
-        std::cerr << "Convert: " << op->get_friendly_name() << "(" << op->get_type_name() << ") to "
-                                 << gpu_op->get_friendly_name() << "(" << gpu_op->get_type_name() << ")\n";
+        std::cerr << "Convert: " << op->get_friendly_name() << "(" << op->get_type_name() << ")\n";
+        auto converted_op = OpConverter::instance().convert_to_extended_opset(op);
 
-        auto casted = std::dynamic_pointer_cast<NodeExtension>(gpu_op);
-        std::cerr << "Casted: " << casted->get_node_ptr()->get_type_name() << std::endl;
-        replace_node_unsafe(op, gpu_op);
+        OPENVINO_ASSERT(std::dynamic_pointer_cast<NodeExtension>(converted_op) != nullptr);
+
+        replace_node_unsafe(op, converted_op);
         if (auto param = std::dynamic_pointer_cast<ov::op::v0::Parameter>(op)) {
             m->remove_parameter(param);
-            m->add_parameters({std::dynamic_pointer_cast<ov::op::v0::Parameter>(gpu_op)});
+            m->add_parameters({std::dynamic_pointer_cast<ov::op::v0::Parameter>(converted_op)});
         } else if (auto result = std::dynamic_pointer_cast<ov::op::v0::Result>(op)) {
             m->remove_result(result);
-            m->add_results({std::dynamic_pointer_cast<ov::op::v0::Result>(gpu_op)});
+            m->add_results({std::dynamic_pointer_cast<ov::op::v0::Result>(converted_op)});
         } else if (auto sink = std::dynamic_pointer_cast<ov::op::Sink>(op)) {
             m->remove_sink(sink);
-            m->add_sinks({std::dynamic_pointer_cast<ov::op::Sink>(gpu_op)});
+            m->add_sinks({std::dynamic_pointer_cast<ov::op::Sink>(converted_op)});
         }
     }
 

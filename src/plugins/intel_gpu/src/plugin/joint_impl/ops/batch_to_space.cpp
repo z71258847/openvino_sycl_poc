@@ -38,6 +38,6 @@ struct BatchToSpaceImplementationsRegistry : public ImplementationsRegistry<Batc
     }
 };
 
-REGISTER_OP_1(BatchToSpace, ov::op::v1::BatchToSpace, BatchToSpaceParams, BatchToSpaceImplementationsRegistry);
+REGISTER_OP(BatchToSpace, ov::op::v1::BatchToSpace, BatchToSpaceParams, BatchToSpaceImplementationsRegistry);
 
 }  // namespace ov

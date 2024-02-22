@@ -19,11 +19,11 @@ struct ImplSelector {
 };
 
 struct GPUImplSelector : public ImplSelector {
-
+    ImplementationBuilder select_best_implementation(const BuildersList& list) override;
 };
 
 struct CPUImplSelector : public ImplSelector {
-
+    ImplementationBuilder select_best_implementation(const BuildersList& list) override;
 };
 
 }  // namespace ov

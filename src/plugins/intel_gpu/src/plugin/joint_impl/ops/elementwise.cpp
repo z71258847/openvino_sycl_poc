@@ -46,7 +46,7 @@ struct ElementwiseRegistry : public ImplementationsRegistry<ElementwiseParams> {
     }
 };
 
-REGISTER_OP_1(Add, op::v1::Add, ElementwiseParams, ElementwiseRegistry);
-REGISTER_OP_1(Subtract, op::v1::Subtract, ElementwiseParams, ElementwiseRegistry);
+REGISTER_OP(Add, op::v1::Add, ElementwiseParams, ElementwiseRegistry);
+REGISTER_OP(Subtract, op::v1::Subtract, ElementwiseParams, ElementwiseRegistry);
 
 }  // namespace ov

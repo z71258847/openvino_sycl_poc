@@ -36,10 +36,5 @@ void NodeExtension::select_preferred_formats() {
 }
 
 const ov::Node* NodeExtension::get_node_ptr() const { return m_node; }
-void NodeExtension::set_node_ptr(const ov::Node* ptr) {
-    OPENVINO_ASSERT(dynamic_cast<const NodeExtension*>(ptr) != nullptr,
-                    "NodeExtension: Invalid ov::Node ptr type set. Node should be castable to NodeExtension");
-    m_node = ptr;
-}
 
 }  // namespace ov

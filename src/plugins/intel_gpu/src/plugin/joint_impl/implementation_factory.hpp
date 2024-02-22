@@ -20,7 +20,6 @@ public:
     std::shared_ptr<FactoryParameters> m_params = nullptr;
     std::shared_ptr<ImplSelector> m_impl_selector = nullptr;
 
-
     BuildersList m_available_impls;
 };
 
@@ -32,7 +31,7 @@ public:
     explicit TypedFactory(const ov::Node* node) : TypedFactory(dynamic_cast<const NodeType*>(node)) { }
     explicit TypedFactory(const NodeType* node) {
         m_params = make_params(node);
-        m_impl_selector = ImplSelector::default_gpu_selector(); // can be parameterized with affinity/requested device/some other params
+        m_impl_selector = ImplSelector::default_cpu_selector(); // can be parameterized with affinity/requested device/some other params
     }
 
     std::shared_ptr<OpImplementation> create_impl(const ov::Node* node) override {

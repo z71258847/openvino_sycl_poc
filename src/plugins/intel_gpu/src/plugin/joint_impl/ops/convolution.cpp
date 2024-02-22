@@ -7,36 +7,18 @@
 #include "joint_impl/implementation_params.hpp"
 #include "joint_impl/implementation_registry.hpp"
 #include "joint_impl/node_extension.hpp"
+#include "joint_impl/ops/convolution.hpp"
 #include "intel_gpu/op/placeholder.hpp"
-#include "intel_gpu/op/convolution.hpp"
+
+#include "joint_impl/ops/cpu/convolution_cpu.hpp"
+
 #include <memory>
 
 namespace ov {
 
-using NodeType = ov::intel_gpu::op::Convolution;
-struct SomeCustomParams : FactoryParameters {
-    SomeCustomParams(const ov::intel_gpu::op::Convolution* node) : FactoryParameters(node) {}
-};
-
-class SomeConvolutionImpl : public OpImplementation {
-public:
-    SomeConvolutionImpl(const SomeCustomParams& params) : OpImplementation("SomeConvolutionImpl") {}
-    void execute() override {
-        std::cerr << "SomeConvolutionImpl::execute()!\n";
-    }
-};
-
-class ConvolutionImplementationsRegistry : public ImplementationsRegistry<SomeCustomParams> {
-public:
-    ConvolutionImplementationsRegistry() {
-        register_impl<SomeConvolutionImpl>();
-    }
-    static const ConvolutionImplementationsRegistry& instance() {
-        static ConvolutionImplementationsRegistry instance;
-        return instance;
-    }
-};
-
+ConvolutionImplementationsRegistry::ConvolutionImplementationsRegistry() {
+    register_impl<cpu::SomeConvolutionCPUImpl>();
+}
 
 template<>
 class TypedNodeExtension<intel_gpu::op::Convolution> : public TypedNodeExtensionBase<intel_gpu::op::Convolution> {
@@ -61,6 +43,6 @@ public:
     }
 };
 
-REGISTER_OP_1(Convolution, intel_gpu::op::Convolution, SomeCustomParams, ConvolutionImplementationsRegistry);
+REGISTER_OP(Convolution, intel_gpu::op::Convolution, SomeCustomParams, ConvolutionImplementationsRegistry);
 
 }  // namespace ov

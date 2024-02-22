@@ -18,7 +18,6 @@ public:
     }
 };
 
-
 class FullyConnectedImplementationsRegistry : public ImplementationsRegistry<FactoryParameters> {
 public:
     FullyConnectedImplementationsRegistry() {
@@ -30,6 +29,6 @@ public:
     }
 };
 
-REGISTER_OP_1(FullyConnected, ov::intel_gpu::op::FullyConnected, FactoryParameters, FullyConnectedImplementationsRegistry);
+REGISTER_OP(FullyConnected, ov::intel_gpu::op::FullyConnected, FactoryParameters, FullyConnectedImplementationsRegistry);
 
 }  // namespace ov
