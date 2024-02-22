@@ -6,7 +6,6 @@
 
 #include "openvino/pass/pass.hpp"
 namespace ov {
-namespace intel_gpu {
 
 class SelectImplementations: public ov::pass::ModelPass {
 public:
@@ -16,5 +15,4 @@ public:
     bool run_on_model(const std::shared_ptr<ov::Model>& model) override;
 };
 
-}   // namespace intel_gpu
 }   // namespace ov

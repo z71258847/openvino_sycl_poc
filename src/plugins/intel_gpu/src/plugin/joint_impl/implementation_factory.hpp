@@ -29,7 +29,7 @@ protected:
     ImplementationsList filter_unsupported(const FactoryParameters& params, const ImplementationsList& all_impls) {
         std::cerr << "Filter out unsupported impls base\n";
         ImplementationsList res;
-        for (auto impl : m_impls) {
+        for (auto impl : all_impls) {
             // TODO: implement filtering logic
             res.push_back(impl);
             break;
@@ -57,7 +57,7 @@ public:
     };
 
     std::shared_ptr<OpImplementation> create_impl(const ov::Node* node) override {
-        OPENVINO_ASSERT(!m_impls.empty());
+        OPENVINO_ASSERT(!m_impls.empty(), "Can't create implementation for ", node->get_friendly_name(), " (type=", node->get_type_name(), ")");
         m_preferred_impl = m_impls.front();
         return m_preferred_impl;
     }

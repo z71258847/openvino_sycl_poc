@@ -7,14 +7,11 @@
 #include "openvino/pass/graph_rewrite.hpp"
 
 namespace ov {
-namespace intel_gpu {
-
-class ConvertToGpuOpset: public ov::pass::ModelPass {
+class ConvertToExtendedOpset: public ov::pass::ModelPass {
 public:
-    OPENVINO_RTTI("ConvertToGpuOpset", "0");
-    ConvertToGpuOpset();
+    OPENVINO_RTTI("ConvertToExtendedOpset", "0");
+    ConvertToExtendedOpset();
     bool run_on_model(const std::shared_ptr<ov::Model>& m) override;
 };
 
-}   // namespace intel_gpu
 }   // namespace ov

@@ -8,7 +8,6 @@
 #include <memory>
 
 namespace ov {
-namespace intel_gpu {
 
 bool LayoutAssignment::run_on_model(const std::shared_ptr<ov::Model>& model) {
     const auto& ops = model->get_ordered_ops();
@@ -23,5 +22,4 @@ bool LayoutAssignment::run_on_model(const std::shared_ptr<ov::Model>& model) {
     return false;
 }
 
-}  // namespace intel_gpu
 }  // namespace ov

@@ -48,7 +48,13 @@ REGISTER_FACTORY(Abs_v0, ov::op::v0::Abs);
 REGISTER_FACTORY(Relu_v0, ov::op::v0::Relu);
 REGISTER_FACTORY(BatchToSpace_v1, ov::op::v1::BatchToSpace);
 REGISTER_FACTORY(Convolution_internal, ov::intel_gpu::op::Convolution);
-REGISTER_FACTORY(FullyConnectedCompressed_internal, ov::intel_gpu::op::FullyConnectedCompressed);
+REGISTER_FACTORY(Result_v0, ov::op::v0::Result);
+REGISTER_FACTORY(Parameter_v0, ov::op::v0::Parameter);
+REGISTER_FACTORY(Constant_v0, ov::op::v0::Constant);
+REGISTER_FACTORY(Placeholder_internal, ov::intel_gpu::op::Placeholder);
+// REGISTER_FACTORY(FullyConnectedCompressed_internal, ov::intel_gpu::op::FullyConnectedCompressed);
+REGISTER_FACTORY(FullyConnected_internal, ov::intel_gpu::op::FullyConnected);
+REGISTER_FACTORY(Reshape_v1, ov::op::v1::Reshape);
 #undef REGISTER_FACTORY
 }
 

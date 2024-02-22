@@ -28,19 +28,19 @@
 
 #define REGISTER_OP(NewOpType, OriginalOpType, RegistryType) \
     using FactoryType ## NewOpType = TypedImplementationsFactory<OriginalOpType, TypedNodeParams<OriginalOpType>, RegistryType>; \
-    using TypedNode ## NewOpType = ov::TypedNodeExtension<OriginalOpType>; \
+    using TypedNode ## NewOpType = TypedNodeExtension<OriginalOpType>; \
     DECLARE_NEW_OP_CLASS(NewOpType, OriginalOpType, TypedNode ## NewOpType, FactoryType ## NewOpType) \
     DECLARE_REGISTER_FUNC(NewOpType, OriginalOpType)
 
 #define REGISTER_OP_WITH_CUSTOM_FACTORY(NewOpType, OriginalOpType, FactoryType) \
-    using TypedNode ## NewOpType = ov::TypedNodeExtension<OriginalOpType>; \
+    using TypedNode ## NewOpType = TypedNodeExtension<OriginalOpType>; \
     DECLARE_NEW_OP_CLASS(NewOpType, OriginalOpType, TypedNode ## NewOpType, FactoryType) \
     DECLARE_REGISTER_FUNC(NewOpType, OriginalOpType)
 
 // Is it needed?
 #define REGISTER_OP_WITH_CUSTOM_PARAMS_AND_REGISTRY(NewOpType, OriginalOpType, ParamsType, RegistryType) \
     using FactoryType ## NewOpType = TypedImplementationsFactory<OriginalOpType, ParamsType, RegistryType>; \
-    using TypedNode ## NewOpType = ov::TypedNodeExtension<OriginalOpType>; \
+    using TypedNode ## NewOpType = TypedNodeExtension<OriginalOpType>; \
     DECLARE_NEW_OP_CLASS(NewOpType, OriginalOpType, TypedNode ## NewOpType, FactoryType ## NewOpType) \
     DECLARE_REGISTER_FUNC(NewOpType, OriginalOpType)
 

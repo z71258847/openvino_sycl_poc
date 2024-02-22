@@ -5,10 +5,12 @@
 #pragma once
 
 #include <string>
+#include "openvino/core/node.hpp"
 
 namespace ov {
 
 struct FactoryParameters {
+    explicit FactoryParameters(const ov::Node* node = nullptr) {}
     std::string some_parameter = "";
 };
 

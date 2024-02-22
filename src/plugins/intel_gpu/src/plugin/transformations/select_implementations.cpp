@@ -30,7 +30,6 @@
 #include <memory>
 
 namespace ov {
-namespace intel_gpu {
 
 // namespace {
 // cldnn::shape_types get_shape_type(const cldnn::kernel_impl_params& impl_params) {
@@ -60,5 +59,4 @@ bool SelectImplementations::run_on_model(const std::shared_ptr<ov::Model>& model
     return false;
 }
 
-}  // namespace intel_gpu
 }  // namespace ov

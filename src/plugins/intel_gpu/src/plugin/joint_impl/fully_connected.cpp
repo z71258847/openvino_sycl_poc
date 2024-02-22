@@ -5,17 +5,29 @@
 #include "extended_opset.hpp"
 #include "joint_impl/implementation_params.hpp"
 #include "joint_impl/implementation_registry.hpp"
-#include "intel_gpu/op/fully_connected_compressed.hpp"
+#include "intel_gpu/op/fully_connected.hpp"
 
 namespace ov {
 
-using NodeType = ov::intel_gpu::op::FullyConnectedCompressed;
+using NodeType = ov::intel_gpu::op::FullyConnected;
 using ParametersType = TypedNodeParams<NodeType>;
+
+class SomeFCImpl : public OpImplementation {
+public:
+    SomeFCImpl() : OpImplementation("SomeFCImpl") {}
+
+    void initialize(const ParametersType& params) { }
+
+    void execute() override {
+        std::cerr << "SomeFCImpl::execute()!\n";
+    }
+};
+
 
 class FullyConnectedImplementationsRegistry : public ImplementationsRegistry {
 public:
     FullyConnectedImplementationsRegistry() {
-        // register_impl<>()
+        register_impl<SomeFCImpl>();
     }
     static const FullyConnectedImplementationsRegistry& instance() {
         static FullyConnectedImplementationsRegistry instance;
@@ -24,7 +36,7 @@ public:
 };
 
 template <>
-class TypedImplementationsFactory<NodeType, ParametersType, FullyConnectedImplementationsRegistry> : public ImplementationsFactory {
+class TypedImplementationsFactory<NodeType, ParametersType, FullyConnectedImplementationsRegistry, false> : public ImplementationsFactory {
 public:
     TypedImplementationsFactory(const ov::Node* node)
         : ImplementationsFactory(std::make_shared<ParametersType>(dynamic_cast<const NodeType*>(node)),
@@ -42,6 +54,6 @@ protected:
     virtual bool supports_impl(const ParametersType& params) const { return false; };
 };
 
-REGISTER_OP(FullyConnectedCompressed_internal, ov::intel_gpu::op::FullyConnectedCompressed, FullyConnectedImplementationsRegistry);
+REGISTER_OP(FullyConnected_internal, ov::intel_gpu::op::FullyConnected, FullyConnectedImplementationsRegistry);
 
 }  // namespace ov
