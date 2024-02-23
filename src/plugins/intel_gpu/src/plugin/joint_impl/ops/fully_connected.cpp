@@ -13,6 +13,6 @@ FullyConnectedImplementationsRegistry::FullyConnectedImplementationsRegistry() {
     register_impl<cpu::SomeFullyConnectedCPUImpl>();
 }
 
-REGISTER_OP(FullyConnected, ov::intel_gpu::op::FullyConnected, FullyConnectedParams, FullyConnectedImplementationsRegistry);
+REGISTER_IMPLS(FullyConnected, ov::intel_gpu::op::FullyConnected, FullyConnectedParams, FullyConnectedImplementationsRegistry);
 
 }  // namespace ov

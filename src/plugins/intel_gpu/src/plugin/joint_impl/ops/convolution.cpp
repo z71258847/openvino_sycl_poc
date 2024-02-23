@@ -43,6 +43,6 @@ public:
     }
 };
 
-REGISTER_OP(Convolution, intel_gpu::op::Convolution, SomeCustomParams, ConvolutionImplementationsRegistry);
+REGISTER_IMPLS(Convolution, intel_gpu::op::Convolution, SomeCustomParams, ConvolutionImplementationsRegistry);
 
 }  // namespace ov

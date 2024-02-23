@@ -16,7 +16,7 @@ ActivationImplementationsRegistry::ActivationImplementationsRegistry() {
     register_impl<gpu::SomeActivationGPUImpl>();
 }
 
-REGISTER_OP(Abs, ov::op::v0::Abs, ActivationParams, ActivationImplementationsRegistry);
-REGISTER_OP(Relu, ov::op::v0::Relu, ActivationParams, ActivationImplementationsRegistry);
+REGISTER_IMPLS(Abs, ov::op::v0::Abs, ActivationParams, ActivationImplementationsRegistry);
+REGISTER_IMPLS(Relu, ov::op::v0::Relu, ActivationParams, ActivationImplementationsRegistry);
 
 }  // namespace ov

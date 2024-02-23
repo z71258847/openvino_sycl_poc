@@ -35,7 +35,7 @@ public:
         : TypedFactory(dynamic_cast<const NodeType*>(node), all_impls) { }
     TypedFactory(const NodeType* node, const ImplementationsList& all_impls) {
         m_params = make_params(node);
-        m_impl_selector = ImplSelector::default_cpu_selector(); // can be parameterized with affinity/requested device/some other params
+        m_impl_selector = ImplSelector::default_gpu_selector(); // can be parameterized with affinity/requested device/some other params
         m_available_impls = filter_unsupported(m_params.get(), all_impls);
     }
 

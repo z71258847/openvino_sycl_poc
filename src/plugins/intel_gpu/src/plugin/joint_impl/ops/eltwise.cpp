@@ -12,7 +12,7 @@ EltwiseRegistry::EltwiseRegistry() {
     register_impl<cpu::SomeEltwiseCPUImpl>();
 }
 
-REGISTER_OP(Add, op::v1::Add, EltwiseParams, EltwiseRegistry);
-REGISTER_OP(Subtract, op::v1::Subtract, EltwiseParams, EltwiseRegistry);
+REGISTER_IMPLS(Add, op::v1::Add, EltwiseParams, EltwiseRegistry);
+REGISTER_IMPLS(Subtract, op::v1::Subtract, EltwiseParams, EltwiseRegistry);
 
 }  // namespace ov

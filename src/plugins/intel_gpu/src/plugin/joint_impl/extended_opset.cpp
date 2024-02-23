@@ -75,7 +75,7 @@ public:
     }
 };
 
-#define REGISTER_FACTORY(NewOpType, OpType) REGISTER_OP(NewOpType, OpType, ImplementationParameters, RegistryStub)
+#define REGISTER_FACTORY(NewOpType, OpType) REGISTER_IMPLS(NewOpType, OpType, ImplementationParameters, RegistryStub)
 #include "extended_opset_tbl.hpp"
 #undef REGISTER_FACTORY
 

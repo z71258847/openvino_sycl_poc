@@ -34,7 +34,7 @@
     }
 
 
-#define REGISTER_OP(NewOpType, OriginalOpType, TypedParams, Registry) \
+#define REGISTER_IMPLS(NewOpType, OriginalOpType, TypedParams, Registry) \
     DECLARE_FACTORY_CLASS(NewOpType ## Factory, OriginalOpType, TypedParams, Registry); \
     DECLARE_NEW_OP_CLASS(NewOpType ## Extension, OriginalOpType, NewOpType ## Factory); \
     DECLARE_REGISTER_FUNC(NewOpType ## Extension, OriginalOpType)

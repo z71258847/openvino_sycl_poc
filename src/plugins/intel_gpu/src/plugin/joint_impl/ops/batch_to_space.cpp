@@ -14,6 +14,6 @@ BatchToSpaceImplementationsRegistry::BatchToSpaceImplementationsRegistry() {
     register_impl<cpu::SomeBatchToSpaceCPUImpl>();
 }
 
-REGISTER_OP(BatchToSpace, ov::op::v1::BatchToSpace, BatchToSpaceParams, BatchToSpaceImplementationsRegistry);
+REGISTER_IMPLS(BatchToSpace, ov::op::v1::BatchToSpace, BatchToSpaceParams, BatchToSpaceImplementationsRegistry);
 
 }  // namespace ov

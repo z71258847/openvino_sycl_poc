@@ -11,9 +11,7 @@ namespace gpu {
 
 class SomeEltwiseGPUExecutor : public OpExecutor {
 public:
-    explicit SomeEltwiseGPUExecutor(const EltwiseParams* params) : m_params(params) {
-
-    }
+    explicit SomeEltwiseGPUExecutor(const EltwiseParams* params) : m_params(params) { }
 
     void execute() override {
         std::cerr << "SomeEltwiseGPUExecutor::execute()" << (int)m_params->type << "\n";
