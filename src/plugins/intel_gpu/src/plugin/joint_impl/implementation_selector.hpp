@@ -13,17 +13,17 @@ struct ImplSelector {
     static std::shared_ptr<ImplSelector> default_cpu_selector();
     static std::shared_ptr<ImplSelector> default_gpu_selector();
 
-    virtual ImplementationBuilder select_best_implementation(const BuildersList& list) {
+    virtual OpImplementation::Ptr select_best_implementation(const ImplementationsList& list, const ov::Node* node) {
         return list.front();
     }
 };
 
 struct GPUImplSelector : public ImplSelector {
-    ImplementationBuilder select_best_implementation(const BuildersList& list) override;
+    OpImplementation::Ptr select_best_implementation(const ImplementationsList& list, const ov::Node* node) override;
 };
 
 struct CPUImplSelector : public ImplSelector {
-    ImplementationBuilder select_best_implementation(const BuildersList& list) override;
+    OpImplementation::Ptr select_best_implementation(const ImplementationsList& list, const ov::Node* node) override;
 };
 
 }  // namespace ov

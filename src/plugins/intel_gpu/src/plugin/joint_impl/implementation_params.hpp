@@ -9,10 +9,10 @@
 
 namespace ov {
 
-struct FactoryParameters {
-    explicit FactoryParameters(const ov::Node* node = nullptr) {}
+struct ImplementationParameters {
+    explicit ImplementationParameters(const ov::Node* node = nullptr) {}
     std::string some_parameter = "";
-    virtual ~FactoryParameters() = default;
+    virtual ~ImplementationParameters() = default;
 };
 
 }  // namespace ov

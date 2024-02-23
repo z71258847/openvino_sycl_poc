@@ -10,8 +10,8 @@
 
 namespace ov {
 
-struct SomeCustomParams : FactoryParameters {
-    SomeCustomParams(const ov::intel_gpu::op::Convolution* node) : FactoryParameters(node) {}
+struct SomeCustomParams : ImplementationParameters {
+    SomeCustomParams(const ov::intel_gpu::op::Convolution* node) : ImplementationParameters(node) {}
 };
 
 class ConvolutionImplementationsRegistry : public ImplementationsRegistry<SomeCustomParams> {

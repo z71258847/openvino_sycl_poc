@@ -37,4 +37,8 @@ void NodeExtension::select_preferred_formats() {
 
 const ov::Node* NodeExtension::get_node_ptr() const { return m_node; }
 
+std::shared_ptr<OpExecutor> NodeExtension::get_executor() const {
+    return m_factory->create_executor(m_best_implementation);
+}
+
 }  // namespace ov

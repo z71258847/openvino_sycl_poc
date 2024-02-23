@@ -30,9 +30,7 @@
     class FactoryName : public TypedFactory<OriginalOpType, TypedParams> { \
     public: \
         using Parent = TypedFactory<OriginalOpType, TypedParams>; \
-        FactoryName(const ov::Node* node) : Parent(node) { \
-            m_available_impls = filter_unsupported(Parent::get_params(), Registry::instance().all()); \
-        } \
+        FactoryName(const ov::Node* node) : Parent(node, Registry::instance().all()) { } \
     }
 
 

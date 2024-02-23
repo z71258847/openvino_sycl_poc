@@ -11,7 +11,7 @@
 
 namespace ov {
 
-struct ActivationParams : public FactoryParameters {
+struct ActivationParams : public ImplementationParameters {
     enum class Type {
         ReLU,
         Abs,

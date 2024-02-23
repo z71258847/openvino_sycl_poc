@@ -10,9 +10,9 @@
 namespace ov {
 namespace cpu {
 
-class SomeConvolutionCPUImpl : public OpImplementation {
+class SomeBatchToSpaceCPUImpl : public OpImplementation {
 public:
-    SomeConvolutionCPUImpl() : OpImplementation("SomeConvolutionCPUImpl") {}
+    SomeBatchToSpaceCPUImpl() : OpImplementation("SomeBatchToSpaceCPUImpl") {}
 
     OpExecutor::Ptr get_executor(const ImplementationParameters* params) const override;
     bool supports(const ImplementationParameters* params) const override;

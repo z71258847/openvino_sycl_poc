@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "joint_impl/executor.hpp"
 #include "openvino/core/node.hpp"
 
 #include "joint_impl/implementation_factory.hpp"
@@ -36,6 +37,7 @@ public:
     virtual void select_preferred_formats();
     virtual void select_best_implementation() = 0;
     std::shared_ptr<OpImplementation> get_impl() const;
+    std::shared_ptr<OpExecutor> get_executor() const;
 
     const ov::Node* get_node_ptr() const;
 
@@ -62,7 +64,7 @@ public:
     }
 
     void select_best_implementation() override {
-        m_best_implementation = m_factory->create_impl(m_node);
+        m_best_implementation = m_factory->select_best_implementation(m_node);
     }
 };
 

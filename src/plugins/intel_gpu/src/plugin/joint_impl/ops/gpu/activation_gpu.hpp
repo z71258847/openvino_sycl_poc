@@ -4,17 +4,18 @@
 
 #pragma once
 
-#include "joint_impl/ops/activation.hpp"
+#include "joint_impl/implementation_params.hpp"
+#include "joint_impl/op_implementation.hpp"
 
 namespace ov {
 namespace gpu {
 
 class SomeActivationGPUImpl : public OpImplementation {
 public:
-    SomeActivationGPUImpl(const ActivationParams& params) : OpImplementation("SomeActivationGPUImpl"), m_params(params) {}
+    SomeActivationGPUImpl() : OpImplementation("SomeActivationGPUImpl") {}
 
-    void execute() override;
-    const ActivationParams& m_params;
+    OpExecutor::Ptr get_executor(const ImplementationParameters* params) const override;
+    bool supports(const ImplementationParameters* params) const override;
 };
 
 }  // namespace gpu

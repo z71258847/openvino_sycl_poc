@@ -66,7 +66,7 @@ OpConverter& OpConverter::instance() {
     return op_converter;
 }
 
-class RegistryStub : public ImplementationsRegistry<FactoryParameters> {
+class RegistryStub : public ImplementationsRegistry<ImplementationParameters> {
 public:
     RegistryStub() { }
     static const RegistryStub& instance() {
@@ -75,7 +75,7 @@ public:
     }
 };
 
-#define REGISTER_FACTORY(NewOpType, OpType) REGISTER_OP(NewOpType, OpType, FactoryParameters, RegistryStub)
+#define REGISTER_FACTORY(NewOpType, OpType) REGISTER_OP(NewOpType, OpType, ImplementationParameters, RegistryStub)
 #include "extended_opset_tbl.hpp"
 #undef REGISTER_FACTORY
 

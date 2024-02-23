@@ -3,12 +3,34 @@
 //
 
 #include "activation_cpu.hpp"
+#include "joint_impl/executor.hpp"
+#include "joint_impl/ops/activation.hpp"
 
 namespace ov {
 namespace cpu {
 
-void SomeActivationCPUImpl::execute() {
-    std::cerr << "SomeActivationCPUImpl::execute()" << (int)m_params.type << "\n";
+class SomeActivationCPUExecutor : public OpExecutor {
+public:
+    explicit SomeActivationCPUExecutor(const ActivationParams* params) : m_params(params) {
+
+    }
+
+    void execute() override {
+        std::cerr << "SomeActivationCPUExecutor::execute()" << (int)m_params->type << "\n";
+    }
+
+private:
+    const ActivationParams* m_params;
+};
+
+
+bool SomeActivationCPUImpl::supports(const ImplementationParameters* params) const {
+    return true;
+}
+
+OpExecutor::Ptr SomeActivationCPUImpl::get_executor(const ImplementationParameters* params) const {
+    auto typed_params = dynamic_cast<const ActivationParams*>(params);
+    return std::make_shared<SomeActivationCPUExecutor>(typed_params);
 }
 
 }  // namespace cpu
