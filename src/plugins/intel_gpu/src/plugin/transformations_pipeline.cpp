@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "joint_impl/node_extension.hpp"
+#include "joint_impl/ops/gpu/layout_optimizer.hpp"
 #include "intel_gpu/plugin/transformations_pipeline.hpp"
 #include "intel_gpu/runtime/itt.hpp"
 #include "low_precision/convolution.hpp"
@@ -66,12 +67,12 @@
 #include "plugin/transformations/indirect_kv_cache.hpp"
 #include "plugin/transformations/convert_convolution.hpp"
 #include "plugin/transformations/layout_assignment.hpp"
-#include "plugin/transformations/layout_optimizer.hpp"
 #include "plugin/transformations/layout_propagation.hpp"
 #include "plugin/transformations/insert_reorders.hpp"
 #include "plugin/transformations/select_implementations.hpp"
 #include "plugin/transformations/convert_to_extended_opset.hpp"
 #include "plugin/transformations/markup_nodes.hpp"
+#include "transformations/build_implementations.hpp"
 #include "transformations/common_optimizations/broadcast_elementwise_fusion.hpp"
 #include "transformations/common_optimizations/broadcast_transition.hpp"
 #include "transformations/common_optimizations/common_optimizations.hpp"
@@ -780,14 +781,15 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
 
         // (void)gpu_visualize_modifiers;
 
-        // LayoutOptimizer::Attributes attrs{false};
-        // LayoutOptimizer optimizer(device_info, config, attrs);
+        GPULayoutOptimizer::Attributes attrs{false};
+        auto optimizer = std::make_shared<GPULayoutOptimizer>(device_info, config, attrs);
 
         ov::pass::Manager manager;
         manager.register_pass<ov::ConvertToExtendedOpset>();
-        manager.register_pass<ov::LayoutAssignment>();
+        manager.register_pass<ov::LayoutAssignment>(optimizer);
+        manager.register_pass<ov::LayoutPropagation>(optimizer);
         manager.register_pass<ov::SelectImplementations>();
-        // manager.register_pass<ov::intel_gpu::LayoutPropagation>(optimizer);
+        manager.register_pass<ov::BuildImplementations>();
         // // manager.register_pass<ov::intel_gpu::ApplyFusions>();
         // manager.register_pass<ov::intel_gpu::InsertReorders>(optimizer);
         // manager.register_pass<ov::intel_gpu::ConvolutionBackwardToForward>();

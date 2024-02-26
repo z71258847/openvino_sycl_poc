@@ -20,10 +20,12 @@ class ImplementationsFactory {
 public:
     virtual ~ImplementationsFactory() = default;
     virtual OpImplementation::Ptr select_best_implementation(const ov::Node* node) = 0;
-    virtual OpExecutor::Ptr create_executor(OpImplementation::Ptr impl) = 0;
+    virtual OpExecutor::Ptr create_executor(OpImplementation::Ptr impl, const ImplementationBuilder& builder) = 0;
 
     std::shared_ptr<ImplementationParameters> m_params = nullptr;
     std::shared_ptr<ImplSelector> m_impl_selector = nullptr;
+
+    void initialize_selector(const ov::Node* node);
 
     ImplementationsList m_available_impls;
 };
@@ -37,7 +39,7 @@ public:
         : TypedFactory(dynamic_cast<const NodeType*>(node), all_impls) { }
     TypedFactory(const NodeType* node, const ImplementationsList& all_impls) {
         m_params = make_params(node);
-        m_impl_selector = ImplSelector::default_gpu_selector(); // can be parameterized with affinity/requested device/some other params
+        initialize_selector(node);
         m_available_impls = filter_unsupported(m_params.get(), all_impls);
     }
 
@@ -45,8 +47,8 @@ public:
         return m_impl_selector->select_best_implementation(m_available_impls, node);
     }
 
-    OpExecutor::Ptr create_executor(OpImplementation::Ptr impl) override {
-        return impl->get_executor(m_params.get());
+    OpExecutor::Ptr create_executor(OpImplementation::Ptr impl, const ImplementationBuilder& builder) override {
+        return impl->get_executor(m_params.get()/*, builder*/);
     }
 
 protected:

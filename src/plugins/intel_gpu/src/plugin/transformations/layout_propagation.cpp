@@ -15,17 +15,16 @@
 #include "openvino/op/parameter.hpp"
 #include "transformations/utils/utils.hpp"
 #include "joint_impl/node_extension.hpp"
-#include "layout_optimizer.hpp"
 
+#include <algorithm>
+#include <iterator>
 #include <memory>
 
 namespace ov {
-namespace intel_gpu {
-
 
 using FormatsMap = std::map<ov::Node*, std::pair<std::vector<Format>, std::vector<Format>>>;
 
-// namespace {
+namespace {
 
 // bool is_special_type(const std::shared_ptr<ov::Node>& node) {
 //     // return ov::is_type<ov::op::v0::Parameter>(node) ||
@@ -281,29 +280,23 @@ using FormatsMap = std::map<ov::Node*, std::pair<std::vector<Format>, std::vecto
 //     }
 // }
 
-// void finalize_formats(const std::vector<std::shared_ptr<ov::Node>>& ops, const LayoutOptimizer& optimizer, FormatsMap& formats) {
-//     for (auto& op : ops) {
-//         if (is_special_type(op))
-//             continue;
-//         auto gpu_node = std::dynamic_pointer_cast<GPUOpExtension>(op);
-//         auto impls = gpu_node->get_available_impl_types();
-//         if (impls.empty()) {
-//             optimizer.select_preferred_formats(op);
-//         }
-//         impls = gpu_node->get_available_impl_types();
-//         for (const auto& impl : impls) {
-//             finalize_input_formats(op.get(), gpu_node->get_preferred_input_fmts(impl), formats[op.get()].first);
-//             finalize_output_formats(op.get(), gpu_node->get_preferred_output_fmts(impl), formats[op.get()].second);
-//         }
+void finalize_formats(const std::vector<NodeExtension*>& ops, const LayoutOptimizer& optimizer) {
+    for (auto& op : ops) {
+        auto args = op->get_memory_desc();
+        for (auto& arg : args) {
+            auto& arg_desc = arg.second;
 
-//         auto new_impl_type = optimizer.get_preferred_impl_type(op);
-//         if (new_impl_type != gpu_node->get_preferred_impl_type()) {
-//             GPU_DEBUG_TRACE << op->get_friendly_name() << " change impls from " << gpu_node->get_preferred_impl_type()
-            //  << " to " << new_impl_type << std::endl;
-//         }
-//         gpu_node->set_preferred_impl_type(new_impl_type);
-//     }
-// }
+            if (arg_desc.m_format == Format::any) {
+                arg_desc.m_format = cldnn::format::get_default_format(arg_desc.m_shape.size());
+            }
+        }
+
+        op->set_memory_descs(args);
+
+
+        std::cerr << op->get_memory_desc() << std::endl;
+    }
+}
 
 // void print_fmts(const std::vector<std::shared_ptr<ov::Node>>& ops, const FormatsMap& formats) {
 //     std::cerr << "-------------------------------------------------------------\n";
@@ -320,10 +313,14 @@ using FormatsMap = std::map<ov::Node*, std::pair<std::vector<Format>, std::vecto
 //         // std::cerr << "!!!!!!!!!!!!!!!!!!!!!!!!! " << name << " cur_out: " << to_str(formats.at(op.get()).second)<< std::endl;
 //     }
 // }
-// }  // namespace
+}  // namespace
 
 bool LayoutPropagation::run_on_model(const std::shared_ptr<ov::Model>& model) {
-    // const auto& ops = model->get_ordered_ops();
+    const auto& ops = model->get_ordered_ops();
+    std::vector<NodeExtension*> nodes;
+    std::transform(ops.begin(), ops.end(), std::back_inserter(nodes), [](std::shared_ptr<ov::Node> node) {
+        return std::dynamic_pointer_cast<NodeExtension>(node).get();
+    });
 
     // FormatsMap formats;
     // init_formats(ops, formats);
@@ -331,7 +328,9 @@ bool LayoutPropagation::run_on_model(const std::shared_ptr<ov::Model>& model) {
     // print_fmts(ops, formats);
     // optimize_formats(ops, m_optimizer, formats);
     // print_fmts(ops, formats);
-    // finalize_formats(ops, m_optimizer, formats);
+    std::cerr << "FINALIZE FORMATS!\n";
+    finalize_formats(nodes, *m_optimizer);
+
     // print_fmts(ops, formats);
 
     // for (const auto& op : ops) {
@@ -350,5 +349,4 @@ bool LayoutPropagation::run_on_model(const std::shared_ptr<ov::Model>& model) {
     return false;
 }
 
-}  // namespace intel_gpu
 }  // namespace ov

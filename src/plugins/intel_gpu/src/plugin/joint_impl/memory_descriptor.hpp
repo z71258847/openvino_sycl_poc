@@ -28,6 +28,13 @@ struct MemoryDesc {
         , m_pad_b(ov::PartialShape::dynamic())
         , m_pad_e(ov::PartialShape::dynamic()) {}
 
+    MemoryDesc(const Format& fmt, ov::PartialShape shape)
+        : m_format(fmt)
+        , m_data_type(ov::element::undefined)
+        , m_shape(shape)
+        , m_pad_b(ov::PartialShape::dynamic())
+        , m_pad_e(ov::PartialShape::dynamic()) {}
+
     Format m_format;
     element::Type m_data_type;
     ov::PartialShape m_shape;
@@ -40,7 +47,7 @@ public:
     std::string to_string() const {
         std::string res;
         for (auto& kv : *this) {
-            res += kv.first.to_string() + " " + kv.second.m_format.to_string() + "\n";
+            res += kv.first.to_string() + " " + kv.second.m_format.to_string() + ":" + kv.second.m_shape.to_string() + "\n";
         }
 
         return res;

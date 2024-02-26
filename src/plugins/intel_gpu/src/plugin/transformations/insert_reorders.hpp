@@ -7,7 +7,7 @@
 #include "intel_gpu/runtime/execution_config.hpp"
 #include "intel_gpu/runtime/device_info.hpp"
 #include "openvino/pass/pass.hpp"
-#include "layout_optimizer.hpp"
+#include "joint_impl/layout_optimizer.hpp"
 
 using DeviceInfo = cldnn::device_info;
 

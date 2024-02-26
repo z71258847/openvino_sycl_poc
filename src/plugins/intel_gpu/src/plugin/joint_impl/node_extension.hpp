@@ -39,8 +39,17 @@ public:
     virtual void select_best_implementation() = 0;
     std::shared_ptr<OpImplementation> get_impl() const;
     std::shared_ptr<OpExecutor> get_executor() const;
+    void create_executor(const ImplementationBuilders& builder);
+
+    void add_fused_op(std::shared_ptr<ov::Node> op);
+    void set_fused_ops(std::shared_ptr<ov::Model> fused_ops);
 
     const ov::Node* get_node_ptr() const;
+
+    void set_layout_optimizer(std::shared_ptr<const LayoutOptimizer> layout_optimizer);
+    void set_affinity(const NodeAffinity& affinity);
+    void set_affinity(const DeviceType& device_type);
+    NodeAffinity get_affinity() const;
 
 protected:
     const ov::Node* m_node;
@@ -49,7 +58,11 @@ protected:
     std::shared_ptr<ImplementationsFactory> m_factory;
     std::shared_ptr<OpImplementation> m_best_implementation = nullptr;
     std::shared_ptr<OptimizationAttributes> m_opt_attributes = nullptr;
-    std::shared_ptr<LayoutOptimizer> m_layout_optimizer = nullptr;
+    std::shared_ptr<const LayoutOptimizer> m_layout_optimizer = nullptr;
+    std::shared_ptr<OpExecutor> m_executor = nullptr;
+
+
+    NodeAffinity m_affinity;
 
     virtual void initialize_descriptors();
 };

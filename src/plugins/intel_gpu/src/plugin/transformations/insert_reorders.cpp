@@ -18,7 +18,6 @@
 #include "transformations/insert_reorders.hpp"
 #include "transformations/utils/utils.hpp"
 #include "joint_impl/node_extension.hpp"
-#include "layout_optimizer.hpp"
 
 #include <memory>
 

@@ -4,24 +4,22 @@
 
 #pragma once
 
+#include "joint_impl/layout_optimizer.hpp"
 #include "openvino/pass/pass.hpp"
-#include "layout_optimizer.hpp"
 
 namespace ov {
-namespace intel_gpu {
 
 class LayoutPropagation: public ov::pass::ModelPass {
 public:
     OPENVINO_RTTI("ov::intel_gpu::LayoutPropagation");
 
-    explicit LayoutPropagation(const LayoutOptimizer& optimizer)
+    explicit LayoutPropagation(std::shared_ptr<const LayoutOptimizer> optimizer)
         : ov::pass::ModelPass()
         , m_optimizer(optimizer) {}
     bool run_on_model(const std::shared_ptr<ov::Model>& model) override;
 
 private:
-    const LayoutOptimizer& m_optimizer;
+    std::shared_ptr<const LayoutOptimizer> m_optimizer;
 };
 
-}   // namespace intel_gpu
 }   // namespace ov

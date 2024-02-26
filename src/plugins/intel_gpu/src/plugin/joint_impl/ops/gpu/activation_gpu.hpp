@@ -12,7 +12,7 @@ namespace gpu {
 
 class SomeActivationGPUImpl : public OpImplementation {
 public:
-    SomeActivationGPUImpl() : OpImplementation("SomeActivationGPUImpl") {}
+    SomeActivationGPUImpl() : OpImplementation("SomeActivationGPUImpl", Type::OCL) {}
 
     OpExecutor::Ptr get_executor(const ImplementationParameters* params) const override;
     bool supports(const ImplementationParameters* params) const override;

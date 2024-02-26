@@ -4,13 +4,11 @@
 
 #pragma once
 
+#include "joint_impl/layout_optimizer.hpp"
 #include "intel_gpu/runtime/execution_config.hpp"
-#include "openvino/pass/graph_rewrite.hpp"
-#include "openvino/pass/pass.hpp"
 #include "intel_gpu/runtime/device_info.hpp"
 #include "intel_gpu/runtime/format.hpp"
 #include "intel_gpu/primitives/implementation_desc.hpp"
-#include "intel_gpu/plugin/common_utils.hpp"
 
 using DeviceInfo = cldnn::device_info;
 using ImplTypes = cldnn::impl_types;
@@ -20,7 +18,7 @@ using cldnn::device_type;
 namespace ov {
 namespace intel_gpu {
 
-class LayoutOptimizer final {
+class GPULayoutOptimizer : public LayoutOptimizer {
 public:
     struct Attributes {
         bool use_onednn;
@@ -28,7 +26,7 @@ public:
 
     using PreferredFormats = std::pair<std::vector<Format>, std::vector<Format>>;
 
-    LayoutOptimizer(const DeviceInfo& device_info, const ExecutionConfig& config, const Attributes& attrs);
+    GPULayoutOptimizer(const DeviceInfo& device_info, const ExecutionConfig& config, const Attributes& attrs);
     void select_preferred_formats(const std::shared_ptr<ov::Node>& node) const;
     ImplTypes get_preferred_impl_type(const std::shared_ptr<ov::Node>& node, Format preferred_format) const;
     ImplTypes get_preferred_impl_type(const std::shared_ptr<ov::Node>& node) const;

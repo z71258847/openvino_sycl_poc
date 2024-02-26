@@ -43,7 +43,6 @@ struct Argument {
     Argument(const Argument& other) = default;
     Argument(Argument&& other) = default;
     Argument& operator=(const Argument& other) = default;
-    Argument& operator=(Argument&& other) = default;
     ~Argument() = default;
 
     std::string to_string() const {

@@ -39,7 +39,7 @@ namespace ov {
 namespace intel_gpu {
 // namespace {
 
-// std::set<ImplTypes> filter_impls(const DeviceInfo& device_info, const std::set<ImplTypes>& impls, const LayoutOptimizer::Attributes& attrs) {
+// std::set<ImplTypes> filter_impls(const DeviceInfo& device_info, const std::set<ImplTypes>& impls, const GPULayoutOptimizer::Attributes& attrs) {
 //     std::set<ImplTypes> res{};
 //     for (auto& impl : impls) {
 //         if (impl == ImplTypes::onednn && (device_info.dev_type != device_type::discrete_gpu || !attrs.use_onednn))
@@ -83,13 +83,13 @@ namespace intel_gpu {
 // }
 // }  // namespace
 
-LayoutOptimizer::LayoutOptimizer(const DeviceInfo& device_info, const ExecutionConfig& config, const Attributes& attrs)
+GPULayoutOptimizer::GPULayoutOptimizer(const DeviceInfo& device_info, const ExecutionConfig& config, const Attributes& attrs)
     : m_device_info(device_info)
     , m_config(config)
     , m_attrs(attrs)
     , m_forcing_map(m_config.get_property(ov::intel_gpu::force_implementations)) { }
 
-LayoutOptimizer::PreferredFormats LayoutOptimizer::get_preferred_formats(const std::shared_ptr<ov::Node>& node, ImplTypes impl_type) const {
+GPULayoutOptimizer::PreferredFormats GPULayoutOptimizer::get_preferred_formats(const std::shared_ptr<ov::Node>& node, ImplTypes impl_type) const {
     // init with any for all in/out ports
     std::vector<Format> preferred_in_fmts(node->get_input_size(), Format::any);
     std::vector<Format> preferred_out_fmts(node->get_output_size(), Format::any);
@@ -191,15 +191,15 @@ LayoutOptimizer::PreferredFormats LayoutOptimizer::get_preferred_formats(const s
     return {preferred_in_fmts, preferred_out_fmts};
 }
 
-ImplTypes LayoutOptimizer::get_preferred_impl_type(const std::shared_ptr<ov::Node>& node) const {
+ImplTypes GPULayoutOptimizer::get_preferred_impl_type(const std::shared_ptr<ov::Node>& node) const {
     return ImplTypes::ocl;
 }
 
-ImplTypes LayoutOptimizer::get_preferred_impl_type(const std::shared_ptr<ov::Node>& node, Format preferred_format) const {
+ImplTypes GPULayoutOptimizer::get_preferred_impl_type(const std::shared_ptr<ov::Node>& node, Format preferred_format) const {
     return ImplTypes::ocl;
 }
 
-void LayoutOptimizer::select_preferred_formats(const std::shared_ptr<ov::Node>& node) const {
+void GPULayoutOptimizer::select_preferred_formats(const std::shared_ptr<ov::Node>& node) const {
     // // if (ov::is_type<ov::op::v0::Constant>(node) ||
     // //     ov::is_type<ov::op::v0::Parameter>(node) ||
     // //     ov::is_type<ov::op::v0::Result>(node))
@@ -229,7 +229,7 @@ void LayoutOptimizer::select_preferred_formats(const std::shared_ptr<ov::Node>& 
     // gpu_op->set_preferred_impl_type(preferred_impl);
 }
 
-bool LayoutOptimizer::is_optimized_format(Format fmt) const {
+bool GPULayoutOptimizer::is_optimized_format(Format fmt) const {
     const std::vector<std::pair<Format::type, bool>> optimized_formats = {
         {Format::b_fs_yx_fsv16, true},
         {Format::b_fs_yx_fsv16, false},
@@ -243,7 +243,7 @@ bool LayoutOptimizer::is_optimized_format(Format fmt) const {
         return f.first == fmt;
     }) != optimized_formats.end();
 }
-bool LayoutOptimizer::is_format_supported(const ov::Node* op, Format fmt) const {
+bool GPULayoutOptimizer::is_format_supported(const ov::Node* op, Format fmt) const {
     return true;
 }
 
