@@ -66,7 +66,7 @@ OpConverter& OpConverter::instance() {
     return op_converter;
 }
 
-class RegistryStub : public ImplementationsRegistry<ImplementationParameters> {
+class RegistryStub : public ImplementationsRegistry {
 public:
     RegistryStub() { }
     static const RegistryStub& instance() {

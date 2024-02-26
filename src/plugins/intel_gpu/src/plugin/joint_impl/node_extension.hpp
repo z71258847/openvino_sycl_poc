@@ -12,6 +12,7 @@
 #include "joint_impl/implementation_params.hpp"
 #include "joint_impl/memory_descriptor.hpp"
 #include "joint_impl/op_implementation.hpp"
+#include "joint_impl/layout_optimizer.hpp"
 #include "joint_impl/optimization_attributes.hpp"
 
 
@@ -42,19 +43,22 @@ public:
     const ov::Node* get_node_ptr() const;
 
 protected:
+    const ov::Node* m_node;
     MemoryDescs m_memory_desc;
+    std::shared_ptr<ov::Model> m_fused_ops = nullptr;
     std::shared_ptr<ImplementationsFactory> m_factory;
     std::shared_ptr<OpImplementation> m_best_implementation = nullptr;
     std::shared_ptr<OptimizationAttributes> m_opt_attributes = nullptr;
-    std::shared_ptr<ov::Model> m_fused_ops = nullptr;
-    const ov::Node* m_node;
+    std::shared_ptr<LayoutOptimizer> m_layout_optimizer = nullptr;
+
+    virtual void initialize_descriptors();
 };
 
 template <typename NodeType, typename std::enable_if<std::is_base_of<ov::Node, NodeType>::value, bool>::type = true>
 class TypedNodeExtensionBase : public NodeExtension {
 public:
     template<typename FactoryType, typename std::enable_if<std::is_base_of<ImplementationsFactory, FactoryType>::value, bool>::type = true>
-    void init(const ov::Node* ptr) {
+    void init_factory(const ov::Node* ptr) {
         m_node = ptr;
         m_factory = std::make_shared<FactoryType>(ptr);
     }

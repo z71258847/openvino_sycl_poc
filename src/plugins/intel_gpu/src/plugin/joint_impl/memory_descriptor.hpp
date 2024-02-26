@@ -45,6 +45,10 @@ public:
 
         return res;
     }
+
+    bool has(const Argument& arg) const {
+        return find(arg) != end();
+    }
 };
 
 inline std::ostream& operator<<(std::ostream& os, const MemoryDescs& val) {

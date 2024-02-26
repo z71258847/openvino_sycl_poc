@@ -12,7 +12,7 @@ struct FullyConnectedParams : public ImplementationParameters {
     FullyConnectedParams(const intel_gpu::op::FullyConnected* node) {}
 };
 
-class FullyConnectedImplementationsRegistry : public ImplementationsRegistry<ImplementationParameters> {
+class FullyConnectedImplementationsRegistry : public ImplementationsRegistry {
 public:
     FullyConnectedImplementationsRegistry();
     static const FullyConnectedImplementationsRegistry& instance() {

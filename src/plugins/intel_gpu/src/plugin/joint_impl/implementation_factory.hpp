@@ -14,6 +14,8 @@
 
 namespace ov {
 
+// Factory handles available primitives implementations
+// and allows to create executor for a given operation
 class ImplementationsFactory {
 public:
     virtual ~ImplementationsFactory() = default;

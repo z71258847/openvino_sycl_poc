@@ -22,7 +22,7 @@ struct EltwiseParams : public ImplementationParameters {
     EltwiseParams(const ov::op::v1::Subtract* node) : type(Type::Sub) {}
 };
 
-struct EltwiseRegistry : public ImplementationsRegistry<EltwiseParams> {
+struct EltwiseRegistry : public ImplementationsRegistry {
     EltwiseRegistry();
     static const EltwiseRegistry& instance() {
         static EltwiseRegistry instance;

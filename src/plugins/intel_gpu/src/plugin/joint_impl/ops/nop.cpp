@@ -27,7 +27,7 @@ public:
     bool supports(const ImplementationParameters*) const override { return true; }
 };
 
-struct NopImplementationsRegistry : public ImplementationsRegistry<ImplementationParameters> {
+struct NopImplementationsRegistry : public ImplementationsRegistry {
     NopImplementationsRegistry() {
         register_impl<NopImpl>();
     }

@@ -14,7 +14,7 @@ struct SomeCustomParams : ImplementationParameters {
     SomeCustomParams(const ov::intel_gpu::op::Convolution* node) : ImplementationParameters(node) {}
 };
 
-class ConvolutionImplementationsRegistry : public ImplementationsRegistry<SomeCustomParams> {
+class ConvolutionImplementationsRegistry : public ImplementationsRegistry {
 public:
     ConvolutionImplementationsRegistry();
     static const ConvolutionImplementationsRegistry& instance() {

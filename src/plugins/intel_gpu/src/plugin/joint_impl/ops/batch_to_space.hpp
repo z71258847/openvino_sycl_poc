@@ -16,7 +16,7 @@ struct BatchToSpaceParams : public ImplementationParameters {
     int some_parameter = 100500;
 };
 
-struct BatchToSpaceImplementationsRegistry : public ImplementationsRegistry<BatchToSpaceParams> {
+struct BatchToSpaceImplementationsRegistry : public ImplementationsRegistry {
     BatchToSpaceImplementationsRegistry();
     static const BatchToSpaceImplementationsRegistry& instance() {
         static BatchToSpaceImplementationsRegistry instance;

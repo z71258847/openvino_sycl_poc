@@ -8,7 +8,6 @@
 
 namespace ov {
 
-template<typename ImplementationParams>
 struct ImplementationsRegistry {
 public:
     virtual ~ImplementationsRegistry() = default;

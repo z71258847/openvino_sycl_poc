@@ -24,7 +24,7 @@ template<>
 class TypedNodeExtension<intel_gpu::op::Convolution> : public TypedNodeExtensionBase<intel_gpu::op::Convolution> {
 public:
 
-    void select_preferred_formats() override {
+    void initialize_descriptors() override {
         // Basic customization
         m_memory_desc[Argument::input(0)] = MemoryDesc(Format::any);
         m_memory_desc[Argument::weights()] = MemoryDesc(Format::any);

@@ -24,7 +24,7 @@ struct ActivationParams : public ImplementationParameters {
     ActivationParams(const ov::op::v0::Relu* node) : type(Type::ReLU) {}
 };
 
-struct ActivationImplementationsRegistry : public ImplementationsRegistry<ActivationParams> {
+struct ActivationImplementationsRegistry : public ImplementationsRegistry {
     ActivationImplementationsRegistry();
     static const ActivationImplementationsRegistry& instance() {
         static ActivationImplementationsRegistry instance;
