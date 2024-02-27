@@ -10,7 +10,8 @@ namespace ov {
 class NodeExtension;
 
 class LayoutOptimizer {
-    virtual void set_preferred_descriptors(const NodeExtension* op, MemoryDescs& current) { }
+public:
+    virtual void set_preferred_descriptors(const NodeExtension* op, MemoryDescs& current) const { }
 };
 
 }  // namespace ov

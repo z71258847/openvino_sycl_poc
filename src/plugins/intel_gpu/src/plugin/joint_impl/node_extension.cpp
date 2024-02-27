@@ -48,6 +48,7 @@ void NodeExtension::select_preferred_formats() {
     OPENVINO_ASSERT(m_node != nullptr);
     std::cerr << "select format for: " << m_node->get_friendly_name() << " " << m_node->get_type_name() << std::endl;
     initialize_descriptors();
+    m_layout_optimizer->set_preferred_descriptors(this, m_memory_desc);
 }
 
 const ov::Node* NodeExtension::get_node_ptr() const { return m_node; }

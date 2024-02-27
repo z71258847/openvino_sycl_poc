@@ -757,7 +757,7 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
         manager.run_passes(func);
     }
 
-    if (1) {
+    if (0) {
         // auto gpu_visualize_modifiers = [](const Node& node, std::vector<std::string>& attributes) -> void {
         //     auto label_it = std::find_if(attributes.begin(), attributes.end(), [](const std::string& s) {
         //         static const std::string prefix = "label";
