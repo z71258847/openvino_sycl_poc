@@ -1,6 +1,7 @@
 // Copyright (C) 2018-2023 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
+#include <gtest/gtest.h>
 #include "common_test_utils/node_builders/fully_connected.hpp"
 #include "common_test_utils/ov_tensor_utils.hpp"
 #include "common_test_utils/file_utils.hpp"
@@ -56,7 +57,7 @@ protected:
 };
 
 TEST_P(NewPipelineTest, Inference) {
-    run();
+    compile_model();
 }
 
 INSTANTIATE_TEST_SUITE_P(smoke, NewPipelineTest, ::testing::Values(0));

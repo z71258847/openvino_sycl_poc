@@ -52,8 +52,6 @@ template<typename T, typename... Args>
 std::shared_ptr<ov::Node> make_gpu_op(Args... args) {
     auto common_op = std::make_shared<T>(std::forward<Args>(args)...);
     auto gpu_op = OpConverter::instance().convert_to_extended_opset(common_op);
-    gpu_op->set_output_size(common_op->get_output_size());
-    gpu_op->set_friendly_name(common_op->get_friendly_name());
     gpu_op->validate_and_infer_types();
 
     return gpu_op;

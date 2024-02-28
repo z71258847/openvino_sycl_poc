@@ -1,0 +1,22 @@
+// Copyright (C) 2024 Intel Corporation
+// SPDX-License-Identifier: Apache-2.0
+//
+
+#pragma once
+
+#include "base_ocl_impl.hpp"
+#include "extension/implementation_params.hpp"
+
+namespace ov {
+namespace ocl {
+
+class SomeActivationOCLImpl : public BaseOCLImpl {
+public:
+    SomeActivationOCLImpl() : BaseOCLImpl("SomeActivationOCLImpl") {}
+
+    OpExecutor::Ptr get_executor(const ImplementationParameters* params) const override;
+    bool supports(const ImplementationParameters* params) const override;
+};
+
+}  // namespace ocl
+}  // namespace ov

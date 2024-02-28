@@ -6,14 +6,14 @@
 #include "extension/extended_opset.hpp"
 
 #include "backend/cpu/activation_cpu.hpp"
-#include "backend/gpu/activation_gpu.hpp"
+#include "backend/ocl/activation_ocl.hpp"
 
 
 namespace ov {
 
 ActivationImplementationsRegistry::ActivationImplementationsRegistry() {
     register_impl<cpu::SomeActivationCPUImpl>();
-    register_impl<gpu::SomeActivationGPUImpl>();
+    register_impl<ocl::SomeActivationOCLImpl>();
 }
 
 REGISTER_IMPLS(Abs, ov::op::v0::Abs, ActivationParams, ActivationImplementationsRegistry);

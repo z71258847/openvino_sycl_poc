@@ -62,7 +62,6 @@ ov::SoPtr<ov::ITensor> SyncInferRequest::get_tensor(const ov::Output<const ov::N
 }
 
 void SyncInferRequest::check_tensors() const {
-    OPENVINO_NOT_IMPLEMENTED;
 }
 
 }  // namespace intel_gpu

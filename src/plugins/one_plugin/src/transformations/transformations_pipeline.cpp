@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "extension/node_extension.hpp"
-#include "backend/gpu/layout_optimizer.hpp"
+#include "backend/ocl/layout_optimizer.hpp"
 #include "transformations_pipeline.hpp"
 #include "low_precision/convolution.hpp"
 #include "low_precision/convolution_backprop_data.hpp"
@@ -777,7 +777,7 @@ bool TransformationsPipeline::run_on_model(const std::shared_ptr<ov::Model>& fun
         // (void)gpu_visualize_modifiers;
 
         // GPULayoutOptimizer::Attributes attrs{false};
-        auto optimizer = std::make_shared<GPULayoutOptimizer>(/*device_info, config, attrs*/);
+        auto optimizer = std::make_shared<ocl::OCLLayoutOptimizer>(/*device_info, config, attrs*/);
 
         ov::pass::Manager manager;
         manager.register_pass<ov::ConvertToExtendedOpset>();

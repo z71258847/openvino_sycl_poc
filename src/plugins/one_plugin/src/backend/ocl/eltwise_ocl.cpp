@@ -1,0 +1,35 @@
+// Copyright (C) 2024 Intel Corporation
+// SPDX-License-Identifier: Apache-2.0
+//
+
+#include "eltwise_ocl.hpp"
+#include "extension/executor.hpp"
+#include "impls/eltwise.hpp"
+
+namespace ov {
+namespace ocl {
+
+class SomeEltwiseOCLExecutor : public OpExecutor {
+public:
+    explicit SomeEltwiseOCLExecutor(const EltwiseParams* params) : m_params(params) { }
+
+    void execute() override {
+        std::cerr << "SomeEltwiseOCLExecutor::execute()" << (int)m_params->type << "\n";
+    }
+
+private:
+    const EltwiseParams* m_params;
+};
+
+
+bool SomeEltwiseOCLImpl::supports(const ImplementationParameters* params) const {
+    return true;
+}
+
+OpExecutor::Ptr SomeEltwiseOCLImpl::get_executor(const ImplementationParameters* params) const {
+    auto typed_params = dynamic_cast<const EltwiseParams*>(params);
+    return std::make_shared<SomeEltwiseOCLExecutor>(typed_params);
+}
+
+}  // namespace ocl
+}  // namespace ov
