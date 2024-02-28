@@ -28,10 +28,12 @@ struct NodeAffinity {
 
 class OpImplementation {
 public:
-    enum class Type {
+    enum class Type : uint8_t {
         CPU = 0,
         OCL = 1,
-        UNKNOWN = 1,
+        SYCL = 2,
+        REF = 3,
+        UNKNOWN = 255,
     };
     using Ptr = std::shared_ptr<OpImplementation>;
     OpImplementation(std::string impl_name = "", Type type = Type::UNKNOWN) : m_impl_name(impl_name), m_type(type) {}

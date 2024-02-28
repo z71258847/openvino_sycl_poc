@@ -40,7 +40,7 @@ protected:
         for (auto&& shape : inputDynamicShapes)
             inputParams.push_back(std::make_shared<ov::op::v0::Parameter>(et, shape));
 
-        this->targetDevice = "GPU";
+        this->targetDevice = "ONE";
 
         auto convolutionNode = ov::test::utils::make_convolution(inputParams.front(), et, kernel, stride, padBegin,
                                                                  padEnd, dilation, padType, out_channels);

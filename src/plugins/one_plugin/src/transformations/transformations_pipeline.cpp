@@ -191,7 +191,7 @@ static bool is_non_supported_decompression_op(const std::shared_ptr<const ov::No
 namespace ov {
 namespace intel_gpu {
 
-void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
+bool TransformationsPipeline::run_on_model(const std::shared_ptr<ov::Model>& func) {
     using const_node_ptr = const std::shared_ptr<const ov::Node>;
 
     const auto& defaultPrecisions = ov::pass::low_precision::precision_set::get_int8_support();
@@ -805,6 +805,8 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
             executor->execute();
         }
     }
+
+    return true;
 }
 }  // namespace intel_gpu
 }  // namespace ov

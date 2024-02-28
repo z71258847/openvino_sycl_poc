@@ -16,7 +16,8 @@
 #include <vector>
 
 #include "compiled_model.hpp"
-#include "transformations_pipeline.hpp"
+#include "execution_config.hpp"
+#include "transformations/transformations_pipeline.hpp"
 #include "openvino/core/deprecated.hpp"
 #include "openvino/core/dimension_tracker.hpp"
 #include "openvino/pass/manager.hpp"
@@ -69,7 +70,7 @@ std::string Plugin::get_device_id(const ov::AnyMap& config) const {
 void Plugin::transform_model(std::shared_ptr<ov::Model>& model, const ExecutionConfig& config) const {
     // auto deviceInfo = m_device_map.at(config.get_property(ov::device::id))->get_info();
     TransformationsPipeline transformations(config/* , deviceInfo */);
-    transformations.apply(model);
+    transformations.run_on_model(model);
 }
 
 std::shared_ptr<ov::Model> Plugin::clone_and_transform_model(const std::shared_ptr<const ov::Model>& model, const ExecutionConfig& config) const {
@@ -161,9 +162,7 @@ ov::SoPtr<ov::IRemoteContext> Plugin::create_context(const ov::AnyMap& remote_pr
 }
 
 std::shared_ptr<RemoteContextImpl> Plugin::get_default_context(const std::string& device_id) const {
-    auto contexts = get_default_contexts();
-    OPENVINO_ASSERT(contexts.count(device_id), "[GPU] Context was not initialized for ", device_id, " device");
-    return contexts.at(device_id);
+    return nullptr;
 }
 
 ov::SoPtr<ov::IRemoteContext> Plugin::get_default_context(const AnyMap& params) const {
@@ -342,11 +341,12 @@ ov::Any Plugin::get_property(const std::string& name, const ov::AnyMap& options)
     if (options.find(ov::device::id.name()) != options.end()) {
         device_id = options.find(ov::device::id.name())->second.as<std::string>();
     }
+
+    ExecutionConfig c;
     // OPENVINO_ASSERT(m_configs_map.find(device_id) != m_configs_map.end(), "[GPU] get_property: Couldn't find config for GPU with id ", device_id);
 
     // const auto& c = m_configs_map.at(device_id);
-    // return c.get_property(name);
-    return ov::Any();
+    return c.get_property(name);
 }
 
 auto StringRightTrim = [](std::string string, std::string substring, bool case_sensitive = true) {
