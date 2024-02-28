@@ -4,6 +4,7 @@
 
 #include "execution_config.hpp"
 #include "internal_properties.hpp"
+#include "openvino/runtime/internal_properties.hpp"
 
 #include <thread>
 
@@ -39,7 +40,7 @@ void ExecutionConfig::set_default() {
         std::make_tuple(ov::cache_dir, ""),
         std::make_tuple(ov::num_streams, 1),
         std::make_tuple(ov::compilation_num_threads, std::max(1, static_cast<int>(std::thread::hardware_concurrency()))),
-        std::make_tuple(ov::hint::inference_precision, ov::element::f16, InferencePrecisionValidator()),
+        std::make_tuple(ov::hint::inference_precision, ov::element::f32, InferencePrecisionValidator()),
         std::make_tuple(ov::hint::model_priority, ov::hint::Priority::MEDIUM),
         std::make_tuple(ov::hint::performance_mode, ov::hint::PerformanceMode::LATENCY, PerformanceModeValidator()),
         std::make_tuple(ov::hint::execution_mode, ov::hint::ExecutionMode::PERFORMANCE),
@@ -51,7 +52,7 @@ void ExecutionConfig::set_default() {
         std::make_tuple(ov::intel_gpu::hint::queue_priority, ov::hint::Priority::MEDIUM),
         std::make_tuple(ov::intel_gpu::enable_loop_unrolling, true),
         std::make_tuple(ov::intel_gpu::disable_winograd_convolution, false),
-        // std::make_tuple(ov::internal::exclusive_async_requests, false),
+        std::make_tuple(ov::internal::exclusive_async_requests, false),
         std::make_tuple(ov::cache_mode, ov::CacheMode::OPTIMIZE_SPEED),
 
         // Legacy API properties

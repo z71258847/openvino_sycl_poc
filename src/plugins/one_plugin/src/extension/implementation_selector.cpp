@@ -16,10 +16,12 @@ std::shared_ptr<ImplSelector> ImplSelector::default_gpu_selector() {
 }
 
 OpImplementation::Ptr GPUImplSelector::select_best_implementation(const ImplementationsList& list, const ov::Node* node) {
+    OPENVINO_ASSERT(!list.empty());
     return list.back();
 }
 
 OpImplementation::Ptr CPUImplSelector::select_best_implementation(const ImplementationsList& list, const ov::Node* node) {
+    OPENVINO_ASSERT(!list.empty());
     return list.front();
 }
 

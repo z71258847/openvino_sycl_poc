@@ -9,22 +9,16 @@
 #include "openvino/core/type.hpp"
 
 
-#define DECLARE_REGISTER_FUNC(NewOpType, OriginalOpType) \
+#define DECLARE_REGISTER_FUNC(NewOpType, OriginalOpType, FactoryType) \
     extern void __register_ ## NewOpType ## _factory(); \
     void __register_ ## NewOpType ## _factory() { \
         OpConverter::instance().register_converter(OriginalOpType::get_type_info_static(), \
         [](const std::shared_ptr<ov::Node>& node) -> std::shared_ptr<ov::Node> { \
-            return std::make_shared<NewOpType>(std::dynamic_pointer_cast<OriginalOpType>(node)); \
+            auto extended_op = std::make_shared<TypedNodeExtension<OriginalOpType>>(std::dynamic_pointer_cast<OriginalOpType>(node)); \
+            extended_op->init_factory<FactoryType>(dynamic_cast<const ov::Node*>(extended_op.get())); \
+            return extended_op; \
         }); \
     }
-
-#define DECLARE_NEW_OP_CLASS(NewOpType, OriginalOpType, FactoryType) \
-    class NewOpType : public OriginalOpType, public TypedNodeExtension<OriginalOpType> { \
-    public: \
-        explicit NewOpType(std::shared_ptr<OriginalOpType> op) : OriginalOpType(*op) { \
-            TypedNodeExtension<OriginalOpType>::init_factory<FactoryType>(this); \
-        } \
-    } \
 
 #define DECLARE_FACTORY_CLASS(FactoryName, OriginalOpType, TypedParams, Registry) \
     class FactoryName : public TypedFactory<OriginalOpType, TypedParams> { \
@@ -36,9 +30,7 @@
 
 #define REGISTER_IMPLS(NewOpType, OriginalOpType, TypedParams, Registry) \
     DECLARE_FACTORY_CLASS(NewOpType ## Factory, OriginalOpType, TypedParams, Registry); \
-    DECLARE_NEW_OP_CLASS(NewOpType ## Extension, OriginalOpType, NewOpType ## Factory); \
-    DECLARE_REGISTER_FUNC(NewOpType ## Extension, OriginalOpType)
-
+    DECLARE_REGISTER_FUNC(NewOpType ## Extension, OriginalOpType, NewOpType ## Factory)
 
 namespace ov {
 

@@ -86,6 +86,9 @@ public:
 };
 
 template <typename NodeType, typename std::enable_if<std::is_base_of<ov::Node, NodeType>::value, bool>::type = true>
-class TypedNodeExtension : public TypedNodeExtensionBase<NodeType> { };
+class TypedNodeExtension : public TypedNodeExtensionBase<NodeType>, public NodeType {
+public:
+    explicit TypedNodeExtension(std::shared_ptr<NodeType> base_node) : TypedNodeExtensionBase<NodeType>(), NodeType(*base_node) {}
+};
 
 }  // namespace ov

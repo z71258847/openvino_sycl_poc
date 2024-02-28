@@ -70,11 +70,17 @@ struct CPUImplementationBuilder  : public ImplementationBuilder{
 
 struct ImplementationBuilders {
     std::map<OpImplementation::Type, ImplementationBuilder::Ptr> m_builders = {
-        { OpImplementation::Type::OCL, std::make_shared<OCLImplementationBuilder>() }
+        { OpImplementation::Type::OCL, std::make_shared<OCLImplementationBuilder>() },
+        { OpImplementation::Type::CPU, std::make_shared<CPUImplementationBuilder>() },
+        { OpImplementation::Type::UNKNOWN, std::make_shared<CPUImplementationBuilder>() }
     };
 
     void add_impl(OpImplementation::Ptr impl) {
-        m_builders[OpImplementation::Type::OCL]->add_impl(impl);
+        if (impl->get_type() == OpImplementation::Type::CPU) {
+            m_builders[OpImplementation::Type::CPU]->add_impl(impl);
+        } else if (impl->get_type() == OpImplementation::Type::OCL) {
+            m_builders[OpImplementation::Type::OCL]->add_impl(impl);
+        }
     }
 
     void build() {

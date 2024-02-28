@@ -10,6 +10,27 @@ classDiagram
     }
 
     class SomePublicOp
+
+    Node <|-- SomePublicOp
+    NodeExtension <|-- TypedNodeExtensionBase
+    TypedNodeExtensionBase <|-- TypedNodeExtension
+    SomePublicOp <|-- TypedNodeExtension
+    NodeExtension  "Has pointer" ..>  Node
+```
+
+-----------
+```mermaid
+classDiagram
+    class Node
+    class NodeExtension
+    class TypedNodeExtensionBase {
+        <<template< SomePublicOp >>>
+    }
+    class TypedNodeExtension {
+        <<template< SomePublicOp >>>
+    }
+
+    class SomePublicOp
     class ExtendedPublicOp
 
     Node <|-- SomePublicOp

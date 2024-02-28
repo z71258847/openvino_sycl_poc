@@ -21,9 +21,11 @@ ConvolutionImplementationsRegistry::ConvolutionImplementationsRegistry() {
 }
 
 template<>
-class TypedNodeExtension<intel_gpu::op::Convolution> : public TypedNodeExtensionBase<intel_gpu::op::Convolution> {
+class TypedNodeExtension<intel_gpu::op::Convolution> : public TypedNodeExtensionBase<intel_gpu::op::Convolution>, public intel_gpu::op::Convolution {
 public:
 
+    explicit TypedNodeExtension(std::shared_ptr<intel_gpu::op::Convolution> base_op)
+        : TypedNodeExtensionBase<intel_gpu::op::Convolution>(), intel_gpu::op::Convolution(*base_op) {}
     void initialize_descriptors() override {
         // Basic customization
         m_memory_desc[Argument::input(0)] = MemoryDesc(Format::any, m_node->get_input_partial_shape(0));
