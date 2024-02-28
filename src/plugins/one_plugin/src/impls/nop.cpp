@@ -23,8 +23,9 @@ class NopImpl : public OpImplementation {
 public:
     NopImpl() : OpImplementation("NopImpl") {}
 
-    OpExecutor::Ptr get_executor(const ImplementationParameters*) const override { return std::make_shared<NopExecutor>(); }
+    OpExecutor::Ptr get_executor() const override { return std::make_shared<NopExecutor>(); }
     bool supports(const ImplementationParameters*) const override { return true; }
+    void initialize(const ImplementationParameters*) override { }
 };
 
 struct NopImplementationsRegistry : public ImplementationsRegistry {

@@ -26,9 +26,13 @@ bool SomeEltwiseOCLImpl::supports(const ImplementationParameters* params) const 
     return true;
 }
 
-OpExecutor::Ptr SomeEltwiseOCLImpl::get_executor(const ImplementationParameters* params) const {
-    auto typed_params = dynamic_cast<const EltwiseParams*>(params);
+OpExecutor::Ptr SomeEltwiseOCLImpl::get_executor() const {
+    auto typed_params = dynamic_cast<const EltwiseParams*>(m_params);
     return std::make_shared<SomeEltwiseOCLExecutor>(typed_params);
+}
+
+void SomeEltwiseOCLImpl::init_kernel_data(const ImplementationParameters* params) {
+    m_kernel_data = {};
 }
 
 }  // namespace ocl

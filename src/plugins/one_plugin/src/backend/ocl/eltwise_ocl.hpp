@@ -14,8 +14,9 @@ class SomeEltwiseOCLImpl : public BaseOCLImpl {
 public:
     SomeEltwiseOCLImpl() : BaseOCLImpl("SomeEltwiseOCLImpl") {}
 
-    OpExecutor::Ptr get_executor(const ImplementationParameters* params) const override;
+    OpExecutor::Ptr get_executor() const override;
     bool supports(const ImplementationParameters* params) const override;
+    void init_kernel_data(const ImplementationParameters* params) override;
 };
 
 }  // namespace ocl

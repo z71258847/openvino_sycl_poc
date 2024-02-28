@@ -26,8 +26,8 @@ bool SomeFullyConnectedCPUImpl::supports(const ImplementationParameters* params)
     return true;
 }
 
-OpExecutor::Ptr SomeFullyConnectedCPUImpl::get_executor(const ImplementationParameters* params) const {
-    auto typed_params = dynamic_cast<const FullyConnectedParams*>(params);
+OpExecutor::Ptr SomeFullyConnectedCPUImpl::get_executor() const {
+    auto typed_params = dynamic_cast<const FullyConnectedParams*>(m_params);
     return std::make_shared<SomeFullyConnectedCPUExecutor>(typed_params);
 }
 

@@ -25,8 +25,8 @@ bool SomeBatchToSpaceCPUImpl::supports(const ImplementationParameters* params) c
     return true;
 }
 
-OpExecutor::Ptr SomeBatchToSpaceCPUImpl::get_executor(const ImplementationParameters* params) const {
-    auto typed_params = dynamic_cast<const BatchToSpaceParams*>(params);
+OpExecutor::Ptr SomeBatchToSpaceCPUImpl::get_executor() const {
+    auto typed_params = dynamic_cast<const BatchToSpaceParams*>(m_params);
     return std::make_shared<SomeBatchToSpaceCPUExecutor>(typed_params);
 }
 

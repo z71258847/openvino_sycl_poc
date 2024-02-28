@@ -31,7 +31,7 @@ std::vector<Code> KernelsDataBase::get(const KernelName& id) const {
     {
         std::ifstream kernel_file{id + ".cl", std::ios::in | std::ios::binary};
         if (kernel_file.is_open()) {
-            code ret;
+            Code ret;
             auto beg = kernel_file.tellg();
             kernel_file.seekg(0, std::ios::end);
             auto end = kernel_file.tellg();

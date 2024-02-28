@@ -4,17 +4,17 @@
 
 #pragma once
 
+#include "backend/cpu/base_cpu_impl.hpp"
 #include "extension/implementation_params.hpp"
-#include "extension/op_implementation.hpp"
 
 namespace ov {
 namespace cpu {
 
-class SomeFullyConnectedCPUImpl : public OpImplementation {
+class SomeFullyConnectedCPUImpl : public BaseCPUImpl {
 public:
-    SomeFullyConnectedCPUImpl() : OpImplementation("SomeFullyConnectedCPUImpl") {}
+    SomeFullyConnectedCPUImpl() : BaseCPUImpl("SomeFullyConnectedCPUImpl") {}
 
-    OpExecutor::Ptr get_executor(const ImplementationParameters* params) const override;
+    OpExecutor::Ptr get_executor() const override;
     bool supports(const ImplementationParameters* params) const override;
 };
 

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "extension/executor.hpp"
+#include "extension/implementation_builder.hpp"
 #include "openvino/core/node.hpp"
 
 #include "extension/implementation_factory.hpp"

@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include "extension/executor.hpp"
+#include "extension/implementation_builder.hpp"
 #include "extension/op_implementation.hpp"
 #include "implementation_params.hpp"
 #include "implementation_selector.hpp"
@@ -15,18 +16,16 @@
 namespace ov {
 
 // Factory handles available primitives implementations
-// and allows to create executor for a given operation
+// and provides an interface to work with them (create, filter, etc)
 class ImplementationsFactory {
 public:
     virtual ~ImplementationsFactory() = default;
     virtual OpImplementation::Ptr select_best_implementation(const ov::Node* node) = 0;
     virtual OpExecutor::Ptr create_executor(OpImplementation::Ptr impl, const ImplementationBuilder& builder) = 0;
+    void initialize_selector(const ov::Node* node);
 
     std::shared_ptr<ImplementationParameters> m_params = nullptr;
     std::shared_ptr<ImplSelector> m_impl_selector = nullptr;
-
-    void initialize_selector(const ov::Node* node);
-
     ImplementationsList m_available_impls;
 };
 
@@ -48,7 +47,7 @@ public:
     }
 
     OpExecutor::Ptr create_executor(OpImplementation::Ptr impl, const ImplementationBuilder& builder) override {
-        return impl->get_executor(m_params.get()/*, builder*/);
+        return impl->get_executor(/*builder*/);
     }
 
 protected:
@@ -59,9 +58,12 @@ protected:
     ImplementationsList filter_unsupported(const ImplementationParameters* params, const ImplementationsList& impls) const {
         ImplementationsList supported;
         for (const auto& impl : impls) {
-            if (impl->supports(params))
+            if (impl->supports(params)) {
+                impl->initialize(params);
                 supported.push_back(impl);
+            }
         }
+
 
         return supported;
     }

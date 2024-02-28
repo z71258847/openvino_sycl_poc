@@ -12,6 +12,7 @@
 // #include "intel_gpu/runtime/engine.hpp"
 // #include "intel_gpu/runtime/engine_configuration.hpp"
 // #include "intel_gpu/runtime/execution_config.hpp"
+#include "common/kernel_data.hpp"
 #include "extension/executor.hpp"
 #include "impls/activation.hpp"
 
@@ -81,37 +82,42 @@ private:
 
 
 bool SomeActivationOCLImpl::supports(const ImplementationParameters* params) const {
+    auto typed_params = dynamic_cast<const ActivationParams*>(params);
+    if (!typed_params)
+        return false;
+
+    if (typed_params->type == ActivationParams::Type::ReLU) {
+        return false;
+    }
+
     return true;
 }
 
-OpExecutor::Ptr SomeActivationOCLImpl::get_executor(const ImplementationParameters* params) const {
-    auto typed_params = dynamic_cast<const ActivationParams*>(params);
-
-    // using namespace kernel_selector;
-
-    // activation_kernel_selector selector;
-    // activation_params selector_params;
-
-
-    // auto devices = cldnn::device_query(cldnn::engine_types::ocl, cldnn::runtime_types::ocl).get_available_devices();
-    // auto engine = cldnn::engine::create(cldnn::engine_types::ocl, cldnn::runtime_types::ocl, devices.begin()->second);
-    // intel_gpu::ExecutionConfig cfg;
-    // set_params(*engine, cfg, selector_params);
-    // selector_params.inputs.resize(1);
-    // selector_params.outputs.resize(1);
-
-    // selector_params.inputs[0] = cldnn::convert_data_tensor(cldnn::layout(ov::PartialShape{1, 2, 3, 4}, ov::element::f32, cldnn::format::bfyx));
-    // selector_params.outputs[0] = cldnn::convert_data_tensor(cldnn::layout(ov::PartialShape{1, 2, 3, 4}, ov::element::f32, cldnn::format::bfyx));
-
-    // if (typed_params->type == ActivationParams::Type::Abs) {
-    //     selector_params.activations.push_back(base_activation_params{ActivationFunction::ABS, 0.0f, 0.0f});
-    // } else if (typed_params->type == ActivationParams::Type::ReLU) {
-    //     selector_params.activations.push_back(base_activation_params{ActivationFunction::RELU, 0.0f, 0.0f});
-    // }
-
-    // auto kernel = selector.get_best_kernel(selector_params);
-
+OpExecutor::Ptr SomeActivationOCLImpl::get_executor() const {
+    auto typed_params = dynamic_cast<const ActivationParams*>(m_params);
     return std::make_shared<SomeActivationOCLExecutor>(typed_params);
+}
+
+
+void SomeActivationOCLImpl::init_kernel_data(const ImplementationParameters* params) {
+    KernelData kd;
+    kd.params.workGroups.global = {1, 1, 1};
+    kd.params.workGroups.local = {1, 1, 1};
+    kd.params.layerID = "some_activation";
+    kd.params.arguments = {
+        Argument{Argument::Types::INPUT, 0},
+        Argument{Argument::Types::OUTPUT, 0}
+    };
+
+    auto kernels = m_db.get("activation_ref");
+    if (!kernels.empty()) {
+        auto str = std::make_shared<KernelString>();
+        str->str = kernels[0];
+        kd.code.kernelString = str;
+    }
+
+
+    m_kernel_data = kd;
 }
 
 }  // namespace ocl

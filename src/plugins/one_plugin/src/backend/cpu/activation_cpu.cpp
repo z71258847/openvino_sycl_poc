@@ -28,8 +28,8 @@ bool SomeActivationCPUImpl::supports(const ImplementationParameters* params) con
     return true;
 }
 
-OpExecutor::Ptr SomeActivationCPUImpl::get_executor(const ImplementationParameters* params) const {
-    auto typed_params = dynamic_cast<const ActivationParams*>(params);
+OpExecutor::Ptr SomeActivationCPUImpl::get_executor() const {
+    auto typed_params = dynamic_cast<const ActivationParams*>(m_params);
     return std::make_shared<SomeActivationCPUExecutor>(typed_params);
 }
 

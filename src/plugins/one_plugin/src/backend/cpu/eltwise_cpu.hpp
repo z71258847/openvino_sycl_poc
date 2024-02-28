@@ -4,17 +4,17 @@
 
 #pragma once
 
+#include "backend/cpu/base_cpu_impl.hpp"
 #include "extension/implementation_params.hpp"
-#include "extension/op_implementation.hpp"
 
 namespace ov {
 namespace cpu {
 
-class SomeEltwiseCPUImpl : public OpImplementation {
+class SomeEltwiseCPUImpl : public BaseCPUImpl {
 public:
-    SomeEltwiseCPUImpl() : OpImplementation("SomeEltwiseCPUImpl") {}
+    SomeEltwiseCPUImpl() : BaseCPUImpl("SomeEltwiseCPUImpl") {}
 
-    OpExecutor::Ptr get_executor(const ImplementationParameters* params) const override;
+    OpExecutor::Ptr get_executor() const override;
     bool supports(const ImplementationParameters* params) const override;
 };
 

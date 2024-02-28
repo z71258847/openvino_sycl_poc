@@ -4,17 +4,17 @@
 
 #pragma once
 
+#include "backend/cpu/base_cpu_impl.hpp"
 #include "extension/implementation_params.hpp"
-#include "extension/op_implementation.hpp"
 
 namespace ov {
 namespace cpu {
 
-class SomeBatchToSpaceCPUImpl : public OpImplementation {
+class SomeBatchToSpaceCPUImpl : public BaseCPUImpl {
 public:
-    SomeBatchToSpaceCPUImpl() : OpImplementation("SomeBatchToSpaceCPUImpl") {}
+    SomeBatchToSpaceCPUImpl() : BaseCPUImpl("SomeBatchToSpaceCPUImpl") {}
 
-    OpExecutor::Ptr get_executor(const ImplementationParameters* params) const override;
+    OpExecutor::Ptr get_executor() const override;
     bool supports(const ImplementationParameters* params) const override;
 };
 

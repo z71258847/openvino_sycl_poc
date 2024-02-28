@@ -22,6 +22,14 @@ struct KernelsDataBase {
 
     std::vector<Code> get(const KernelName& id) const;
     std::vector<Code> get_batch_header_str() const { return std::move(batch_header_str); }
+    std::vector<KernelName> get_names() const {
+        std::vector<KernelName> names;
+        for (auto kv : primitives) {
+            names.push_back(kv.first);
+        }
+
+        return names;
+    }
 
 private:
     struct case_insensitive_compare {

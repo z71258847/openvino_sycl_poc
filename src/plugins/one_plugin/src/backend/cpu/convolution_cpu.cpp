@@ -26,8 +26,8 @@ bool SomeConvolutionCPUImpl::supports(const ImplementationParameters* params) co
     return true;
 }
 
-OpExecutor::Ptr SomeConvolutionCPUImpl::get_executor(const ImplementationParameters* params) const {
-    auto typed_params = dynamic_cast<const SomeCustomParams*>(params);
+OpExecutor::Ptr SomeConvolutionCPUImpl::get_executor() const {
+    auto typed_params = dynamic_cast<const SomeCustomParams*>(m_params);
     return std::make_shared<SomeConvolutionCPUExecutor>(typed_params);
 }
 

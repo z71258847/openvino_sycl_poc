@@ -28,8 +28,8 @@ bool SomeEltwiseCPUImpl::supports(const ImplementationParameters* params) const 
     return true;
 }
 
-OpExecutor::Ptr SomeEltwiseCPUImpl::get_executor(const ImplementationParameters* params) const {
-    auto typed_params = dynamic_cast<const EltwiseParams*>(params);
+OpExecutor::Ptr SomeEltwiseCPUImpl::get_executor() const {
+    auto typed_params = dynamic_cast<const EltwiseParams*>(m_params);
     return std::make_shared<SomeEltwiseCPUExecutor>(typed_params);
 }
 
