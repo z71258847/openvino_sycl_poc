@@ -41,18 +41,33 @@ endif()
 # add_subdirectory(src/kernel_selector)
 # add_subdirectory(src/graph)
 
-file(GLOB_RECURSE PLUGIN_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp)
+file(GLOB PLUGIN_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/plugin/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/transformations/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/opset/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/impls/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/extension/*.cpp
+        )
 
+
+set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/")
+add_subdirectory(src/backend/cpu)
+add_subdirectory(src/backend/ocl)
+
+list(APPEND OBJ_LIBS cpu_impls)
+list(APPEND OBJ_LIBS ocl_impls)
 ov_add_plugin(NAME ${TARGET_NAME}
               DEVICE_NAME "ONE"
               SOURCES ${PLUGIN_SOURCES}
               DEFAULT_CONFIG ${PLUGIN_DEFAULT_CONFIG}
+              OBJECT_LIBRARIES ${OBJ_LIBS}
               VERSION_DEFINES_FOR src/plugin/plugin.cpp)
 
 target_compile_options(${TARGET_NAME} PRIVATE
     $<$<CONFIG:Release>:$<IF:$<CXX_COMPILER_ID:MSVC>,/Os,-Os>>)
 
-target_link_libraries(${TARGET_NAME} PRIVATE openvino::pugixml openvino::shape_inference)
+target_link_libraries(${TARGET_NAME} PRIVATE openvino::pugixml openvino::shape_inference openvino::runtime openvino::runtime::dev)
 
 target_include_directories(${TARGET_NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include/
