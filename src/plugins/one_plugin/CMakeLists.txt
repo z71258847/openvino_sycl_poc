@@ -48,6 +48,8 @@ file(GLOB PLUGIN_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/src/opset/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/impls/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/extension/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/runtime/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/runtime/*.hpp
         )
 
 
