@@ -278,7 +278,10 @@ namespace {
 
 void finalize_formats(const std::vector<NodeExtension*>& ops, const LayoutOptimizer& optimizer) {
     for (auto& op : ops) {
-        auto args = op->get_memory_desc();
+        auto configs = op->get_available_configurations();
+        OPENVINO_ASSERT(!configs.empty());
+        auto best_config = configs[0];
+        auto& args = best_config.m_desc;
         for (auto& arg : args) {
             auto& arg_desc = arg.second;
 
@@ -288,10 +291,10 @@ void finalize_formats(const std::vector<NodeExtension*>& ops, const LayoutOptimi
             }
         }
 
-        op->set_memory_descs(args);
+        op->set_best_configuration(best_config);
 
 
-        std::cerr << op->get_memory_desc() << std::endl;
+        std::cerr << op->get_best_configuration().m_desc << std::endl;
     }
 }
 

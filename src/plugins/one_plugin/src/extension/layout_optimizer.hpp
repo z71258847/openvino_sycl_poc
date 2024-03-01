@@ -11,7 +11,7 @@ class NodeExtension;
 
 class LayoutOptimizer {
 public:
-    virtual void set_preferred_descriptors(const NodeExtension* op, MemoryDescs& current) const { }
+    virtual std::vector<Configuration> get_available_configurations(const NodeExtension* op) const;
 };
 
 }  // namespace ov

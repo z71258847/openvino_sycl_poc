@@ -1,21 +1,21 @@
 ```mermaid
 classDiagram
-    class Node
+    class ovNode
     class NodeExtension
     class TypedNodeExtensionBase {
-        <<template< SomePublicOp >>>
+        <<template< ovCommonOp >>>
     }
     class TypedNodeExtension {
-        <<template< SomePublicOp >>>
+        <<template< ovCommonOp >>>
     }
 
-    class SomePublicOp
+    class ovCommonOp
 
-    Node <|-- SomePublicOp
+    ovNode <|-- ovCommonOp
     NodeExtension <|-- TypedNodeExtensionBase
     TypedNodeExtensionBase <|-- TypedNodeExtension
-    SomePublicOp <|-- TypedNodeExtension
-    NodeExtension  "Has pointer" ..>  Node
+    ovCommonOp <|-- TypedNodeExtension
+    NodeExtension  ..>  TypedNodeExtension : Has pointer
 ```
 
 ---------------------------
@@ -39,12 +39,12 @@ classDiagram
 
     class NodeExtension
 
+    NodeExtension o-- Model : fused ops
     NodeExtension o-- MemoryDescs
-    NodeExtension o-- "fused ops" Model
     NodeExtension *-- ImplementationsFactory
-    NodeExtension o-- "best impl" OpImplementation
     NodeExtension o-- OptimizationAttributes
     NodeExtension o-- LayoutOptimizer
-    NodeExtension o-- OpExecutor
+    NodeExtension o-- "best impl" OpImplementation
+    NodeExtension o-- "best executor" OpExecutor
 
 ```

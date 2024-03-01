@@ -29,15 +29,18 @@ public:
 
     void visit_attributes(AttributeVisitor& visitor);
 
-    const MemoryDescs& get_memory_desc() const;
-    void set_memory_desc(const Argument& arg, const MemoryDesc& desc);
-    void set_memory_descs(const MemoryDescs& descs);
+    const Configuration& get_best_configuration() const;
+    void set_best_configuration(const Configuration& best_config);
+    const std::vector<Configuration>& get_available_configurations() const;
+    virtual MemoryDescs get_default_descriptors() const;
 
     void set_inplace();
     bool is_inplace() const;
 
-    virtual void select_preferred_formats();
+    virtual void select_preferred_formats(std::shared_ptr<const LayoutOptimizer> layout_optimizer);
     virtual void select_best_implementation() = 0;
+
+
     std::shared_ptr<OpImplementation> get_impl() const;
     std::shared_ptr<OpExecutor> get_executor() const;
     void create_executor(const ImplementationBuilders& builder);
@@ -54,18 +57,19 @@ public:
 
 protected:
     const ov::Node* m_node;
-    MemoryDescs m_memory_desc;
+    std::vector<Configuration> m_available_configs; // multimap
     std::shared_ptr<ov::Model> m_fused_ops = nullptr;
     std::shared_ptr<ImplementationsFactory> m_factory;
-    std::shared_ptr<OpImplementation> m_best_implementation = nullptr;
     std::shared_ptr<OptimizationAttributes> m_opt_attributes = nullptr;
-    std::shared_ptr<const LayoutOptimizer> m_layout_optimizer = nullptr;
+
+
+    // ??
+    Configuration m_best_config;
+    std::shared_ptr<OpImplementation> m_best_implementation = nullptr;
     std::shared_ptr<OpExecutor> m_executor = nullptr;
-
-
     NodeAffinity m_affinity;
 
-    virtual void initialize_descriptors();
+
 };
 
 template <typename NodeType, typename std::enable_if<std::is_base_of<ov::Node, NodeType>::value, bool>::type = true>

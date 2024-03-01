@@ -5,6 +5,7 @@
 #pragma once
 
 #include "extension/implementation_args.hpp"
+#include "extension/op_implementation.hpp"
 #include "openvino/core/partial_shape.hpp"
 #include "openvino/core/type/element_type.hpp"
 
@@ -50,7 +51,7 @@ struct MemoryDesc {
 
     Format m_format;
     element::Type m_data_type;
-    ov::PartialShape m_shape;
+    ov::PartialShape m_shape; // may be a custom class from CPU plugin for shape representation
     ov::PartialShape m_pad_b; // need partialshape here ?
     ov::PartialShape m_pad_e; // need partialshape here ?
 };
@@ -69,6 +70,19 @@ public:
     bool has(const Argument& arg) const {
         return find(arg) != end();
     }
+};
+
+struct ConfigurationProperties {
+    bool shape_agnostic;
+
+    std::vector<uint8_t> pad_begin_mask; // dynamic pad mask
+    std::vector<uint8_t> pad_end_mask;
+};
+
+struct Configuration {
+    MemoryDescs m_desc;
+    OpImplementation::Type m_type;
+    ConfigurationProperties m_properties;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const MemoryDescs& val) {

@@ -9,6 +9,8 @@
 #include "openvino/core/type.hpp"
 
 
+// 1. move factory init to pass
+// 2. Add custom shape infer impls
 #define DECLARE_REGISTER_FUNC(NewOpType, OriginalOpType, FactoryType) \
     extern void __register_ ## NewOpType ## _factory(); \
     void __register_ ## NewOpType ## _factory() { \
@@ -19,6 +21,7 @@
             return extended_op; \
         }); \
     }
+
 
 #define DECLARE_FACTORY_CLASS(FactoryName, OriginalOpType, TypedParams, Registry) \
     class FactoryName : public TypedFactory<OriginalOpType, TypedParams> { \
