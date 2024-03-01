@@ -68,8 +68,6 @@ protected:
     std::shared_ptr<OpImplementation> m_best_implementation = nullptr;
     std::shared_ptr<OpExecutor> m_executor = nullptr;
     NodeAffinity m_affinity;
-
-
 };
 
 template <typename NodeType, typename std::enable_if<std::is_base_of<ov::Node, NodeType>::value, bool>::type = true>

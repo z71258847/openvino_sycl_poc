@@ -22,29 +22,52 @@ classDiagram
 
 ```mermaid
 classDiagram
-    class MemoryDescs {
+    class MemoryDesc {
         + layout
         + precision
         + paddings
     }
+    class Configuration {
+        + ImplType
+    }
+
+    Configuration "1" *-- "1..N" MemoryDesc
+    Configuration *-- OptimizationAttributes
 
     class Model
     class ImplementationsFactory {
         + impls list
     }
-    class OpImplementation
+    class OpImplementation {
+        + ImplType
+        + get_executor(ImplementationsCache*)
+        + supports()
+        + initialize()
+    }
+    class ImplementationsCache {
+
+    }
+    class ImplementationsRegistry {
+
+    }
     class OptimizationAttributes
     class LayoutOptimizer
-    class OpExecutor
+    class OpExecutor {
+        execute()
+    }
 
     class NodeExtension
 
     NodeExtension o-- Model : fused ops
-    NodeExtension o-- MemoryDescs
+    NodeExtension o-- "1..N" Configuration : Preferred node configs
     NodeExtension *-- ImplementationsFactory
-    NodeExtension o-- OptimizationAttributes
-    NodeExtension o-- LayoutOptimizer
-    NodeExtension o-- "best impl" OpImplementation
-    NodeExtension o-- "best executor" OpExecutor
+    NodeExtension <-- LayoutOptimizer : use
+    NodeExtension o-- OpImplementation : best impl
+    ImplementationsFactory o-- "1..N" OpImplementation : available impls
+    OpImplementation --> OpExecutor : creates
+    ImplementationsCache --> OpImplementation
+    ImplementationsRegistry "1" --> "1..N" ImplementationsFactory
+    ImplementationsRegistry *-- OpImplementation
+    OpExecutor ..> NodeExtension
 
 ```
