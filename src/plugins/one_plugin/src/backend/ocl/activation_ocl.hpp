@@ -6,6 +6,7 @@
 
 #include "base_ocl_impl.hpp"
 #include "extension/implementation_params.hpp"
+#include "extension/executor.hpp"
 
 namespace ov {
 namespace ocl {

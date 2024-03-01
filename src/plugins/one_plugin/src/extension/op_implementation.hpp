@@ -7,11 +7,12 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "extension/executor.hpp"
 #include "extension/implementation_params.hpp"
 #include "openvino/core/except.hpp"
 
 namespace ov {
+
+class OpExecutor;
 
 enum class DeviceType {
     CPU = 0,

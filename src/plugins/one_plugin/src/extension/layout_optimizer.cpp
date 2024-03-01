@@ -3,7 +3,7 @@
 //
 
 #include "layout_optimizer.hpp"
-#include "extension/memory_descriptor.hpp"
+#include "runtime/memory_descriptor.hpp"
 #include "extension/op_implementation.hpp"
 #include "node_extension.hpp"
 

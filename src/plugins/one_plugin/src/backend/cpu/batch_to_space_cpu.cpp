@@ -13,8 +13,9 @@ class SomeBatchToSpaceCPUExecutor : public OpExecutor {
 public:
     explicit SomeBatchToSpaceCPUExecutor(const BatchToSpaceParams* params) : m_params(params) { }
 
-    void execute() override {
+    Event::Ptr execute(Stream& stream, const MemoryArgs& args, const Events dep_events) override {
         std::cerr << "SomeBatchToSpaceCPUExecutor::execute() " << m_params->some_parameter << "\n";
+        return nullptr;
     }
 
 private:

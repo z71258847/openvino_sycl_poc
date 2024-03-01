@@ -72,8 +72,9 @@ public:
 
     }
 
-    void execute() override {
+    Event::Ptr execute(Stream& stream, const MemoryArgs& args, const Events dep_events) override {
         std::cerr << "SomeActivationOCLExecutor::execute()" << (int)m_params->type << "\n";
+        return nullptr;
     }
 
 private:

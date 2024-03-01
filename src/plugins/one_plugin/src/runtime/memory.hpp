@@ -5,7 +5,8 @@
 #pragma once
 
 #include <memory>
-#include "extension/memory_descriptor.hpp"
+#include "extension/implementation_args.hpp"
+#include "memory_descriptor.hpp"
 #include "event.hpp"
 #include "stream.hpp"
 
@@ -44,6 +45,10 @@ struct Memory {
 protected:
     Engine* m_engine;
     MemoryDesc m_desc;
+};
+
+class MemoryArgs : public std::map<ov::Argument, Memory::Ptr> {
+
 };
 
 }  // namespace ov

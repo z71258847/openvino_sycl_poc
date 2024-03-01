@@ -802,7 +802,8 @@ bool TransformationsPipeline::run_on_model(const std::shared_ptr<ov::Model>& fun
         std::cerr << "Execute model " << std::endl;
         for (auto& op : func->get_ordered_ops()) {
             auto executor = std::dynamic_pointer_cast<NodeExtension>(op)->get_executor();
-            executor->execute();
+            Stream s;
+            executor->execute(s, {}, {});
         }
     }
 

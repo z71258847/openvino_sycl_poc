@@ -13,8 +13,9 @@ class SomeEltwiseOCLExecutor : public OpExecutor {
 public:
     explicit SomeEltwiseOCLExecutor(const EltwiseParams* params) : m_params(params) { }
 
-    void execute() override {
+    Event::Ptr execute(Stream& stream, const MemoryArgs& args, const Events dep_events) override {
         std::cerr << "SomeEltwiseOCLExecutor::execute()" << (int)m_params->type << "\n";
+        return nullptr;
     }
 
 private:

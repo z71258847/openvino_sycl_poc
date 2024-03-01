@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "extension/memory_descriptor.hpp"
+#include "runtime/memory_descriptor.hpp"
 
 namespace ov {
 class NodeExtension;

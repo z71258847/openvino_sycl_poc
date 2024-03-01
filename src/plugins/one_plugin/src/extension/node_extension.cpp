@@ -4,7 +4,6 @@
 
 #include "node_extension.hpp"
 #include "extension/implementation_args.hpp"
-#include "extension/memory_descriptor.hpp"
 #include "extension/op_implementation.hpp"
 #include "openvino/core/model.hpp"
 #include "openvino/op/parameter.hpp"

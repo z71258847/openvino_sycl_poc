@@ -13,8 +13,9 @@ class SomeFullyConnectedCPUExecutor : public OpExecutor {
 public:
     explicit SomeFullyConnectedCPUExecutor(const FullyConnectedParams* params) : m_params(params) { }
 
-    void execute() override {
+    Event::Ptr execute(Stream& stream, const MemoryArgs& args, const Events dep_events) override {
         std::cerr << "SomeFullyConnectedCPUExecutor::execute() " << (m_params != nullptr ? "with params" : "null params") << "\n";
+        return nullptr;
     }
 
 private:

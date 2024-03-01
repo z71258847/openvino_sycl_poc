@@ -6,6 +6,7 @@
 
 #include "backend/cpu/base_cpu_impl.hpp"
 #include "extension/implementation_params.hpp"
+#include "extension/executor.hpp"
 
 namespace ov {
 namespace cpu {

@@ -16,7 +16,10 @@ namespace ov {
 
 class NopExecutor : public OpExecutor {
 public:
-    void execute() override { std::cerr << "NopExecutor::Execute()\n"; }
+    Event::Ptr execute(Stream& stream, const MemoryArgs& args, const Events dep_events)  override {
+        std::cerr << "NopExecutor::Execute()\n";
+        return nullptr;
+    }
 };
 
 class NopImpl : public OpImplementation {

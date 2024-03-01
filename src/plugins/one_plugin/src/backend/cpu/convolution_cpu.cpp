@@ -13,8 +13,9 @@ class SomeConvolutionCPUExecutor : public OpExecutor {
 public:
     explicit SomeConvolutionCPUExecutor(const SomeCustomParams* params) : m_params(params) { }
 
-    void execute() override {
+    Event::Ptr execute(Stream& stream, const MemoryArgs& args, const Events dep_events) override {
         std::cerr << "SomeConvolutionCPUExecutor::execute() " << (m_params != nullptr ? "with params" : "null params") << "\n";
+        return nullptr;
     }
 
 private:

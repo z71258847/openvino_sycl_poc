@@ -6,7 +6,7 @@
 #include "extension/implementation_args.hpp"
 #include "extension/implementation_params.hpp"
 #include "extension/implementation_registry.hpp"
-#include "extension/memory_descriptor.hpp"
+#include "runtime/memory_descriptor.hpp"
 #include "extension/node_extension.hpp"
 #include "convolution.hpp"
 #include "opset/placeholder.hpp"

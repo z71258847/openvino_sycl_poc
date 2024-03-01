@@ -6,6 +6,7 @@
 
 
 #include <memory>
+#include <vector>
 
 namespace ov {
 
@@ -28,6 +29,10 @@ protected:
     virtual void wait_impl() = 0;
     virtual void set_impl() = 0;
     virtual bool is_set_impl() = 0;
+};
+
+class Events : public std::vector<Event::Ptr> {
+
 };
 
 }  // namespace ov

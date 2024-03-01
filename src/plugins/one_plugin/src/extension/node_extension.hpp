@@ -11,10 +11,10 @@
 #include "extension/implementation_factory.hpp"
 #include "extension/implementation_args.hpp"
 #include "extension/implementation_params.hpp"
-#include "extension/memory_descriptor.hpp"
 #include "extension/op_implementation.hpp"
 #include "extension/layout_optimizer.hpp"
 #include "extension/optimization_attributes.hpp"
+#include "runtime/memory_descriptor.hpp"
 
 
 #include <memory>
