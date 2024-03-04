@@ -44,7 +44,7 @@ struct NopImplementationsRegistry : public ImplementationsRegistry {
 REGISTER_IMPLS(Parameter, op::v0::Parameter, ImplementationParameters, NopImplementationsRegistry);
 REGISTER_IMPLS(Result, op::v0::Result, ImplementationParameters, NopImplementationsRegistry);
 REGISTER_IMPLS(Constant, op::v0::Constant, ImplementationParameters, NopImplementationsRegistry);
-REGISTER_IMPLS(Reshape, op::v1::Reshape, ImplementationParameters, NopImplementationsRegistry);
+// REGISTER_IMPLS(Reshape, op::v1::Reshape, ImplementationParameters, NopImplementationsRegistry);
 REGISTER_IMPLS(Placeholder, intel_gpu::op::Placeholder, ImplementationParameters, NopImplementationsRegistry);
 
 }  // namespace ov

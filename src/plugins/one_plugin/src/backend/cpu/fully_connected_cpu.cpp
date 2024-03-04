@@ -5,6 +5,7 @@
 #include "fully_connected_cpu.hpp"
 #include "extension/executor.hpp"
 #include "impls/fully_connected.hpp"
+#include "openvino/op/matmul.hpp"
 
 namespace ov {
 namespace cpu {
@@ -15,6 +16,16 @@ public:
 
     Event::Ptr execute(Stream& stream, const MemoryArgs& args, const Events dep_events) override {
         std::cerr << "SomeFullyConnectedCPUExecutor::execute() " << (m_params != nullptr ? "with params" : "null params") << "\n";
+
+        ov::TensorVector inputs {args.at(Argument::input(0))->to_tensor(), args.at(Argument::weights())->to_tensor()};
+        ov::TensorVector outputs {args.at(Argument::output(0))->to_tensor()};
+        OPENVINO_ASSERT(m_params != nullptr);
+        OPENVINO_ASSERT(m_params->m_node != nullptr);
+        ov::op::v0::MatMul op;
+        op.set_transpose_a(false);
+        op.set_transpose_b(true);
+        OPENVINO_ASSERT(op.evaluate(outputs, inputs));
+
         return nullptr;
     }
 

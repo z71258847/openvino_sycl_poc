@@ -12,4 +12,4 @@ file(GLOB_RECURSE LIBRARY_SRC
 add_library(${TARGET_NAME} OBJECT ${LIBRARY_SRC})
 
 target_include_directories(${TARGET_NAME} PUBLIC ${ROOT_DIR})
-target_link_libraries(${TARGET_NAME} PUBLIC openvino::runtime openvino::runtime::dev)
+target_link_libraries(${TARGET_NAME} PUBLIC openvino::runtime openvino::runtime::dev openvino::reference)

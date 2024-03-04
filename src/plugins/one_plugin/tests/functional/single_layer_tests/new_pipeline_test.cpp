@@ -25,7 +25,7 @@ class NewPipelineTest : public testing::WithParamInterface<int>,
                                 virtual public ov::test::SubgraphBaseTest {
 protected:
     void SetUp() override {
-        InputShape inputShape = ov::test::static_shapes_to_test_representation({{1, 3, 10, 11}})[0];
+        InputShape inputShape = ov::test::static_shapes_to_test_representation({{1, 3, 5, 6}})[0];
         init_input_shapes({inputShape});
 
         ov::op::PadType padType = ov::op::PadType::AUTO;
@@ -47,17 +47,19 @@ protected:
                                                                  padEnd, dilation, padType, out_channels);
 
         auto relu = std::make_shared<ov::op::v0::Relu>(convolutionNode);
-        auto target_shape = ov::op::v0::Constant::create(ov::element::i32, {2}, std::vector<int32_t>{8, 110});
+        auto target_shape = ov::op::v0::Constant::create(ov::element::i32, {2}, std::vector<int32_t>{8, 30});
         auto reshape = std::make_shared<ov::op::v1::Reshape>(relu, target_shape, false);
         auto fc = ov::test::utils::make_fully_connected(reshape, et, 16, false, ov::Shape{});
         auto abs = std::make_shared<ov::op::v0::Abs>(fc);
 
         function = std::make_shared<ov::Model>(ov::NodeVector{abs}, inputParams, "NewPipelineTest");
+        this->abs_threshold = 1e-3f;
+        this->rel_threshold = 1e-3f;
     }
 };
 
 TEST_P(NewPipelineTest, Inference) {
-    compile_model();
+    run();
 }
 
 INSTANTIATE_TEST_SUITE_P(smoke, NewPipelineTest, ::testing::Values(0));

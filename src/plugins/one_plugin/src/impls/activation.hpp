@@ -19,9 +19,8 @@ struct ActivationParams : public ImplementationParameters {
     };
     Type type = Type::Undef;
 
-    ActivationParams() = default;
-    ActivationParams(const ov::op::v0::Abs* node) : type(Type::Abs) {}
-    ActivationParams(const ov::op::v0::Relu* node) : type(Type::ReLU) {}
+    ActivationParams(const ov::op::v0::Abs* node) : ImplementationParameters(node), type(Type::Abs) {}
+    ActivationParams(const ov::op::v0::Relu* node) : ImplementationParameters(node), type(Type::ReLU) {}
 };
 
 struct ActivationImplementationsRegistry : public ImplementationsRegistry {

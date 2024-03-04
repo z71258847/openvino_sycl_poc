@@ -12,8 +12,12 @@
 namespace ov {
 
 void ImplementationsFactory::initialize_selector(const ov::Node* node) {
-    m_impl_selector = dynamic_cast<const NodeExtension*>(node)->get_affinity().m_type == DeviceType::CPU ? ImplSelector::default_cpu_selector()
-                                                                                                         : ImplSelector::default_gpu_selector();
+    auto affinity = dynamic_cast<const NodeExtension*>(node)->get_affinity();
+    if (affinity.m_type == DeviceType::UNDEFINED)
+        return;
+
+    m_impl_selector = affinity.m_type == DeviceType::CPU ? ImplSelector::default_cpu_selector()
+                                                         : ImplSelector::default_gpu_selector();
 
 }
 

@@ -5,6 +5,7 @@
 #include "activation_cpu.hpp"
 #include "extension/executor.hpp"
 #include "impls/activation.hpp"
+#include "openvino/runtime/tensor.hpp"
 
 namespace ov {
 namespace cpu {
@@ -17,6 +18,15 @@ public:
 
     Event::Ptr execute(Stream& stream, const MemoryArgs& args, const Events dep_events) override {
         std::cerr << "SomeActivationCPUExecutor::execute()" << (int)m_params->type << "\n";
+
+        auto input = args.at(Argument::input(0));
+        auto output = args.at(Argument::output(0));
+        ov::TensorVector inputs {input->to_tensor()};
+        ov::TensorVector outputs {output->to_tensor()};
+        OPENVINO_ASSERT(m_params != nullptr);
+        OPENVINO_ASSERT(m_params->m_node != nullptr);
+        OPENVINO_ASSERT(m_params->m_node->evaluate(outputs, inputs));
+
         return nullptr;
     }
 

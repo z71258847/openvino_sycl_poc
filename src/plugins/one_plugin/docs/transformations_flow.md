@@ -111,24 +111,21 @@ flowchart TB
         ImplementationsBuilder -- "Compile" --> ImplementationsBuilder
     end
 
-    start_flow("start") --> CommonTransformations --> ConvertToInternalOpset -->
-    PluginInternalTransformations --> ConvertToExtendedOpset --> FactoryInit -->
+    start_flow("CompileModel"):::Start --> CommonTransformations --> ConvertToInternalOpset -->
+    PluginInternalTransformations --> ConvertToExtendedOpset --> FactoryInit:::Optional -->
     LayoutAssignment --> OperatorsFusion --> LayoutPropagation --> SelectImplementations -->
-    InsertReorders --> FastOpInitialize --> BuildImplementations --> SerializeWeightsless -->
-    ConstantFolding --> MemoryDependenciesAnalysis --> SerializeWeightsFull --> TransferMemoryToDevice --> end_flow("end")
+    InsertReorders --> FastOpInitialize --> BuildImplementations --> SerializeWeightsless:::Optional -->
+    ConstantFolding --> MemoryDependenciesAnalysis --> SerializeWeightsFull:::Optional --> TransferMemoryToDevice --> end_flow("end"):::End
 
 
     MemoryDependenciesAnalysis -. Can Run earlier? .-> BuildImplementations
     FastOpInitialize <-. Can Merge? .-> InsertReorders
 
-    ImportWeightslessModel --> ConstantFolding
-    ImportWeightsfullModel --> TransferMemoryToDevice
+    ImportWeightslessModel:::Start --> ConstantFolding
+    ImportWeightsfullModel:::Start --> TransferMemoryToDevice
 
 
-    style start_flow fill:#6f6,stroke:#333,stroke-width:4px
-    style ImportWeightslessModel fill:#6f6,stroke:#333,stroke-width:4px
-    style ImportWeightsfullModel fill:#6f6,stroke:#333,stroke-width:4px
-    style end_flow fill:#f66,stroke:#333,stroke-width:4px
-    style SerializeWeightsless fill:#f7f,stroke:#333,stroke-width:4px,stroke-dasharray: 5 5
-    style SerializeWeightsFull fill:#f7f,stroke:#333,stroke-width:4px,stroke-dasharray: 5 5
+    classDef Optional stroke:#333,stroke-width:4px,stroke-dasharray: 5 5
+    classDef Start fill:#6f6,stroke:#333,stroke-width:4px
+    classDef End fill:#f66,stroke:#333,stroke-width:4px
 ```

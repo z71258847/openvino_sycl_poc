@@ -17,9 +17,8 @@ struct EltwiseParams : public ImplementationParameters {
     };
     Type type = Type::Undef;
 
-    EltwiseParams() = default;
-    EltwiseParams(const ov::op::v1::Add* node) : type(Type::Add) {}
-    EltwiseParams(const ov::op::v1::Subtract* node) : type(Type::Sub) {}
+    EltwiseParams(const ov::op::v1::Add* node) : ImplementationParameters(node), type(Type::Add) {}
+    EltwiseParams(const ov::op::v1::Subtract* node) : ImplementationParameters(node), type(Type::Sub) {}
 };
 
 struct EltwiseRegistry : public ImplementationsRegistry {

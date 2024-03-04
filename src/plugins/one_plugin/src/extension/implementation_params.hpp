@@ -10,9 +10,11 @@
 namespace ov {
 
 struct ImplementationParameters {
-    explicit ImplementationParameters(const ov::Node* node = nullptr) {}
+    explicit ImplementationParameters(const ov::Node* node) : m_node(node) {}
     std::string some_parameter = "";
     virtual ~ImplementationParameters() = default;
+
+    const ov::Node* m_node;
 };
 
 }  // namespace ov

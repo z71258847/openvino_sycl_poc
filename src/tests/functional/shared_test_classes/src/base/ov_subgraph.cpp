@@ -341,6 +341,12 @@ void SubgraphBaseTest::generate_inputs(const std::vector<ov::Shape>& targetInput
 void SubgraphBaseTest::infer() {
     inferRequest = compiledModel.create_infer_request();
     for (const auto& input : inputs) {
+        for (size_t i = 0; i < input.second.get_size(); i++) {
+            auto act = input.second.data<const float>();
+
+            std::cerr << "INPUT=" << act[i] << " i=" << i << std::endl;
+        }
+
         inferRequest.set_tensor(input.first, input.second);
     }
     inferRequest.infer();
@@ -475,6 +481,8 @@ void SubgraphBaseTest::validate() {
 #ifndef NDEBUG
     actualOutputs = get_plugin_outputs();
     expectedOutputs = calculate_refs();
+
+
 #else
     if (targetDevice == "TEMPLATE") {
         // TODO: Fix it in CVS-129397
@@ -493,6 +501,16 @@ void SubgraphBaseTest::validate() {
         t_ref.join();
     }
 #endif
+
+    std::cerr << "PLUGIN OUT PTR = " << actualOutputs[0].data() << std::endl;
+    ASSERT_EQ(actualOutputs.size(), expectedOutputs.size());
+    ASSERT_EQ(actualOutputs[0].get_size(), expectedOutputs[0].get_size());
+    for (size_t i = 0; i < actualOutputs[0].get_size(); i++) {
+        auto act = actualOutputs[0].data<const float>();
+        auto ref = expectedOutputs[0].data<const float>();
+
+        ASSERT_EQ(act[i], ref[i]) << "actual=" << act[i] << " ref=" << ref[i] << " i=" << i << std::endl;
+    }
 
     if (expectedOutputs.empty()) {
         return;

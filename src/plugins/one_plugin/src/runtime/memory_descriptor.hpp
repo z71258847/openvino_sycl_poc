@@ -7,6 +7,7 @@
 #include "extension/implementation_args.hpp"
 #include "extension/op_implementation.hpp"
 #include "openvino/core/partial_shape.hpp"
+#include "openvino/core/shape.hpp"
 #include "openvino/core/type/element_type.hpp"
 
 namespace ov {
@@ -49,11 +50,28 @@ struct MemoryDesc {
         , m_pad_b(ov::PartialShape::dynamic())
         , m_pad_e(ov::PartialShape::dynamic()) {}
 
+    MemoryDesc(ov::element::Type type, ov::PartialShape shape, const Format& fmt)
+        : m_format(fmt)
+        , m_data_type(type)
+        , m_shape(shape)
+        , m_pad_b(ov::PartialShape::dynamic())
+        , m_pad_e(ov::PartialShape::dynamic()) {}
+
     Format m_format;
     element::Type m_data_type;
     ov::PartialShape m_shape; // may be a custom class from CPU plugin for shape representation
     ov::PartialShape m_pad_b; // need partialshape here ?
     ov::PartialShape m_pad_e; // need partialshape here ?
+
+    size_t byte_size() const {
+        return ov::shape_size(m_shape.get_shape()) * m_data_type.size();
+    }
+
+    std::string to_string() const {
+        std::string res;
+        res += m_shape.to_string() + ":" + m_data_type.to_string()  + ":" + m_format.to_string();
+        return res;
+    }
 };
 
 class MemoryDescs : public std::map<Argument, MemoryDesc> {
@@ -61,7 +79,8 @@ public:
     std::string to_string() const {
         std::string res;
         for (auto& kv : *this) {
-            res += kv.first.to_string() + " " + kv.second.m_format.to_string() + ":" + kv.second.m_shape.to_string() + "\n";
+            const auto& desc = kv.second;
+            res += kv.first.to_string() + " " + desc.to_string() + "\n";
         }
 
         return res;

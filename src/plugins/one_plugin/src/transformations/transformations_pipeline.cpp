@@ -12,6 +12,7 @@
 #include <tuple>
 #include <vector>
 
+#include "extension/implementation_args.hpp"
 #include "extension/node_extension.hpp"
 #include "backend/ocl/layout_optimizer.hpp"
 #include "transformations_pipeline.hpp"
@@ -51,6 +52,7 @@
 #include "openvino/pass/constant_folding.hpp"
 #include "openvino/pass/manager.hpp"
 #include "openvino/pass/visualize_tree.hpp"
+#include "runtime/memory.hpp"
 #include "transformations/binary_conv_to_conv.hpp"
 #include "transformations/clamp_fp16_output.hpp"
 #include "transformations/convert_fc_to_compressed.hpp"
@@ -798,13 +800,6 @@ bool TransformationsPipeline::run_on_model(const std::shared_ptr<ov::Model>& fun
         // manager.register_pass<ov::intel_gpu::AddReordersForSelectedImpls>();
         // manager.register_pass<ov::intel_gpu::OptimizeReorders>();
         manager.run_passes(func);
-
-        std::cerr << "Execute model " << std::endl;
-        for (auto& op : func->get_ordered_ops()) {
-            auto executor = std::dynamic_pointer_cast<NodeExtension>(op)->get_executor();
-            Stream s;
-            executor->execute(s, {}, {});
-        }
     }
 
     return true;

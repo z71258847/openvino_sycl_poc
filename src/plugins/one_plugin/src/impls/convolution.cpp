@@ -30,13 +30,13 @@ public:
     MemoryDescs get_default_descriptors() const override {
         MemoryDescs descs;
         // Basic customization
-        descs[Argument::input(0)] = MemoryDesc(Format::any, m_node->get_input_partial_shape(0));
-        descs[Argument::weights()] = MemoryDesc(Format::any, m_node->get_input_partial_shape(1));
-        descs[Argument::output(0)] = MemoryDesc(Format::any, m_node->get_output_partial_shape(0));
+        descs[Argument::input(0)] = MemoryDesc(m_node->get_input_element_type(0), m_node->get_input_partial_shape(0), Format::any);
+        descs[Argument::weights()] = MemoryDesc(m_node->get_input_element_type(1), m_node->get_input_partial_shape(1), Format::any);
+        descs[Argument::output(0)] = MemoryDesc(m_node->get_output_element_type(0), m_node->get_output_partial_shape(0), Format::any);
 
         // Check in/out node type
         if (ov::is_type<intel_gpu::op::Placeholder>(m_node->get_input_node_shared_ptr(2))) {
-            descs[Argument::bias()] = MemoryDesc(Format::any, m_node->get_input_partial_shape(2));
+            descs[Argument::bias()] = MemoryDesc(m_node->get_input_element_type(2), m_node->get_input_partial_shape(2), Format::any);
         }
 
         // Check prev/next node layouts

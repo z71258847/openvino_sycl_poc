@@ -10,7 +10,7 @@
 namespace ov {
 
 struct BatchToSpaceParams : public ImplementationParameters {
-    explicit BatchToSpaceParams(const ov::op::v1::BatchToSpace* node) : some_parameter(node->get_output_size()) {
+    explicit BatchToSpaceParams(const ov::op::v1::BatchToSpace* node) : ImplementationParameters(node), some_parameter(node->get_output_size()) {
 
     }
     int some_parameter = 100500;

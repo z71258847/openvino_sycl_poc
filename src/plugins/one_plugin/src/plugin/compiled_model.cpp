@@ -59,9 +59,7 @@ CompiledModel::CompiledModel(std::shared_ptr<ov::Model> model,
     , m_context(context)
     , m_config(config)
     , m_wait_executor(std::make_shared<ov::threading::CPUStreamsExecutor>(ov::threading::IStreamsExecutor::Config{"Intel GPU plugin wait executor"}))
-    , m_model_name(model->get_friendly_name())
-    , m_inputs(ov::ICompiledModel::inputs())
-    , m_outputs(ov::ICompiledModel::outputs())
+    , m_model(model)
     , m_loaded_from_cache(false) {
 }
 
@@ -115,7 +113,7 @@ ov::Any CompiledModel::get_property(const std::string& name) const {
             ov::PropertyName{ov::execution_devices.name(), PropertyMutability::RO}
         };
     } else if (name == ov::model_name) {
-        return decltype(ov::model_name)::value_type {m_model_name};
+        return decltype(ov::model_name)::value_type {m_model->get_friendly_name()};
     } else if (name == ov::loaded_from_cache) {
         return decltype(ov::loaded_from_cache)::value_type {m_loaded_from_cache};
     } else if (name == ov::optimal_number_of_infer_requests) {

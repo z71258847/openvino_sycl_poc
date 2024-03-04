@@ -27,18 +27,18 @@ std::shared_ptr<OpImplementation> NodeExtension::get_impl() const {
 MemoryDescs NodeExtension::get_default_descriptors() const {
     MemoryDescs desc;
     for (size_t i = 0; i < m_node->get_input_size(); i++) {
-        desc[Argument::input(i)] = MemoryDesc(Format::any, m_node->get_input_partial_shape(i));
+        desc[Argument::input(i)] = MemoryDesc(m_node->get_input_element_type(i), m_node->get_input_partial_shape(i), Format::any);
     }
 
     for (size_t i = 0; i < m_node->get_output_size(); i++) {
-        desc[Argument::output(i)] = MemoryDesc(Format::any, m_node->get_output_partial_shape(i));
+        desc[Argument::output(i)] = MemoryDesc(m_node->get_output_element_type(i), m_node->get_output_partial_shape(i), Format::any);
     }
 
     if (m_fused_ops) {
         size_t i = 0;
         for (auto& op : m_fused_ops->get_ordered_ops()) {
             if (ov::is_type<op::v0::Parameter>(op)) {
-                desc[Argument::post_op(i++)] = MemoryDesc(Format::any, op->get_output_partial_shape(0));
+                desc[Argument::post_op(i++)] = MemoryDesc(op->get_output_element_type(0), op->get_output_partial_shape(0), Format::any);
             }
         }
     }
@@ -76,6 +76,7 @@ void NodeExtension::set_affinity(const NodeAffinity& affinity) {
 
 void NodeExtension::set_affinity(const DeviceType& device_type) {
     m_affinity = NodeAffinity{device_type};
+    m_factory->initialize_selector(m_node);
 }
 
 NodeAffinity NodeExtension::get_affinity() const {

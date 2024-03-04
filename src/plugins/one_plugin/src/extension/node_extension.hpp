@@ -57,7 +57,7 @@ public:
 
 protected:
     const ov::Node* m_node;
-    std::vector<Configuration> m_available_configs; // multimap
+    std::vector<Configuration> m_available_configs;
     std::shared_ptr<ov::Model> m_fused_ops = nullptr;
     std::shared_ptr<ImplementationsFactory> m_factory;
     std::shared_ptr<OptimizationAttributes> m_opt_attributes = nullptr;

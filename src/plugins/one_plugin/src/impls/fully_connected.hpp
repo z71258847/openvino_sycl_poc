@@ -9,7 +9,7 @@
 namespace ov {
 
 struct FullyConnectedParams : public ImplementationParameters {
-    FullyConnectedParams(const intel_gpu::op::FullyConnected* node) {}
+    FullyConnectedParams(const intel_gpu::op::FullyConnected* node) : ImplementationParameters(node) {}
 };
 
 class FullyConnectedImplementationsRegistry : public ImplementationsRegistry {

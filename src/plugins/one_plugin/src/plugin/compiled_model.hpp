@@ -42,24 +42,18 @@ public:
                                        "to Core::compile_model during compilation");
     };
 
-    const std::vector<ov::Output<const ov::Node>>& outputs() const override {
-        return m_outputs;
-    }
-    const std::vector<ov::Output<const ov::Node>>& inputs() const override {
-        return m_inputs;
-    }
-
     RemoteContextImpl::Ptr get_context_impl() const {
         return m_context;
     }
+
+    std::shared_ptr<ov::Model> get_model() const { return m_model; }
 
 private:
     RemoteContextImpl::Ptr m_context;
     ExecutionConfig m_config;
     std::shared_ptr<ov::threading::ITaskExecutor> m_wait_executor;
     std::string m_model_name;
-    std::vector<ov::Output<const ov::Node>> m_inputs;
-    std::vector<ov::Output<const ov::Node>> m_outputs;
+    std::shared_ptr<ov::Model> m_model;
     bool m_loaded_from_cache;
 };
 
