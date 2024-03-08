@@ -14,7 +14,8 @@
 #include "openvino/pass/pattern/op/wrap_type.hpp"
 
 namespace {
-bool is_data_movement_operation(const std::shared_ptr<ov::Node>& node, const std::vector<ov::DiscreteTypeInfo>& allowed_data_movement_ops) {
+bool is_data_movement_operation(const std::shared_ptr<ov::Node>& node,
+                                const std::vector<ov::DiscreteTypeInfo>& allowed_data_movement_ops) {
     for (auto& allowed_type : allowed_data_movement_ops) {
         if (node->get_type_info().is_castable(allowed_type))
             return true;
@@ -48,7 +49,8 @@ std::vector<ov::DiscreteTypeInfo> ov::pass::MoveEltwiseUpThroughDataMov::get_def
     };
 }
 
-ov::pass::MoveEltwiseUpThroughDataMov::MoveEltwiseUpThroughDataMov(std::vector<DiscreteTypeInfo> allowed_data_movement_ops) {
+ov::pass::MoveEltwiseUpThroughDataMov::MoveEltwiseUpThroughDataMov(
+    std::vector<DiscreteTypeInfo> allowed_data_movement_ops) {
     MATCHER_SCOPE(MoveEltwiseUpThroughDataMov);
     auto eltwise_pattern = ov::pass::pattern::wrap_type<ov::op::util::UnaryElementwiseArithmetic,
                                                         ov::op::util::BinaryElementwiseArithmetic,
