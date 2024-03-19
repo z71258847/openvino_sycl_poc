@@ -20,6 +20,7 @@
 #include "transformations/common_optimizations/shared_ops_optimization.hpp"
 #include "transformations/common_optimizations/simplify_shape_of_sub_graph.hpp"
 #include "transformations/symbolic_transformations/chained_maximum.hpp"
+#include "transformations/symbolic_transformations/dereshape_concat.hpp"
 #include "transformations/symbolic_transformations/dereshape_matmul.hpp"
 #include "transformations/symbolic_transformations/label_optimization.hpp"
 #include "transformations/symbolic_transformations/nop_broadcast.hpp"
@@ -198,6 +199,7 @@ ov::pass::SymbolicOptimizations::SymbolicOptimizations(bool full_run) {
         REGISTER_SYMBOLIC(LabelResolvingThroughSelect)  // figures out that broadcasting didn't happen through Select op
         REGISTER_SYMBOLIC(DeReshapeMatMul)
         REGISTER_SYMBOLIC(DeReshapeFullyConnected)
+        REGISTER_SYMBOLIC(DeReshapeConcat)
         REGISTER_SYMBOLIC(ReshapeOptimizations)
         REGISTER_SYMBOLIC(SimplifyShapeOfSubGraph)
     }
