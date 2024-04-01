@@ -290,6 +290,14 @@ ov::pass::pattern::op::ValuePredicate constant_predicate(std::function<bool(cons
         return false;
     });
 }
+
+template <typename T>
+ov::pass::pattern::op::ValuePredicate constant_value(const T target_value, const T threshold = std::numeric_limits<T>::epsilon()) {
+    return pass::pattern::op::as_value_predicate([=](const ov::Output<ov::Node>& output) -> bool {
+        return ov::op::util::has_constant_value<T>(output.get_node_shared_ptr(), target_value, threshold);
+    });
+}
+
 }  // namespace util
 }  // namespace op
 }  // namespace ov
