@@ -57,7 +57,6 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
   ::sycl::event e;
   if (M == 1) // GEMV
   {
-
     // K=4096
     uint32_t ppg=16;
     if (K==11008) ppg=64;
@@ -80,7 +79,7 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
                   ndi);
             });
       });
-    }/* else if (K == 11008) {
+    } else if (K == 11008) {
       e = queue.submit([&](handler& cgh) {
         cgh.parallel_for(
             RangeV2, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL {
@@ -92,39 +91,10 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
                   ndi);
             });
       });
-    }*/
-    // e = queue.submit([=](::sycl::handler& cgh) {
-    //     cgh.parallel_for(::sycl::range<3>(1, M, N), [=](::sycl::id<3> index) {
-    //         const uint m = index[1];
-    //         const uint n = index[2];
-    //         using accum_t = typename AccumulatorType<AType, WType>::type;
-    //         accum_t accumulator = 0.0f;
-
-    //         const uint dst_index = n;
-    //         for (uint y = 0; y < K; ++y) {
-    //             const uint input0_offset = y;
-    //             // const uint decomp_offset = (y / 32)*N + n % N;
-    //             const uint decomp_offset = (y / 32) + n * 128;
-    //             const uint filter_offset = y + n*K;
-    //             // const uint filter_offset = y*N + n;
-
-    //             accum_t zp_val = static_cast<accum_t>(8.0f);
-    //             accum_t scale = s[decomp_offset];
-    //             const WType packed = w[filter_offset / 2];
-
-    //             const WType v0 = packed & 0x0F;
-    //             const WType v1 = (packed & 0xF0) >> 4;
-    //             accum_t unpacked = filter_offset % 2 == 0 ? v0 : v1;
-
-    //             accum_t filter_val = (unpacked - zp_val) * scale;
-    //             accumulator += a[input0_offset] * filter_val;
-    //         }
-    //         dst[dst_index] = accumulator;
-    //     });
-    // });
+    }
   } else // GEMM
   {
-    /*int groupReduce2048H = (N + 15) / 16;
+    int groupReduce2048H = (N + 15) / 16;
     int groupReduce2048V = 1;
     int localReduce2048H = 64; // internalPrecision == 0  (fp32), not 32
     int localReduce2048V = 1;
@@ -167,37 +137,9 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
                     ndi);
               });
         });
-      }*/
-      e = queue.submit([=](::sycl::handler& cgh) {
-        cgh.parallel_for(::sycl::range<3>(1, M, N), [=](::sycl::id<3> index) {
-            const uint m = index[1];
-            const uint n = index[2];
-            using accum_t = typename AccumulatorType<AType, WType>::type;
-            accum_t accumulator = 0.0f;
-
-            const uint dst_index = n + m*N;
-            for (uint y = 0; y < K; ++y) {
-                const uint input0_offset = y + m*K;
-                // const uint decomp_offset = (y / 32)*N + n % N;
-                const uint decomp_offset = (y / 32) + n * 128;
-                const uint filter_offset = y + n*K;
-                // const uint filter_offset = y*N + n;
-
-                accum_t zp_val = static_cast<accum_t>(8.0f);
-                accum_t scale = s[decomp_offset];
-                const WType packed = w[filter_offset / 2];
-
-                const WType v0 = packed & 0x0F;
-                const WType v1 = (packed & 0xF0) >> 4;
-                accum_t unpacked = filter_offset % 2 == 0 ? v0 : v1;
-
-                accum_t filter_val = (unpacked - zp_val) * scale;
-                accumulator += a[input0_offset] * filter_val;
-            }
-            dst[dst_index] = accumulator;
-        });
-      });
-    /*else if (K == 11008) {
+      }
+    }
+    else if (K == 11008) {
       for (int ii = 0; ii < 5; ii++) {
         lastReduce = 0;
         e = queue.submit([&](handler& cgh) {
@@ -236,11 +178,11 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
               });
         });
       }
-    }*/
+    }
   }
   return e;
 }
-/*
+
 template<typename AType, typename WType, typename ScaleType, typename DType>
 ::sycl::event run_fc_q4_0_fp32out(::sycl::queue& queue, const AType* a, const WType* w, const ScaleType* s, DType* dst,
                               size_t M, size_t N, size_t K) {
@@ -319,7 +261,7 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
                     (uint8_t*)w,
                     (uint8_t*)a,
                     (uint8_t*)dst,
-                    (uint8_t*)a,
+                    (uint8_t*)s,
                     K,
                     M,
                     ii,
@@ -371,7 +313,6 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
   }
   return e;
 }
-*/
 
 struct fully_connected_sycl : typed_primitive_sycl_impl<fully_connected> {
     using parent = typed_primitive_sycl_impl<fully_connected>;
@@ -472,15 +413,15 @@ struct fully_connected_sycl : typed_primitive_sycl_impl<fully_connected> {
         bool barrier = stream.get_queue_type() == QueueTypes::out_of_order;
 
         if (out_t == ov::element::f16){
-          const ::sycl::half* in = static_cast<const ::sycl::half*>(inputs[0]->buffer_ptr());
-          const uint8_t* wei = static_cast<const uint8_t*>(weights->buffer_ptr());
-          ::sycl::half* out = static_cast<::sycl::half*>(output->buffer_ptr());
-          const ::sycl::half* ds = static_cast<const ::sycl::half*>(inputs[1]->buffer_ptr());
+          // const ::sycl::half* in = static_cast<const ::sycl::half*>(inputs[0]->buffer_ptr());
+          // const uint8_t* wei = static_cast<const uint8_t*>(weights->buffer_ptr());
+          // ::sycl::half* out = static_cast<::sycl::half*>(output->buffer_ptr());
+          // const ::sycl::half* ds = static_cast<const ::sycl::half*>(inputs[1]->buffer_ptr());
           return to_ocl_event(stream, run_fc_q4_0_fp16out(sycl_queue, in, wei, ds, out, M, N, K));
         }
-        /*else if (out_t == ov::element::f32){
+        else if (out_t == ov::element::f32){
           return to_ocl_event(stream, run_fc_q4_0_fp32out(sycl_queue, in, wei, ds, out, M, N, K));
-        }*/
+        }
     }
 
     static std::shared_ptr<WeightsReorderParams> get_weights_reorder(const kernel_impl_params& impl_params) {
