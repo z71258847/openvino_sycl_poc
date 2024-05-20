@@ -830,3 +830,750 @@ ESIMD_INLINE void matrixMulCommonDim11008Int4NoReshapeNx16V2_ipex_FP32out(
         (float*)c + outputOffset + hh * 16, bb.select<16, 1>(0));
   }
 }
+
+ESIMD_INLINE void matrixMulCommonDim4096Int4NoReshape(uint8_t* a, uint8_t* b, uint8_t* c, uint8_t* d, nd_item<1>& ndi) {
+  __ESIMD_NS::slm_init(4096 * sizeof(fp16) + 64 * sizeof(fp16));
+  int hhh = ndi.get_global_id(0); // [0, 512*64)
+  int hh = ndi.get_local_linear_id(); // [0, 64)
+  int h = hhh >> 6; // [0, 512)
+  int offsetA = (h * 8 * 4096 + hh * 64 * 8) >> 1;
+  int offsetQuan = h * 64 * 16 * sizeof(fp16) + hh * 16 * sizeof(fp16);
+  int offsetB = hh * 64 * sizeof(fp16);
+  int outputOffset = 8 * h;
+  simd<unsigned char, 256> aaa;
+  simd<fp16, 16> quant;
+  simd<fp16, 64> bb;
+  simd<fp16, 32 * 16> aa;
+  simd<fp16, 16> cc(0.0f);
+
+  bb.template bit_cast_view<unsigned char>().template select<128, 1>(0) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    128,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)b + offsetB);
+
+  aaa.template bit_cast_view<unsigned char>().template select<256, 1>(0) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    256,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)a + offsetA);
+
+  quant.template bit_cast_view<unsigned char>().template select<32, 1>(0) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    32,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)d + offsetQuan);
+
+#pragma unroll
+  for (int k = 0; k < 16; k++) {
+    aa.select<16, 2>(32 * k) = aaa.select<16, 1>(16 * k) & 0xf;
+    aa.select<16, 2>(32 * k + 1) = aaa.select<16, 1>(16 * k) >> 4;
+  }
+
+  aa = aa - 8.0f;
+#pragma unroll
+  for (int k = 0; k < 16; k++) {
+    aa.select<32, 1>(32 * k) = quant[k] * aa.select<32, 1>(32 * k);
+  }
+
+  slm_block_store<fp16, 64>(hh * 64 * sizeof(fp16), bb);
+  barrier();
+  int inputVectSlmOffset = hh & 0x7;
+  inputVectSlmOffset = inputVectSlmOffset * 512 * sizeof(fp16);
+#pragma unroll
+  for (int ll = 0; ll < 2; ll++) {
+    simd<fp16, 16 * 16> fBb;
+#pragma unroll
+    for (int k = 0; k < 2; k++) {
+      fBb.template select<128, 1>(128 * k) = slm_block_load<fp16, 128>(inputVectSlmOffset + 128 * k * sizeof(fp16));
+    }
+
+#pragma unroll
+    for (int k = 0; k < 16; k++) {
+      cc += aa.select<16, 1>(16 * k + ll * 256) * fBb.select<16, 1>(16 * k);
+    }
+    inputVectSlmOffset += 256 * sizeof(fp16);
+  }
+
+  cc.select<8, 1>(0) += cc.select<8, 1>(8);
+  cc.select<4, 1>(0) += cc.select<4, 1>(4);
+  cc.select<2, 1>(0) += cc.select<2, 1>(2);
+  simd<fp16, 1> slmAccumulationTemp = cc[0] + cc[1];
+  uint32_t slmAccumulationOffsetGroup = hh >> 3;
+  uint32_t slmAccumulationOffsetSimdSlot = hh & 0x7;
+  uint32_t slmAccumulationOffset = 4096 * sizeof(fp16) + (slmAccumulationOffsetGroup + slmAccumulationOffsetSimdSlot * 8) * sizeof(fp16);
+
+  //slm_scalar_store(slmAccumulationOffset, slmAccumulationTemp);
+  slm_block_store<fp16, 1>(slmAccumulationOffset, slmAccumulationTemp);
+  barrier();
+
+  if (hh == 0) {
+    simd<fp16, 64> sum;
+    //simd<fp16, 8> sumOut;
+
+    sum = slm_block_load<fp16, 64>(4096 * sizeof(fp16));
+
+#pragma unroll
+    for (int k = 1; k < 8; k++) {
+      sum.select<8, 1>(0) += sum.select<8, 1>(8 * k);
+    }
+
+    //sumOut = sum.select<8, 1>(0);
+
+    __ESIMD_ENS::lsc_block_store<
+      fp16,
+      8,
+      __ESIMD_ENS::lsc_data_size::default_size,
+      __ESIMD_ENS::cache_hint::write_back,
+      __ESIMD_ENS::cache_hint::write_back>((fp16*)c + outputOffset, sum.select<8, 1>(0));
+  }
+}
+
+ESIMD_INLINE void matrixMulCommonDim4096Int4NoReshape_FP32out(uint8_t* a, uint8_t* b, uint8_t* c, uint8_t* d, nd_item<1>& ndi) {
+  __ESIMD_NS::slm_init(4096 * sizeof(fp16) + 64 * sizeof(fp16));
+  int hhh = ndi.get_global_id(0); // [0, 512*64)
+  int hh = ndi.get_local_linear_id(); // [0, 64)
+  int h = hhh >> 6; // [0, 512)
+  int offsetA = (h * 8 * 4096 + hh * 64 * 8) >> 1;
+  int offsetQuan = h * 64 * 16 * sizeof(fp16) + hh * 16 * sizeof(fp16);
+  int offsetB = hh * 64 * sizeof(fp16);
+  int outputOffset = 8 * h;
+  simd<unsigned char, 256> aaa;
+  simd<fp16, 16> quant;
+  simd<fp16, 64> bb;
+  simd<fp16, 32 * 16> aa;
+  simd<fp16, 16> cc(0.0f);
+
+  bb.template bit_cast_view<unsigned char>().template select<128, 1>(0) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    128,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)b + offsetB);
+
+  aaa.template bit_cast_view<unsigned char>().template select<256, 1>(0) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    256,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)a + offsetA);
+
+  quant.template bit_cast_view<unsigned char>().template select<32, 1>(0) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    32,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)d + offsetQuan);
+
+#pragma unroll
+  for (int k = 0; k < 16; k++) {
+    aa.select<16, 2>(32 * k) = aaa.select<16, 1>(16 * k) & 0xf;
+    aa.select<16, 2>(32 * k + 1) = aaa.select<16, 1>(16 * k) >> 4;
+  }
+
+  aa = aa - 8.0f;
+#pragma unroll
+  for (int k = 0; k < 16; k++) {
+    aa.select<32, 1>(32 * k) = quant[k] * aa.select<32, 1>(32 * k);
+  }
+
+  //simd<fp16, 64> fp16Shuffle;
+  //fp16Shuffle = bb;
+  //fp16Shuffle.select<32, 1>(0) = bb.select<32, 2>(0);
+  //fp16Shuffle.select<32, 1>(32) = bb.select<32, 2>(1);
+  slm_block_store<fp16, 64>(hh * 64 * sizeof(fp16), bb);
+  barrier();
+  int inputVectSlmOffset = hh & 0x7;
+  inputVectSlmOffset = inputVectSlmOffset * 512 * sizeof(fp16);
+#pragma unroll
+  for (int ll = 0; ll < 2; ll++) {
+    simd<fp16, 16 * 16> fBb;
+#pragma unroll
+    for (int k = 0; k < 2; k++) {
+      fBb.template select<128, 1>(128 * k) = slm_block_load<fp16, 128>(inputVectSlmOffset + 128 * k * sizeof(fp16));
+    }
+
+#pragma unroll
+    for (int k = 0; k < 16; k++) {
+      cc += aa.select<16, 1>(16 * k + ll * 256) * fBb.select<16, 1>(16 * k);
+    }
+    inputVectSlmOffset += 256 * sizeof(fp16);
+  }
+
+  cc.select<8, 1>(0) += cc.select<8, 1>(8);
+  cc.select<4, 1>(0) += cc.select<4, 1>(4);
+  cc.select<2, 1>(0) += cc.select<2, 1>(2);
+  simd<float, 1> slmAccumulationTemp = cc[0] + cc[1];
+  uint32_t slmAccumulationOffsetGroup = hh >> 3;
+  uint32_t slmAccumulationOffsetSimdSlot = hh & 0x7;
+  uint32_t slmAccumulationOffset = 4096 * sizeof(fp16) + (slmAccumulationOffsetGroup + slmAccumulationOffsetSimdSlot * 8) * sizeof(float);
+
+  //slm_scalar_store(slmAccumulationOffset, slmAccumulationTemp);
+  slm_block_store<float, 1>(slmAccumulationOffset, slmAccumulationTemp);
+  barrier();
+
+  if (hh == 0) {
+    simd<float, 64> sum;
+    //simd<fp16, 8> sumOut;
+
+    sum = slm_block_load<float, 64>(4096 * sizeof(fp16));
+
+#pragma unroll
+    for (int k = 1; k < 8; k++) {
+      sum.select<8, 1>(0) += sum.select<8, 1>(8 * k);
+    }
+
+    //sumOut = sum.select<8, 1>(0);
+
+    __ESIMD_ENS::lsc_block_store<
+      float,
+      8,
+      __ESIMD_ENS::lsc_data_size::default_size,
+      __ESIMD_ENS::cache_hint::write_back,
+      __ESIMD_ENS::cache_hint::write_back>((float*)c + outputOffset, sum.select<8, 1>(0));
+  }
+}
+
+
+ESIMD_INLINE void matrixMulCommonDim11008Int4NoReshape(uint8_t* a, uint8_t* b, uint8_t* c, uint8_t* d, nd_item<2>& ndi) {
+  __ESIMD_NS::slm_init(11008 * sizeof(fp16) + 88 * sizeof(fp16));
+  int hh = ndi.get_local_id(0); // [0, 11)
+  int vv = ndi.get_local_id(1); // [0, 4)
+  int h = ndi.get_group(0); // [0, 11)
+  int localLinearId = vv * 11 + hh;
+  int offsetA = (h * 8 * 11008 + vv * 11008 + hh * 1024) >> 1;
+  int offsetQuant = h * 344 * 8 * sizeof(fp16) + (vv * 344 + hh * 32) * sizeof(fp16);
+  int offsetB = localLinearId * 256 * sizeof(fp16);
+  int outputOffset = 8 * h;
+  simd<unsigned char, 512> aaa;
+  simd<fp16, 32> quant;
+  simd<fp16, 256> bb;
+  simd<fp16, 64 * 16> aa;
+  simd<fp16, 16> cc(0.0f);
+
+  aaa.template bit_cast_view<unsigned char>().template select<256, 1>(0) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    256,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)a + offsetA);
+
+  aaa.template bit_cast_view<unsigned char>().template select<128, 1>(256) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    128,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)a + offsetA + 256);
+
+  if (hh != 10) {
+    aaa.template bit_cast_view<unsigned char>().template select<128, 1>(256 + 128) =
+      __ESIMD_ENS::lsc_block_load<
+      uint8_t,
+      128,
+      __ESIMD_ENS::lsc_data_size::default_size,
+      __ESIMD_ENS::cache_hint::cached,
+      __ESIMD_ENS::cache_hint::cached>((uint8_t*)a + offsetA + 256 + 128);
+
+  }
+
+  quant.template bit_cast_view<unsigned char>().template select<64, 1>(0) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    64,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)d + offsetQuant);
+
+  if (localLinearId < 43) {
+#pragma unroll
+    for (int k = 0; k < 4; k++) {
+      bb.template bit_cast_view<unsigned char>().template select<128, 1>(128 * k) =
+        __ESIMD_ENS::lsc_block_load<
+        uint8_t,
+        128,
+        __ESIMD_ENS::lsc_data_size::default_size,
+        __ESIMD_ENS::cache_hint::cached,
+        __ESIMD_ENS::cache_hint::cached>((uint8_t*)b + offsetB + 128 * k);
+    }
+  }
+
+#pragma unroll
+  for (int k = 0; k < 24; k++) {
+    aa.select<16, 2>(32 * k) = aaa.select<16, 1>(16 * k) & 0xf;
+    aa.select<16, 2>(32 * k + 1) = aaa.select<16, 1>(16 * k) >> 4;
+  }
+
+  if (hh != 10) {
+#pragma unroll
+    for (int k = 24; k < 32; k++) {
+      aa.select<16, 2>(32 * k) = aaa.select<16, 1>(16 * k) & 0xf;
+      aa.select<16, 2>(32 * k + 1) = aaa.select<16, 1>(16 * k) >> 4;
+    }
+  }
+
+  aa = aa - 8.0f;
+#pragma unroll
+  for (int k = 0; k < 24; k++) {
+    aa.select<32, 1>(32 * k) = aa.select<32, 1>(32 * k) * quant[k];
+  }
+
+  if (hh != 10) {
+#pragma unroll
+    for (int k = 24; k < 32; k++) {
+      aa.select<32, 1>(32 * k) = aa.select<32, 1>(32 * k) * quant[k];
+    }
+  }
+
+  if (localLinearId < 43) {
+    simd<fp16, 64> fBbShuffle;
+#pragma unroll
+    for (int k = 0; k < 4; k++) {
+      fBbShuffle = bb.select<64, 1>(64 * k);
+      //fBbShuffle.select<32, 1>(0) = bb.select<32, 2>(64 * k);
+      //fBbShuffle.select<32, 1>(32) = bb.select<32, 2>(64 * k + 1);
+      slm_block_store<fp16, 64>((localLinearId * 256 + k * 64) * sizeof(fp16), fBbShuffle.select<64, 1>(0));
+    }
+  }
+  barrier();
+  int inputVectSlmOffset = hh * 1024 * sizeof(fp16);
+  simd<fp16, 16 * 16> fBb;
+#pragma unroll
+  for (int ll = 0; ll < 3; ll++) {
+#pragma unroll
+    for (int k = 0; k < 2; k++) {
+      fBb.select<128, 1>(128 * k) = slm_block_load<fp16, 128>(inputVectSlmOffset + k * 128 * sizeof(fp16));
+    }
+
+#pragma unroll
+    for (int k = 0; k < 16; k++) {
+      cc += aa.select<16, 1>(16 * k + ll * 256) * fBb.select<16, 1>(16 * k);
+    }
+    inputVectSlmOffset += 256 * sizeof(fp16);
+  }
+
+  if (hh != 10) {
+#pragma unroll
+    for (int k = 0; k < 2; k++) {
+      fBb.select<128, 1>(128 * k) = slm_block_load<fp16, 128>(inputVectSlmOffset + k * 128 * sizeof(fp16));
+    }
+
+#pragma unroll
+    for (int k = 0; k < 16; k++) {
+      cc += aa.select<16, 1>(16 * k + 3 * 256) * fBb.select<16, 1>(16 * k);
+    }
+    inputVectSlmOffset += 256 * sizeof(fp16);
+  }
+
+  cc.select<8, 1>(0) += cc.select<8, 1>(8);
+  cc.select<4, 1>(0) += cc.select<4, 1>(4);
+  cc.select<2, 1>(0) += cc.select<2, 1>(2);
+  simd<fp16, 1> slmAccumulationTemp = cc[0] + cc[1];
+  uint32_t slmAccumulationOffsetGroup = vv;
+  uint32_t slmAccumulationOffsetSimdSlot = hh;
+  uint32_t slmAccumulationOffset = 11008 * sizeof(fp16) + (slmAccumulationOffsetGroup + slmAccumulationOffsetSimdSlot * 8) * sizeof(fp16);
+  //slm_scalar_store(slmAccumulationOffset, slmAccumulationTemp);
+  slm_block_store<fp16, 1>(slmAccumulationOffset, slmAccumulationTemp);
+  cc = (fp16)0.0f;
+  offsetA += 11008 * 4 / 2;
+  offsetQuant += 344 * 4 * sizeof(fp16);
+
+  aaa.template bit_cast_view<unsigned char>().template select<256, 1>(0) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    256,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)a + offsetA);
+
+  aaa.template bit_cast_view<unsigned char>().template select<128, 1>(256) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    128,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)a + offsetA + 256);
+
+  if (hh != 10) {
+    aaa.template bit_cast_view<unsigned char>().template select<128, 1>(256 + 128) =
+      __ESIMD_ENS::lsc_block_load<
+      uint8_t,
+      128,
+      __ESIMD_ENS::lsc_data_size::default_size,
+      __ESIMD_ENS::cache_hint::cached,
+      __ESIMD_ENS::cache_hint::cached>((uint8_t*)a + offsetA + 256 + 128);
+  }
+
+  quant.template bit_cast_view<unsigned char>().template select<64, 1>(0) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    64,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)d + offsetQuant);
+
+#pragma unroll
+  for (int k = 0; k < 24; k++) {
+    aa.select<16, 2>(32 * k) = aaa.select<16, 1>(16 * k) & 0xf;
+    aa.select<16, 2>(32 * k + 1) = aaa.select<16, 1>(16 * k) >> 4;
+  }
+
+  if (hh != 10) {
+#pragma unroll
+    for (int k = 24; k < 32; k++) {
+      aa.select<16, 2>(32 * k) = aaa.select<16, 1>(16 * k) & 0xf;
+      aa.select<16, 2>(32 * k + 1) = aaa.select<16, 1>(16 * k) >> 4;
+    }
+  }
+
+  aa = aa - 8.0f;
+#pragma unroll
+  for (int k = 0; k < 24; k++) {
+    aa.select<32, 1>(32 * k) = aa.select<32, 1>(32 * k) * quant[k];
+  }
+
+  if (hh != 10) {
+#pragma unroll
+    for (int k = 24; k < 32; k++) {
+      aa.select<32, 1>(32 * k) = aa.select<32, 1>(32 * k) * quant[k];
+    }
+  }
+
+  inputVectSlmOffset = hh * 1024 * sizeof(fp16);
+#pragma unroll
+  for (int ll = 0; ll < 3; ll++) {
+#pragma unroll
+    for (int k = 0; k < 2; k++) {
+      fBb.select<128, 1>(128 * k) = slm_block_load<fp16, 128>(inputVectSlmOffset + k * 128 * sizeof(fp16));
+    }
+
+#pragma unroll
+    for (int k = 0; k < 16; k++) {
+      cc += aa.select<16, 1>(16 * k + ll * 256) * fBb.select<16, 1>(16 * k);
+    }
+    inputVectSlmOffset += 256 * sizeof(fp16);
+  }
+
+  if (hh != 10) {
+#pragma unroll
+    for (int k = 0; k < 2; k++) {
+      fBb.select<128, 1>(128 * k) = slm_block_load<fp16, 128>(inputVectSlmOffset + k * 128 * sizeof(fp16));
+    }
+
+#pragma unroll
+    for (int k = 0; k < 16; k++) {
+      cc += aa.select<16, 1>(16 * k + 3 * 256) * fBb.select<16, 1>(16 * k);
+    }
+    inputVectSlmOffset += 256 * sizeof(fp16);
+  }
+
+  cc.select<8, 1>(0) += cc.select<8, 1>(8);
+  cc.select<4, 1>(0) += cc.select<4, 1>(4);
+  cc.select<2, 1>(0) += cc.select<2, 1>(2);
+  slmAccumulationTemp = cc[0] + cc[1];
+  slmAccumulationOffsetGroup = vv + 4;
+  slmAccumulationOffsetSimdSlot = hh;
+  slmAccumulationOffset = 11008 * sizeof(fp16) + (slmAccumulationOffsetGroup + slmAccumulationOffsetSimdSlot * 8) * sizeof(fp16);
+  //slm_scalar_store(slmAccumulationOffset, slmAccumulationTemp);
+  slm_block_store<fp16, 1>(slmAccumulationOffset, slmAccumulationTemp);
+  barrier();
+
+  if (localLinearId == 0) {
+    simd<fp16, 88> sum;
+    //simd<fp16, 8> sumOut;
+    sum.select<64, 1>(0) = slm_block_load<fp16, 64>(11008 * sizeof(fp16));
+    sum.select<16, 1>(64) = slm_block_load<fp16, 16>(11008 * sizeof(fp16) + 64 * sizeof(fp16));
+    sum.select<8, 1>(64 + 16) = slm_block_load<fp16, 8>(11008 * sizeof(fp16) + (64 + 16) * sizeof(fp16));
+
+#pragma unroll
+    for (int k = 1; k < 11; k++) {
+      sum.select<8, 1>(0) += sum.select<8, 1>(8 * k);
+    }
+
+    //sumOut = sum.select<8, 1>(0);
+
+    __ESIMD_ENS::lsc_block_store<
+      fp16,
+      8,
+      __ESIMD_ENS::lsc_data_size::default_size,
+      __ESIMD_ENS::cache_hint::write_back,
+      __ESIMD_ENS::cache_hint::write_back>((fp16*)c + outputOffset, sum.select<8, 1>(0));
+  }
+}
+
+ESIMD_INLINE void matrixMulCommonDim11008Int4NoReshape_FP32out(uint8_t* a, uint8_t* b, uint8_t* c, uint8_t* d, nd_item<2>& ndi) {
+  __ESIMD_NS::slm_init(11008 * sizeof(fp16) + 88 * sizeof(fp16));
+  int hh = ndi.get_local_id(0); // [0, 11)
+  int vv = ndi.get_local_id(1); // [0, 4)
+  int h = ndi.get_group(0); // [0, 11)
+  int localLinearId = vv * 11 + hh;
+  int offsetA = (h * 8 * 11008 + vv * 11008 + hh * 1024) >> 1;
+  int offsetQuant = h * 344 * 8 * sizeof(fp16) + (vv * 344 + hh * 32) * sizeof(fp16);
+  int offsetB = localLinearId * 256 * sizeof(fp16);
+  int outputOffset = 8 * h;
+  simd<unsigned char, 512> aaa;
+  simd<fp16, 32> quant;
+  simd<fp16, 256> bb;
+  simd<fp16, 64 * 16> aa;
+  simd<fp16, 16> cc(0.0f);
+
+  aaa.template bit_cast_view<unsigned char>().template select<256, 1>(0) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    256,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)a + offsetA);
+
+  aaa.template bit_cast_view<unsigned char>().template select<128, 1>(256) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    128,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)a + offsetA + 256);
+
+  if (hh != 10) {
+    aaa.template bit_cast_view<unsigned char>().template select<128, 1>(256 + 128) =
+      __ESIMD_ENS::lsc_block_load<
+      uint8_t,
+      128,
+      __ESIMD_ENS::lsc_data_size::default_size,
+      __ESIMD_ENS::cache_hint::cached,
+      __ESIMD_ENS::cache_hint::cached>((uint8_t*)a + offsetA + 256 + 128);
+
+  }
+
+  quant.template bit_cast_view<unsigned char>().template select<64, 1>(0) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    64,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)d + offsetQuant);
+
+  if (localLinearId < 43) {
+#pragma unroll
+    for (int k = 0; k < 4; k++) {
+      bb.template bit_cast_view<unsigned char>().template select<128, 1>(128 * k) =
+        __ESIMD_ENS::lsc_block_load<
+        uint8_t,
+        128,
+        __ESIMD_ENS::lsc_data_size::default_size,
+        __ESIMD_ENS::cache_hint::cached,
+        __ESIMD_ENS::cache_hint::cached>((uint8_t*)b + offsetB + 128 * k);
+    }
+  }
+
+#pragma unroll
+  for (int k = 0; k < 24; k++) {
+    aa.select<16, 2>(32 * k) = aaa.select<16, 1>(16 * k) & 0xf;
+    aa.select<16, 2>(32 * k + 1) = aaa.select<16, 1>(16 * k) >> 4;
+  }
+
+  if (hh != 10) {
+#pragma unroll
+    for (int k = 24; k < 32; k++) {
+      aa.select<16, 2>(32 * k) = aaa.select<16, 1>(16 * k) & 0xf;
+      aa.select<16, 2>(32 * k + 1) = aaa.select<16, 1>(16 * k) >> 4;
+    }
+  }
+
+  aa = aa - 8.0f;
+#pragma unroll
+  for (int k = 0; k < 24; k++) {
+    aa.select<32, 1>(32 * k) = aa.select<32, 1>(32 * k) * quant[k];
+  }
+
+  if (hh != 10) {
+#pragma unroll
+    for (int k = 24; k < 32; k++) {
+      aa.select<32, 1>(32 * k) = aa.select<32, 1>(32 * k) * quant[k];
+    }
+  }
+
+  if (localLinearId < 43) {
+    simd<fp16, 64> fBbShuffle;
+#pragma unroll
+    for (int k = 0; k < 4; k++) {
+      fBbShuffle = bb.select<64, 1>(64 * k);
+      //fBbShuffle.select<32, 1>(0) = bb.select<32, 2>(64 * k);
+      //fBbShuffle.select<32, 1>(32) = bb.select<32, 2>(64 * k + 1);
+      slm_block_store<fp16, 64>((localLinearId * 256 + k * 64) * sizeof(fp16), fBbShuffle.select<64, 1>(0));
+    }
+  }
+  barrier();
+  int inputVectSlmOffset = hh * 1024 * sizeof(fp16);
+  simd<fp16, 16 * 16> fBb;
+#pragma unroll
+  for (int ll = 0; ll < 3; ll++) {
+#pragma unroll
+    for (int k = 0; k < 2; k++) {
+      fBb.select<128, 1>(128 * k) = slm_block_load<fp16, 128>(inputVectSlmOffset + k * 128 * sizeof(fp16));
+    }
+
+#pragma unroll
+    for (int k = 0; k < 16; k++) {
+      cc += aa.select<16, 1>(16 * k + ll * 256) * fBb.select<16, 1>(16 * k);
+    }
+    inputVectSlmOffset += 256 * sizeof(fp16);
+  }
+
+  if (hh != 10) {
+#pragma unroll
+    for (int k = 0; k < 2; k++) {
+      fBb.select<128, 1>(128 * k) = slm_block_load<fp16, 128>(inputVectSlmOffset + k * 128 * sizeof(fp16));
+    }
+
+#pragma unroll
+    for (int k = 0; k < 16; k++) {
+      cc += aa.select<16, 1>(16 * k + 3 * 256) * fBb.select<16, 1>(16 * k);
+    }
+    inputVectSlmOffset += 256 * sizeof(fp16);
+  }
+
+  cc.select<8, 1>(0) += cc.select<8, 1>(8);
+  cc.select<4, 1>(0) += cc.select<4, 1>(4);
+  cc.select<2, 1>(0) += cc.select<2, 1>(2);
+  simd<fp16, 1> slmAccumulationTemp = cc[0] + cc[1];
+  uint32_t slmAccumulationOffsetGroup = vv;
+  uint32_t slmAccumulationOffsetSimdSlot = hh;
+  uint32_t slmAccumulationOffset = 11008 * sizeof(fp16) + (slmAccumulationOffsetGroup + slmAccumulationOffsetSimdSlot * 8) * sizeof(fp16);
+  //slm_scalar_store(slmAccumulationOffset, slmAccumulationTemp);
+  slm_block_store<fp16, 1>(slmAccumulationOffset, slmAccumulationTemp);
+  cc = (fp16)0.0f;
+  offsetA += 11008 * 4 / 2;
+  offsetQuant += 344 * 4 * sizeof(fp16);
+
+  aaa.template bit_cast_view<unsigned char>().template select<256, 1>(0) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    256,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)a + offsetA);
+
+  aaa.template bit_cast_view<unsigned char>().template select<128, 1>(256) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    128,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)a + offsetA + 256);
+
+  if (hh != 10) {
+    aaa.template bit_cast_view<unsigned char>().template select<128, 1>(256 + 128) =
+      __ESIMD_ENS::lsc_block_load<
+      uint8_t,
+      128,
+      __ESIMD_ENS::lsc_data_size::default_size,
+      __ESIMD_ENS::cache_hint::cached,
+      __ESIMD_ENS::cache_hint::cached>((uint8_t*)a + offsetA + 256 + 128);
+  }
+
+  quant.template bit_cast_view<unsigned char>().template select<64, 1>(0) =
+    __ESIMD_ENS::lsc_block_load<
+    uint8_t,
+    64,
+    __ESIMD_ENS::lsc_data_size::default_size,
+    __ESIMD_ENS::cache_hint::cached,
+    __ESIMD_ENS::cache_hint::cached>((uint8_t*)d + offsetQuant);
+
+#pragma unroll
+  for (int k = 0; k < 24; k++) {
+    aa.select<16, 2>(32 * k) = aaa.select<16, 1>(16 * k) & 0xf;
+    aa.select<16, 2>(32 * k + 1) = aaa.select<16, 1>(16 * k) >> 4;
+  }
+
+  if (hh != 10) {
+#pragma unroll
+    for (int k = 24; k < 32; k++) {
+      aa.select<16, 2>(32 * k) = aaa.select<16, 1>(16 * k) & 0xf;
+      aa.select<16, 2>(32 * k + 1) = aaa.select<16, 1>(16 * k) >> 4;
+    }
+  }
+
+  aa = aa - 8.0f;
+#pragma unroll
+  for (int k = 0; k < 24; k++) {
+    aa.select<32, 1>(32 * k) = aa.select<32, 1>(32 * k) * quant[k];
+  }
+
+  if (hh != 10) {
+#pragma unroll
+    for (int k = 24; k < 32; k++) {
+      aa.select<32, 1>(32 * k) = aa.select<32, 1>(32 * k) * quant[k];
+    }
+  }
+
+  inputVectSlmOffset = hh * 1024 * sizeof(fp16);
+#pragma unroll
+  for (int ll = 0; ll < 3; ll++) {
+#pragma unroll
+    for (int k = 0; k < 2; k++) {
+      fBb.select<128, 1>(128 * k) = slm_block_load<fp16, 128>(inputVectSlmOffset + k * 128 * sizeof(fp16));
+    }
+
+#pragma unroll
+    for (int k = 0; k < 16; k++) {
+      cc += aa.select<16, 1>(16 * k + ll * 256) * fBb.select<16, 1>(16 * k);
+    }
+    inputVectSlmOffset += 256 * sizeof(fp16);
+  }
+
+  if (hh != 10) {
+#pragma unroll
+    for (int k = 0; k < 2; k++) {
+      fBb.select<128, 1>(128 * k) = slm_block_load<fp16, 128>(inputVectSlmOffset + k * 128 * sizeof(fp16));
+    }
+
+#pragma unroll
+    for (int k = 0; k < 16; k++) {
+      cc += aa.select<16, 1>(16 * k + 3 * 256) * fBb.select<16, 1>(16 * k);
+    }
+    inputVectSlmOffset += 256 * sizeof(fp16);
+  }
+
+  cc.select<8, 1>(0) += cc.select<8, 1>(8);
+  cc.select<4, 1>(0) += cc.select<4, 1>(4);
+  cc.select<2, 1>(0) += cc.select<2, 1>(2);
+  slmAccumulationTemp = cc[0] + cc[1];
+  slmAccumulationOffsetGroup = vv + 4;
+  slmAccumulationOffsetSimdSlot = hh;
+  slmAccumulationOffset = 11008 * sizeof(fp16) + (slmAccumulationOffsetGroup + slmAccumulationOffsetSimdSlot * 8) * sizeof(fp16);
+  //slm_scalar_store(slmAccumulationOffset, slmAccumulationTemp);
+  slm_block_store<fp16, 1>(slmAccumulationOffset, slmAccumulationTemp);
+  barrier();
+
+  if (localLinearId == 0) {
+    simd<fp16, 88> sum;
+    //simd<fp16, 8> sumOut;
+    sum.select<64, 1>(0) = slm_block_load<fp16, 64>(11008 * sizeof(fp16));
+    sum.select<16, 1>(64) = slm_block_load<fp16, 16>(11008 * sizeof(fp16) + 64 * sizeof(fp16));
+    sum.select<8, 1>(64 + 16) = slm_block_load<fp16, 8>(11008 * sizeof(fp16) + (64 + 16) * sizeof(fp16));
+
+#pragma unroll
+    for (int k = 1; k < 11; k++) {
+      sum.select<8, 1>(0) += sum.select<8, 1>(8 * k);
+    }
+
+    //sumOut = sum.select<8, 1>(0);
+
+    __ESIMD_ENS::lsc_block_store<
+      float,
+      8,
+      __ESIMD_ENS::lsc_data_size::default_size,
+      __ESIMD_ENS::cache_hint::write_back,
+      __ESIMD_ENS::cache_hint::write_back>((float*)c + outputOffset, sum.select<8, 1>(0));
+  }
+}

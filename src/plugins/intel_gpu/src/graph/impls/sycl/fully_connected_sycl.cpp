@@ -67,11 +67,21 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
     ::sycl::range<1> LocalRangeV2(16);
     ::sycl::nd_range<1> RangeV2(GlobalRange6V2, LocalRangeV2);
 
+    int groups = (N + 7) / 8;
+    ::sycl::range<1> GlobalRangeCommonDim4096(groups * 64);
+    ::sycl::range<1> LocalRangeCommonDim4096(64);
+    ::sycl::nd_range<1> RangeCommonDim4096(GlobalRangeCommonDim4096, LocalRangeCommonDim4096);
+
+
+    ::sycl::range<2> GlobalRangeCommonDim11008(11 * groups, 4);
+    ::sycl::range<2> LocalRangeCommonDim11008(11, 4);
+    ::sycl::nd_range<2> RangeCommonDim11008(GlobalRangeCommonDim11008, LocalRangeCommonDim11008);
+
     if (K == 4096) {
       e = queue.submit([&](handler& cgh) {
         cgh.parallel_for(
-            RangeV2, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL {
-              matrixMulCommonDim4096Int4NoReshapeNx16V3_ipex2<4>(
+            RangeCommonDim4096, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL {
+              matrixMulCommonDim4096Int4NoReshape(
                   (uint8_t*)w,
                   (uint8_t*)a,
                   (uint8_t*)dst,
@@ -82,8 +92,8 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
     } else if (K == 11008) {
       e = queue.submit([&](handler& cgh) {
         cgh.parallel_for(
-            RangeV2, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL {
-              matrixMulCommonDim11008Int4NoReshapeNx16V2_ipex<6>(
+            RangeCommonDim11008, [=](nd_item<2> ndi) SYCL_ESIMD_KERNEL {
+              matrixMulCommonDim11008Int4NoReshape(
                   (uint8_t*)w,
                   (uint8_t*)a,
                   (uint8_t*)dst,
@@ -199,11 +209,20 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
     ::sycl::range<1> LocalRangeV2(16);
     ::sycl::nd_range<1> RangeV2(GlobalRange6V2, LocalRangeV2);
 
+
+    int groups = (N+7) / 8;
+    ::sycl::range<1> GlobalRangeCommonDim4096(groups * 64);
+    ::sycl::range<1> LocalRangeCommonDim4096(64);
+    ::sycl::nd_range<1> RangeCommonDim4096(GlobalRangeCommonDim4096, LocalRangeCommonDim4096);
+
+    ::sycl::range<2> GlobalRangeCommonDim11008(11 * groups, 4);
+    ::sycl::range<2> LocalRangeCommonDim11008(11, 4);
+    ::sycl::nd_range<2> RangeCommonDim11008(GlobalRangeCommonDim11008, LocalRangeCommonDim11008);
     if (K == 4096) {
       e = queue.submit([&](handler& cgh) {
         cgh.parallel_for(
-            RangeV2, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL {
-              matrixMulCommonDim4096Int4NoReshapeNx16V3_ipex2_FP32out<4>(
+            RangeCommonDim4096, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL {
+              matrixMulCommonDim4096Int4NoReshape_FP32out(
                   (uint8_t*)w,
                   (uint8_t*)a,
                   (uint8_t*)dst,
@@ -214,8 +233,8 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
     } else if (K == 11008) {
       e = queue.submit([&](handler& cgh) {
         cgh.parallel_for(
-            RangeV2, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL {
-              matrixMulCommonDim11008Int4NoReshapeNx16V2_ipex_FP32out<6>(
+            RangeCommonDim11008, [=](nd_item<2> ndi) SYCL_ESIMD_KERNEL {
+              matrixMulCommonDim11008Int4NoReshape_FP32out(
                   (uint8_t*)w,
                   (uint8_t*)a,
                   (uint8_t*)dst,
