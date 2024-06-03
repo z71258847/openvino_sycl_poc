@@ -332,7 +332,8 @@ endif()
 
 file(RELATIVE_PATH OV_NATIVE_PARENT_PROJECT_ROOT_DIR "${CMAKE_SOURCE_DIR}/.." ${CMAKE_SOURCE_DIR})
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
     #
     # Common options / warnings enabled
     #
@@ -348,7 +349,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     # Increase Number of Sections in .Obj file
     ov_add_compiler_flags(/bigobj)
     # Build with multiple processes
-    ov_add_compiler_flags(/MP)
+    #ov_add_compiler_flags(/MP)
 
     if(AARCH64 AND NOT MSVC_VERSION LESS 1930)
         # otherwise, _ARM64_EXTENDED_INTRINSICS is defined, which defines 'mvn' macro
@@ -382,7 +383,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 
     # Enable __FILE__ trim, use path with forward and backward slash as directory separator
     # github actions use sccache which doesn't support /d1trimfile compile option
-    if(NOT DEFINED ENV{GITHUB_ACTIONS})
+    if(NOT DEFINED ENV{GITHUB_ACTIONS} AND CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
         add_compile_options(
             "$<$<COMPILE_LANGUAGE:CXX>:/d1trimfile:${OV_NATIVE_PROJECT_ROOT_DIR}\\>"
             "$<$<COMPILE_LANGUAGE:CXX>:/d1trimfile:${CMAKE_SOURCE_DIR}/>")
