@@ -18,6 +18,7 @@
 
 #include "impls/sycl/esimd_gemm_q4_0.h"
 #include "impls/sycl/esimd_gemv_q4_0.h"
+#include "impls/sycl/lnl_gemv.h"
 
 #include <algorithm>
 #include <chrono>
@@ -199,6 +200,7 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
   ::sycl::event e;
   if (M == 1) // GEMV
   {
+#if 0
     // K=4096
     uint32_t ppg=16;
     if (K==11008) ppg=64;
@@ -243,8 +245,35 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
             });
       });
     }
-  } else // GEMM
-  {
+#else
+  int groupsV2 = (N + 16 - 1) / 16;
+  ::sycl::range<1> GlobalRangeCommonDim4096V2(groupsV2 * 16);
+  ::sycl::range<1> LocalRangeCommonDim4096V2(16);
+  ::sycl::nd_range<1> RangeCommonDim4096V2(GlobalRangeCommonDim4096V2, LocalRangeCommonDim4096V2);
+
+  // Thread config for matrixMulCommonDim11008Int4NoReshapeV2
+  groupsV2 = (N + 64 - 1) / 64;
+  ::sycl::range<1> GlobalRangeCommonDim11008V2(groupsV2 * 16);
+  ::sycl::range<1> LocalRangeCommonDim11008V2(16);
+  ::sycl::nd_range<1> RangeCommonDim11008V2(GlobalRangeCommonDim11008V2, LocalRangeCommonDim11008V2);
+  
+  if (K == 4096) {
+    e = queue.submit([&](handler& cgh) {
+      cgh.parallel_for(RangeCommonDim4096V2, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL{
+        GEMV_Int4Weight_FP32InOutNx16Temp_largeGRF_block<4096, 4>((uint8_t*)w, (uint8_t*)a, (uint8_t*)dst, (uint8_t*)s, ndi);
+        });
+      });
+  } else if (K == 11008) {
+    e = queue.submit([&](handler& cgh) {
+      cgh.parallel_for(RangeCommonDim11008V2, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL{
+      GEMV_Int4Weight_FP32InOutNx16Temp_largeGRF_block<11008, 6>((uint8_t*)w, (uint8_t*)a, (uint8_t*)dst, (uint8_t*)s, ndi);
+        });
+      });
+  } 
+
+#endif
+  } 
+  else {// GEMM
     int groupReduce2048H = (N + 15) / 16;
     int groupReduce2048V = 1;
     int localReduce2048H = 64; // internalPrecision == 0  (fp32), not 32
