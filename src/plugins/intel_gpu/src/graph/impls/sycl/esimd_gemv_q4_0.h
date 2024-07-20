@@ -1577,3 +1577,273 @@ ESIMD_INLINE void matrixMulCommonDim11008Int4NoReshape_FP32out(uint8_t* a, uint8
       __ESIMD_ENS::cache_hint::write_back>((float*)c + outputOffset, sum.select<8, 1>(0));
   }
 }
+
+
+template<uint32_t K_DIM, uint32_t pixelPerGroupShift>
+ESIMD_INLINE void GEMV_Int4Weight_FP32InOutNx16Temp_largeGRF_block_PPG1_opt_32t_ipex(uint8_t* a, uint8_t* b, uint8_t* c, uint8_t* d, nd_item<1>& ndi) {
+  constexpr uint32_t pixelPerGroup = 1 << pixelPerGroupShift;
+  constexpr uint32_t quantPerGroup = K_DIM / 32 * pixelPerGroup;
+  constexpr uint32_t sumThreads = 1;
+  constexpr uint32_t baseOffsetInc16[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+  constexpr uint32_t baseOffsetInc8[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+  constexpr uint32_t K_DIM_DIV_4096 = (K_DIM + 8191) / 8192;
+  constexpr uint32_t K_DIM_MOD_4096 = (K_DIM - (K_DIM_DIV_4096-1)*8192);
+  constexpr uint32_t K_DIM_REDUCE_T = K_DIM_MOD_4096 / (8192 / 32); // 32 threads, 256 ele per thread in total 8192
+  __ESIMD_NS::slm_init(32 * sizeof(float));
+  int hh = ndi.get_local_id(0); // [0, 64)
+  int h = ndi.get_group(0); // [0, 256)
+  int rowSize = ndi.get_group_range(0) * pixelPerGroup;
+  int offsetABase = (h * pixelPerGroup * K_DIM + hh * 8 * 8 * 4) >> 1;
+  int offsetQuanBase = /*rowSize * K_DIM / 2 +*/ h * quantPerGroup * sizeof(fp16) + hh * 2 * 4 * sizeof(fp16);
+  int offsetB = hh * 64 * 4 * sizeof(fp16);
+  int offsetB_2 = offsetB + 2 * 4096 * sizeof(fp16);
+  int outputOffset = pixelPerGroup * h;
+  int offsetSLMThread = hh * 2 * 64 * sizeof(float);
+  simd<unsigned char, 128> aaa;
+  simd<fp16, 40> quant;
+  simd<float, 32> bb;
+  simd<fp16, 1280> bb_fp16;
+  simd<float, 8 * 16 * 2> aa;
+  simd<float, 16> cc(0.0f);
+  simd<uint32_t, 8> offsetC(baseOffsetInc8);
+  uint32_t offsetA;
+  uint32_t offsetQuan;
+  offsetA = offsetABase;
+  offsetQuan = offsetQuanBase;
+
+#pragma unroll
+  for (int k = 0; k < 1; k++) {
+    //if (k != K_DIM_DIV_4096-1 || hh < K_DIM_REDUCE_T)
+    {
+      bb_fp16.template bit_cast_view<unsigned char>().template select<256, 1>(512 * k) =
+        __ESIMD_ENS::lsc_block_load<
+        uint8_t,
+        256,
+        __ESIMD_ENS::lsc_data_size::default_size,
+        __ESIMD_ENS::cache_hint::cached,
+        __ESIMD_ENS::cache_hint::cached>((uint8_t*)b + offsetB);
+      bb_fp16.template bit_cast_view<unsigned char>().template select<256, 1>(512 * k + 256*1) =
+        __ESIMD_ENS::lsc_block_load<
+        uint8_t,
+        256,
+        __ESIMD_ENS::lsc_data_size::default_size,
+        __ESIMD_ENS::cache_hint::cached,
+        __ESIMD_ENS::cache_hint::cached>((uint8_t*)b + offsetB + 1*128 * sizeof(fp16));
+    } 
+
+    offsetB += 8192 * sizeof(fp16);
+  }
+
+  //for (int n = 0; n < 1; n++) {
+    //cc = 0.0f;
+    offsetQuan = offsetQuanBase;// + n * K_DIM / 32 * sizeof(fp16);
+#pragma unroll
+    for (int k = 0; k < 1; k++) {
+      quant.template bit_cast_view<unsigned char>().template select<16, 1>(16 * k) =
+        __ESIMD_ENS::lsc_block_load<
+        uint8_t,
+        16,
+        __ESIMD_ENS::lsc_data_size::default_size,
+        __ESIMD_ENS::cache_hint::cached,
+        __ESIMD_ENS::cache_hint::cached>((uint8_t*)d + offsetQuan);
+      offsetQuan += 256 * sizeof(fp16);
+    }
+    //offsetQuan += 128 * sizeof(fp16);
+
+    offsetA = offsetABase;// + n * K_DIM / 2;
+
+#pragma unroll
+    for (int k = 0; k < 1; k++) {
+      //if (k != K_DIM_DIV_4096-1 || hh < K_DIM_REDUCE_T)
+      {
+        simd<float, 8> fp32Q = quant.select<8, 1>(8 * k);
+        aaa.template bit_cast_view<unsigned char>().template select<128, 1>(0) =
+          __ESIMD_ENS::lsc_block_load<
+          uint8_t,
+          128,
+          __ESIMD_ENS::lsc_data_size::default_size,
+          __ESIMD_ENS::cache_hint::uncached,
+          __ESIMD_ENS::cache_hint::uncached>((uint8_t*)a + offsetA);
+
+// #pragma unroll
+//         for (int kk = 0; kk < 8; kk++) {
+//           aa.select<16, 1>(32 * kk) = aaa.select<16, 1>(16 * kk) & 0xf;
+//           aa.select<16, 1>(32 * kk + 16) = aaa.select<16, 1>(16 * kk) >> 4;
+//         }
+#pragma unroll
+        for (int kk = 0; kk < 8; kk++) {
+          aa.select<16, 2>(32 * kk) = aaa.select<16, 1>(16 * kk) & 0xf;
+          aa.select<16, 2>(32 * kk + 1) = aaa.select<16, 1>(16 * kk) >> 4;
+        }
+
+        aa = aa - 8.0f;
+#pragma unroll
+        for (int kk = 0; kk < 8; kk++) {
+          aa.select<32, 1>(32 * kk) = fp32Q[kk] * aa.select<32, 1>(32 * kk);
+        }
+#pragma unroll
+        for (int kk = 0; kk < 16; kk++) {
+          cc += aa.select<16, 1>(16 * kk) * bb_fp16.select<16, 1>(16 * kk + 128 * 2 * k); // note: 128 * 2 easy to have mistake!
+        }
+      }
+
+      {
+        offsetA += 4096;
+      }
+    }
+
+
+  
+#pragma unroll
+  for (int k = 1; k < K_DIM_DIV_4096; k++) {
+    if (k != K_DIM_DIV_4096-1 || hh < K_DIM_REDUCE_T)
+    {
+      bb_fp16.template bit_cast_view<unsigned char>().template select<256, 1>(512 * k) =
+        __ESIMD_ENS::lsc_block_load<
+        uint8_t,
+        256,
+        __ESIMD_ENS::lsc_data_size::default_size,
+        __ESIMD_ENS::cache_hint::cached,
+        __ESIMD_ENS::cache_hint::cached>((uint8_t*)b + offsetB_2);
+      bb_fp16.template bit_cast_view<unsigned char>().template select<256, 1>(512 * k + 256*1) =
+        __ESIMD_ENS::lsc_block_load<
+        uint8_t,
+        256,
+        __ESIMD_ENS::lsc_data_size::default_size,
+        __ESIMD_ENS::cache_hint::cached,
+        __ESIMD_ENS::cache_hint::cached>((uint8_t*)b + offsetB_2 + 1*128 * sizeof(fp16));
+    } 
+    else 
+    {
+      bb_fp16.template bit_cast_view<unsigned char>().template select<256, 1>(512 * k) = 0;
+      bb_fp16.template bit_cast_view<unsigned char>().template select<256, 1>(512 * k + 256*1) = 0;
+    }
+
+    offsetB_2 += 8192 * sizeof(fp16);
+  }
+
+  //for (int n = 0; n < 1; n++) {
+    //offsetQuan = offsetQuanBase + 2 * 128 * sizeof(fp16);// + n * K_DIM / 32 * sizeof(fp16);
+#pragma unroll
+    for (int k = 1; k < K_DIM_DIV_4096-1; k++) {
+      quant.template bit_cast_view<unsigned char>().template select<16, 1>(16 * k) =
+        __ESIMD_ENS::lsc_block_load<
+        uint8_t,
+        16,
+        __ESIMD_ENS::lsc_data_size::default_size,
+        __ESIMD_ENS::cache_hint::cached,
+        __ESIMD_ENS::cache_hint::cached>((uint8_t*)d + offsetQuan);
+      offsetQuan += 256 * sizeof(fp16);
+    }
+    if (hh < K_DIM_REDUCE_T)
+    {
+      quant.template bit_cast_view<unsigned char>().template select<16, 1>(16 * (K_DIM_DIV_4096-1)) =
+        __ESIMD_ENS::lsc_block_load<
+        uint8_t,
+        16,
+        __ESIMD_ENS::lsc_data_size::default_size,
+        __ESIMD_ENS::cache_hint::cached,
+        __ESIMD_ENS::cache_hint::cached>((uint8_t*)d + offsetQuan);
+    }
+    else
+    {
+      quant.template bit_cast_view<unsigned char>().template select<16, 1>(16 * (K_DIM_DIV_4096-1)) = 0;
+    }
+    offsetQuan += 128 * sizeof(fp16);
+  
+    //offsetA = offsetABase + 2 * 2048;// + n * K_DIM / 2;
+
+#pragma unroll
+    for (int k = 1; k < K_DIM_DIV_4096; k++) {
+      if (k != K_DIM_DIV_4096-1 || hh < K_DIM_REDUCE_T)
+      {
+        simd<float, 8> fp32Q = quant.select<8, 1>(8 * k);
+        aaa.template bit_cast_view<unsigned char>().template select<128, 1>(0) =
+          __ESIMD_ENS::lsc_block_load<
+          uint8_t,
+          128,
+          __ESIMD_ENS::lsc_data_size::default_size,
+          __ESIMD_ENS::cache_hint::uncached,
+          __ESIMD_ENS::cache_hint::uncached>((uint8_t*)a + offsetA);
+
+// #pragma unroll
+//         for (int kk = 0; kk < 8; kk++) {
+//           aa.select<16, 1>(32 * kk) = aaa.select<16, 1>(16 * kk) & 0xf;
+//           aa.select<16, 1>(32 * kk + 16) = aaa.select<16, 1>(16 * kk) >> 4;
+//         }
+#pragma unroll
+        for (int kk = 0; kk < 8; kk++) {
+          aa.select<16, 2>(32 * kk) = aaa.select<16, 1>(16 * kk) & 0xf;
+          aa.select<16, 2>(32 * kk + 1) = aaa.select<16, 1>(16 * kk) >> 4;
+        }
+
+        aa = aa - 8.0f;
+#pragma unroll
+        for (int kk = 0; kk < 8; kk++) {
+          aa.select<32, 1>(32 * kk) = fp32Q[kk] * aa.select<32, 1>(32 * kk);
+        }
+#pragma unroll
+        for (int kk = 0; kk < 16; kk++) {
+          cc += aa.select<16, 1>(16 * kk) * bb_fp16.select<16, 1>(16 * kk + 128 * 2 * k); // note: 128 * 2 easy to have mistake!
+        }
+      }
+
+      if (k == K_DIM_DIV_4096-1)
+      {
+        offsetA += K_DIM_REDUCE_T * 256 / 2;
+      }
+      else
+      {
+        offsetA += 4096;
+      }
+    }
+
+    cc.select<8, 1>(0) += cc.select<8, 1>(8);
+    cc.select<4, 1>(0) += cc.select<4, 1>(4);
+    cc.select<2, 1>(0) += cc.select<2, 1>(2);
+    simd<float, 1> slmAccumulationTemp = cc[0] + cc[1];
+    // uint32_t slmGroup = n >> 4;
+    // uint32_t slmInnerGroupOffset = n & 0xf;
+    // uint32_t slmAccumulationOffset = (slmGroup * 16 * 16 + hh * 16 + slmInnerGroupOffset) * sizeof(float);
+    uint32_t slmAccumulationOffset = (hh) * sizeof(float);
+    //slm_scalar_store(slmAccumulationOffset, slmAccumulationTemp);
+    slm_block_store<float, 1>(slmAccumulationOffset, slmAccumulationTemp);
+
+  barrier();
+  if (hh == 0) {
+
+      bb.select<32, 1>(0) = slm_block_load<float, 32>(0);
+      bb.select<16, 1>(0) += bb.select<16, 1>(16);
+      bb.select<8, 1>(0) += bb.select<8, 1>(8);
+      bb.select<4, 1>(0) += bb.select<4, 1>(4);
+      bb.select<2, 1>(0) += bb.select<2, 1>(2);
+      bb.select<1, 1>(0) += bb.select<1, 1>(1);
+
+    
+    // __ESIMD_ENS::lsc_block_store<
+    //   float,
+    //   1,
+    //   __ESIMD_ENS::lsc_data_size::default_size,
+    //   __ESIMD_ENS::cache_hint::write_back,
+    //   __ESIMD_ENS::cache_hint::write_back>((float*)c + outputOffset /*+ hh * 16*/, bb.select<1, 1>(0));
+
+    
+    simd<fp16, 8> out;
+    out = bb.select<8, 1>(0);
+
+    simd_mask<8> quantPred = 0;
+    quantPred[0] = 1;
+    offsetC = offsetC + outputOffset * sizeof(float);
+
+    __ESIMD_ENS::lsc_scatter<
+      float,
+      1,
+      __ESIMD_ENS::lsc_data_size::u32,
+      __ESIMD_ENS::cache_hint::write_back,
+      __ESIMD_ENS::cache_hint::write_back,
+      8,
+      uint32_t
+    >((float*)c, offsetC, out.select<8, 1>(0), quantPred);
+
+  }
+}

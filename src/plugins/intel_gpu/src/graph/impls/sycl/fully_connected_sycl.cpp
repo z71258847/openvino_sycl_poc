@@ -101,6 +101,8 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
                   ndi);
             });
       });
+    } else if (K == 14336){
+      std::cerr << "14336 FP16 out not impl!!!!" << std::endl; 
     }
   } else // GEMM
   {
@@ -188,6 +190,8 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
               });
         });
       }
+    } else if (K == 14336) {
+      std::cerr << "14336 FP16 out not impl!!!!" << std::endl; 
     }
   }
   return e;
@@ -241,6 +245,20 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
                   (uint8_t*)s,
                   ndi);
             });
+      });
+    } else if (K == 14336) {
+      ::sycl::range<1> GlobalRange2(N * 32);
+      ::sycl::range<1> LocalRange2(32);
+      ::sycl::nd_range<1> Range2(GlobalRange2, LocalRange2);
+      e = queue.submit([&](handler& cgh) {
+        cgh.parallel_for(Range2, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL{
+          GEMV_Int4Weight_FP32InOutNx16Temp_largeGRF_block_PPG1_opt_32t_ipex<14336, 0>(
+            (uint8_t*)w, 
+            (uint8_t*)a, 
+            (uint8_t*)dst, 
+            (uint8_t*)s, 
+            ndi);
+          });
       });
     }
   } else // GEMM
@@ -316,6 +334,26 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
           cgh.parallel_for(
               RangeReduce768, [=](nd_item<2> ndi) SYCL_ESIMD_KERNEL {
                 gemmReduce768WeightsQ40InputFp16_ipex_FP32out(
+                    (uint8_t*)w,
+                    (uint8_t*)a,
+                    (uint8_t*)dst,
+                    (uint8_t*)s,
+                    K,
+                    M,
+                    ii,
+                    lastReduce,
+                    ndi);
+              });
+        });
+      }
+    }
+    else if (K == 14336){
+      for (int ii = 0; ii < 7; ii++) {
+        lastReduce = (ii == 6);
+        e = queue.submit([&](handler& cgh) {
+          cgh.parallel_for(
+              RangeReduce2048, [=](nd_item<2> ndi) SYCL_ESIMD_KERNEL {
+                gemmReduce2048WeightsQ40InputFp16_ipex_FP32out(
                     (uint8_t*)w,
                     (uint8_t*)a,
                     (uint8_t*)dst,
