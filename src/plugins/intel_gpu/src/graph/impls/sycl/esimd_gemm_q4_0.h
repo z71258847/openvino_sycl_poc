@@ -26,11 +26,11 @@ ESIMD_INLINE void gemmReduce2048WeightsQ40InputFp16_ipex(
   int v = reduceIdx; // [0, (row + 15) / 16)
   int outputRow = ndi.get_group_range(0) * 16;
   int hiddenDimInt4Size = hiddenDim >> 1;
-  int hiddenDimDequantSize = hiddenDim >> 5;
+  int hiddenDimDequantSize = hiddenDim >> 7;
   uint32_t globalOffset = v * 2048 + h * hiddenDim * 16 + hh * 32;
   uint32_t baseOffsetA = globalOffset >> 1;
   uint32_t baseOffsetQuant =
-      /*hiddenDimInt4Size * outputRow +*/ (globalOffset >> 4);
+      /*hiddenDimInt4Size * outputRow +*/ (globalOffset >> 6);
   uint32_t baseOffsetB = (v * 2048 + hh * 32) * sizeof(fp16);
   uint32_t offsetC = h * 16 + hh * outputRow;
   simd<fp16, 8 * 32> bb;
@@ -95,37 +95,49 @@ ESIMD_INLINE void gemmReduce2048WeightsQ40InputFp16_ipex(
 //   }
 #pragma unroll
     for (int kk = 0; kk < 4; kk++) {
-      simd<uint8_t, 16> bitShiftTemp =
-          bb.template bit_cast_view<uint8_t>().select<16, 4>(64 * kk + 0);
+      simd<int8_t, 16> bitShiftTemp =
+          bb.template bit_cast_view<int8_t>().select<16, 4>(64 * kk + 0);
 
-      aa.select<16, 1>((4 * 2 * kk + 0) * 16) = bitShiftTemp & 0xf;
+      simd<int8_t, 16> temp = bitShiftTemp & 0xf;
+      temp.select<16, 1>(0) = temp.select<16, 1>(0) << 4;
+      temp.select<16, 1>(0) = temp.select<16, 1>(0) >> 4;
+      aa.select<16, 1>((4 * 2 * kk + 0) * 16) = temp;
       aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 1 * 16) = bitShiftTemp >> 4;
 
       // ==========================================================================================
       bitShiftTemp =
-          bb.template bit_cast_view<uint8_t>().select<16, 4>(64 * kk + 1);
+          bb.template bit_cast_view<int8_t>().select<16, 4>(64 * kk + 1);
 
-      aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 2 * 16) = bitShiftTemp & 0xf;
+      simd<int8_t, 16> temp = bitShiftTemp & 0xf;
+      temp.select<16, 1>(0) = temp.select<16, 1>(0) << 4;
+      temp.select<16, 1>(0) = temp.select<16, 1>(0) >> 4;
+      aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 2 * 16) = temp;
       aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 3 * 16) = bitShiftTemp >> 4;
 
       // ==========================================================================================
       bitShiftTemp =
-          bb.template bit_cast_view<uint8_t>().select<16, 4>(64 * kk + 2);
+          bb.template bit_cast_view<int8_t>().select<16, 4>(64 * kk + 2);
 
-      aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 4 * 16) = bitShiftTemp & 0xf;
+      simd<int8_t, 16> temp = bitShiftTemp & 0xf;
+      temp.select<16, 1>(0) = temp.select<16, 1>(0) << 4;
+      temp.select<16, 1>(0) = temp.select<16, 1>(0) >> 4;
+      aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 4 * 16) = temp;
       aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 5 * 16) = bitShiftTemp >> 4;
 
       // ==========================================================================================
       bitShiftTemp =
-          bb.template bit_cast_view<uint8_t>().select<16, 4>(64 * kk + 3);
-      
-      aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 6 * 16) = bitShiftTemp & 0xf;
+          bb.template bit_cast_view<int8_t>().select<16, 4>(64 * kk + 3);
+
+      simd<int8_t, 16> temp = bitShiftTemp & 0xf;
+      temp.select<16, 1>(0) = temp.select<16, 1>(0) << 4;
+      temp.select<16, 1>(0) = temp.select<16, 1>(0) >> 4;
+      aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 6 * 16) = temp;
       aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 7 * 16) = bitShiftTemp >> 4;
     }
     offset += 128 * sizeof(uint32_t);
   }
 
-  aa = aa - 8.0f;
+  //aa = aa - 8.0f;
 #pragma unroll
   for (int k = 0; k < 32; k++) {
     aa.select<16, 1>(16 * k) = aa.select<16, 1>(16 * k) * cc.select<16, 1>(16);
@@ -427,11 +439,11 @@ ESIMD_INLINE void gemmReduce2048WeightsQ40InputFp16_ipex_FP32out(
   int v = reduceIdx; // [0, (row + 15) / 16)
   int outputRow = ndi.get_group_range(0) * 16;
   int hiddenDimInt4Size = hiddenDim >> 1;
-  int hiddenDimDequantSize = hiddenDim >> 5;
+  int hiddenDimDequantSize = hiddenDim >> 7;
   uint32_t globalOffset = v * 2048 + h * hiddenDim * 16 + hh * 32;
   uint32_t baseOffsetA = globalOffset >> 1;
   uint32_t baseOffsetQuant =
-      /*hiddenDimInt4Size * outputRow +*/ (globalOffset >> 4);
+      /*hiddenDimInt4Size * outputRow +*/ (globalOffset >> 6);
   uint32_t baseOffsetB = (v * 2048 + hh * 32) * sizeof(fp16);
   uint32_t offsetC = h * 16 + hh * outputRow;
   simd<fp16, 8 * 32> bb;
@@ -497,37 +509,49 @@ ESIMD_INLINE void gemmReduce2048WeightsQ40InputFp16_ipex_FP32out(
 //   }
 #pragma unroll
     for (int kk = 0; kk < 4; kk++) {
-      simd<uint8_t, 16> bitShiftTemp =
-          bb.template bit_cast_view<uint8_t>().select<16, 4>(64 * kk + 0);
+      simd<int8_t, 16> bitShiftTemp =
+          bb.template bit_cast_view<int8_t>().select<16, 4>(64 * kk + 0);
 
-      aa.select<16, 1>((4 * 2 * kk + 0) * 16) = bitShiftTemp & 0xf;
+      simd<int8_t, 16> temp = bitShiftTemp & 0xf;
+      temp.select<16, 1>(0) = temp.select<16, 1>(0) << 4;
+      temp.select<16, 1>(0) = temp.select<16, 1>(0) >> 4;
+      aa.select<16, 1>((4 * 2 * kk + 0) * 16) = temp;
       aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 1 * 16) = bitShiftTemp >> 4;
 
       // ==========================================================================================
       bitShiftTemp =
-          bb.template bit_cast_view<uint8_t>().select<16, 4>(64 * kk + 1);
+          bb.template bit_cast_view<int8_t>().select<16, 4>(64 * kk + 1);
 
-      aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 2 * 16) = bitShiftTemp & 0xf;
+      simd<int8_t, 16> temp = bitShiftTemp & 0xf;
+      temp.select<16, 1>(0) = temp.select<16, 1>(0) << 4;
+      temp.select<16, 1>(0) = temp.select<16, 1>(0) >> 4;
+      aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 2 * 16) = temp;
       aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 3 * 16) = bitShiftTemp >> 4;
 
       // ==========================================================================================
       bitShiftTemp =
-          bb.template bit_cast_view<uint8_t>().select<16, 4>(64 * kk + 2);
+          bb.template bit_cast_view<int8_t>().select<16, 4>(64 * kk + 2);
 
-      aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 4 * 16) = bitShiftTemp & 0xf;
+      simd<int8_t, 16> temp = bitShiftTemp & 0xf;
+      temp.select<16, 1>(0) = temp.select<16, 1>(0) << 4;
+      temp.select<16, 1>(0) = temp.select<16, 1>(0) >> 4;
+      aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 4 * 16) = temp;
       aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 5 * 16) = bitShiftTemp >> 4;
 
       // ==========================================================================================
       bitShiftTemp =
-          bb.template bit_cast_view<uint8_t>().select<16, 4>(64 * kk + 3);
-      
-      aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 6 * 16) = bitShiftTemp & 0xf;
+          bb.template bit_cast_view<int8_t>().select<16, 4>(64 * kk + 3);
+
+      simd<int8_t, 16> temp = bitShiftTemp & 0xf;
+      temp.select<16, 1>(0) = temp.select<16, 1>(0) << 4;
+      temp.select<16, 1>(0) = temp.select<16, 1>(0) >> 4;
+      aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 6 * 16) = temp;
       aa.select<16, 1>((4 * 2 * kk + 0) * 16 + 7 * 16) = bitShiftTemp >> 4;
     }
     offset += 128 * sizeof(uint32_t);
   }
 
-  aa = aa - 8.0f;
+  //aa = aa - 8.0f;
 #pragma unroll
   for (int k = 0; k < 32; k++) {
     aa.select<16, 1>(16 * k) = aa.select<16, 1>(16 * k) * cc.select<16, 1>(16);
