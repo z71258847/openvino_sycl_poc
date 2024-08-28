@@ -1739,12 +1739,12 @@ impl_types layout_optimizer::get_preferred_impl_type(program_node& node, format 
         if (node.is_type<fully_connected>()) {
             auto& fc_node = node.as<fully_connected>();
             auto prim = fc_node.get_primitive();
-            if (fc_node.weights().get_output_layout().data_type==ov::element::u4 &&
-            // fc_node.get_output_layout().data_type==ov::element::f16 &&
-            (fc_node.weights().get_output_layout().get_partial_shape()[1]==4096 ||
-            fc_node.weights().get_output_layout().get_partial_shape()[1]==11008 ||
-            fc_node.weights().get_output_layout().get_partial_shape()[1]==14336)) {
+            std::string layer_name = fc_node.id();
+            size_t name_len = layer_name.length();
+            if (layer_name.at(name_len-2)=='_' && layer_name.at(name_len-1)=='2') {
                 std::cout << fc_node.id() << ": use sycl impl!\n";
+                // std::cout << fc_node.weights().get_output_layout() << std::endl;
+                // std::cout << fc_node.get_output_layout().data_type << std::endl;
                 return impl_types::sycl;
             }
         }
