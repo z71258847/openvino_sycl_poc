@@ -11,7 +11,9 @@ namespace sycl {
     static detail::attach_##prim##_sycl attach_##prim
 
 void register_implementations() {
-    REGISTER_SYCL_IMPL(fully_connected);}
+    REGISTER_SYCL_IMPL(fully_connected);
+    REGISTER_SYCL_IMPL(convolution);
+}
 
 }  // namespace sycl
 }  // namespace cldnn

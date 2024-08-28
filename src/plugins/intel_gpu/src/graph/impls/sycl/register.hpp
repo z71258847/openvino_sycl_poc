@@ -5,6 +5,7 @@
 #pragma once
 
 #include "intel_gpu/primitives/fully_connected.hpp"
+#include "intel_gpu/primitives/convolution.hpp"
 
 namespace cldnn {
 namespace sycl {
@@ -18,6 +19,7 @@ namespace detail {
     }
 
 REGISTER_SYCL_IMPL(fully_connected);
+REGISTER_SYCL_IMPL(convolution);
 
 #undef REGISTER_SYCL_IMPL
 

@@ -1642,8 +1642,21 @@ impl_types layout_optimizer::get_preferred_impl_type(program_node& node, format 
         else
             return impl_types::ocl;
     } else if (node.is_type<pooling>() || node.is_type<convolution>() || node.is_type<deconvolution>()) {
-        if (!_optimization_attributes.use_onednn_impls)
+        if (node.is_type<convolution>()) {
+            auto& fc_node = node.as<convolution>();
+            auto prim = fc_node.get_primitive();
+            if (fc_node.weights().get_output_layout().data_type==ov::element::i8 &&
+            fc_node.weights().get_output_layout().get_partial_shape()[2]==7) {
+                std::cout << fc_node.id() << ": target use sycl impl!\n";
+                std::cout << "weights: " << fc_node.weights().get_output_layout() << std::endl;
+                std::cout << "outputs: " << fc_node.get_output_layout() << std::endl;
+                // return impl_types::sycl;
+            }
+        }
+
+        if (!_optimization_attributes.use_onednn_impls){
             return impl_types::ocl;
+        }
 
         std::vector<format> onednn_optimized_formats = {
             format::byxf,
