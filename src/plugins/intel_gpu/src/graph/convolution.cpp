@@ -88,6 +88,10 @@ std::vector<layout> calc_output_layout_impl(convolution_node const& node, kernel
         output_format = node.get_preferred_output_fmt();
     }
 
+    if (node.get_preferred_impl_type() == impl_types::sycl && node.get_preferred_output_fmt() != format::any) {
+        output_format = format::byxf;
+    }
+
     // dynamic case
     std::vector<ov::PartialShape> input_shapes = {
         input_layout.get_partial_shape(),
