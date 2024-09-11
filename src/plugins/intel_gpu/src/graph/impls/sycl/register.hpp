@@ -16,6 +16,9 @@ namespace detail {
         attach_##prim##_sycl();   \
     }
 
+
+REGISTER_SYCL_IMPL(fully_connected);
+
 #undef REGISTER_SYCL_IMPL
 
 }  // namespace detail
