@@ -33,13 +33,13 @@ struct FCImplementationManagerSYCL : public ImplementationManager {
 
 
         bool compressed_case = fc_prim->compressed_weights &&
-                               one_of(in0_dt, {data_types::f16, data_types::f32}) &&
+                               one_of(in0_dt, {data_types::f16}) &&
                                one_of(wei_dt, {data_types::u4, data_types::i4}) &&
-                               one_of(out_dt, {data_types::f16, data_types::f32});
+                               one_of(out_dt, {data_types::f16});
         if (!compressed_case)
             return false;
 
-        if (wei_layout.get_partial_shape()[1] != 2048)
+        if (wei_layout.get_partial_shape()[1] != 2048 && wei_layout.get_partial_shape()[1] != 4096)
             return false;
 
         if (!one_of(in_layout.format.value, supported_formats) || !one_of(out_layout.format.value, supported_formats))

@@ -68,19 +68,31 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
             const uint dst_index = n + m*N;
             for (uint y = 0; y < K; ++y) {
                 const uint input0_offset = y + m*K;
-                const uint decomp_offset = (y / group_size) + n * groups_num;
+                const uint decomp_offset = (y / group_size) + n*groups_num;
                 const uint filter_offset = y + n*K;
 
                 accum_t scale = s[decomp_offset];
                 const char packed = w[filter_offset / 2];
+                char v0;
+                char v1;
+                accum_t zp_val;
 
-                const char s_bit = packed & 0x08;
-                const char mask = s_bit > 0 ? 0xF0 : 0x00;
-                const char v0 = (packed & 0x0F) | mask;
-                const char v1 = (packed & 0xF0) >> 4;
+                if (K==2048){
+                    zp_val = static_cast<accum_t>(0.0f);
+                    const char s_bit = packed & 0x08;
+                    const char mask = s_bit > 0 ? 0xF0 : 0x00;
+                    v0 = (packed & 0x0F) | mask;
+                    v1 = (packed & 0xF0) >> 4;
+                }
+                else if (K==4096){
+                    zp_val = static_cast<accum_t>(8.0f);
+                    v0 = (packed & 0x0F);
+                    v1 = (packed & 0xF0) >> 4;
+                }
+
                 accum_t unpacked = filter_offset % 2 == 0 ? v0 : v1;
 
-                accum_t filter_val = unpacked * scale;
+                accum_t filter_val = (unpacked - zp_val) * scale;
                 accumulator += a[input0_offset] * filter_val;
             }
             dst[dst_index] = accumulator;
@@ -102,7 +114,7 @@ struct fully_connected_sycl : typed_primitive_sycl_impl<fully_connected> {
     event::ptr execute_impl(const std::vector<event::ptr>& /* events */, typed_primitive_inst<fully_connected>& instance) override {
         auto& network = instance.get_network();
         const auto& desc = instance.get_typed_desc<fully_connected>();
-        const bool print = false;
+        const bool print = true;
 
         auto start = std::chrono::high_resolution_clock::now();
         // auto& stream = dynamic_cast<ocl::ocl_stream&>(network.get_stream());
@@ -189,7 +201,7 @@ struct fully_connected_sycl : typed_primitive_sycl_impl<fully_connected> {
 
         if (out_t == ov::element::f16){
           const ::sycl::half* in = static_cast<const ::sycl::half*>(inputs[0]->buffer_ptr());
-          const char* wei = static_cast<const char*>(weights->buffer_ptr());
+          const uint8_t* wei = static_cast<const uint8_t*>(weights->buffer_ptr());
           ::sycl::half* out = static_cast<::sycl::half*>(output->buffer_ptr());
           const ::sycl::half* ds = static_cast<const ::sycl::half*>(inputs[1]->buffer_ptr());
           return to_ocl_event(stream, run_fc_q4_0_fp16out(sycl_queue, in, wei, ds, out, M, N, K, group_size, groups_num));
