@@ -82,7 +82,7 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
                     const char s_bit = packed & 0x08;
                     const char mask = s_bit > 0 ? 0xF0 : 0x00;
                     v0 = (packed & 0x0F) | mask;
-                    v1 = (packed & 0xF0) >> 4;
+                    v1 = packed >> 4;
                 }
                 else if (K==4096){
                     zp_val = static_cast<accum_t>(8.0f);
