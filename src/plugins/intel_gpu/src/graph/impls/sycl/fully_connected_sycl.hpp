@@ -34,12 +34,12 @@ struct FCImplementationManagerSYCL : public ImplementationManager {
 
         bool compressed_case = fc_prim->compressed_weights &&
                                one_of(in0_dt, {data_types::f16, data_types::f32}) &&
-                               one_of(wei_dt, {data_types::u4}) &&
+                               one_of(wei_dt, {data_types::u4, data_types::i4}) &&
                                one_of(out_dt, {data_types::f16, data_types::f32});
         if (!compressed_case)
             return false;
 
-        if (wei_layout.get_partial_shape()[1] != 4096 && wei_layout.get_partial_shape()[1] != 11008)
+        if (wei_layout.get_partial_shape()[1] != 2048)
             return false;
 
         if (!one_of(in_layout.format.value, supported_formats) || !one_of(out_layout.format.value, supported_formats))
@@ -48,6 +48,9 @@ struct FCImplementationManagerSYCL : public ImplementationManager {
         if (in_layout.data_padding || out_layout.data_padding)
             return false;
 
+        std::cout << fc_node.id() << std::endl;
+        std::cout << "use sycl impl" << std::endl;
+        std::cout << wei_layout << std::endl;
         return true;
     }
 };

@@ -56,284 +56,37 @@ template<> struct AccumulatorType<::sycl::half, int8_t> {
 
 template<typename AType, typename WType, typename ScaleType, typename DType>
 ::sycl::event run_fc_q4_0_fp16out(::sycl::queue& queue, const AType* a, const WType* w, const ScaleType* s, DType* dst,
-                              size_t M, size_t N, size_t K) {
-  ::sycl::event e;
-  if (M == 1) // GEMV
-  {
-    // K=4096
-    uint32_t ppg=16;
-    if (K==11008) ppg=64;
+                              size_t M, size_t N, size_t K, size_t group_size, size_t groups_num) {
+    ::sycl::event e;
+    e = queue.submit([=](::sycl::handler& cgh) {
+        cgh.parallel_for(::sycl::range<2>(M, N), [=](::sycl::id<2> index) {
+            const uint m = index[0];
+            const uint n = index[1];
+            using accum_t = typename ::sycl::half;
+            accum_t accumulator = 0.0f;
 
-    int groupsV2 = (N + ppg - 1) / ppg;
+            const uint dst_index = n + m*N;
+            for (uint y = 0; y < K; ++y) {
+                const uint input0_offset = y + m*K;
+                const uint decomp_offset = (y / group_size) + n * groups_num;
+                const uint filter_offset = y + n*K;
 
-    ::sycl::range<1> GlobalRange6V2(groupsV2 * 16);
-    ::sycl::range<1> LocalRangeV2(16);
-    ::sycl::nd_range<1> RangeV2(GlobalRange6V2, LocalRangeV2);
+                accum_t scale = s[decomp_offset];
+                const char packed = w[filter_offset / 2];
 
-    int groups = (N + 7) / 8;
-    ::sycl::range<1> GlobalRangeCommonDim4096(groups * 64);
-    ::sycl::range<1> LocalRangeCommonDim4096(64);
-    ::sycl::nd_range<1> RangeCommonDim4096(GlobalRangeCommonDim4096, LocalRangeCommonDim4096);
+                const char s_bit = packed & 0x08;
+                const char mask = s_bit > 0 ? 0xF0 : 0x00;
+                const char v0 = (packed & 0x0F) | mask;
+                const char v1 = (packed & 0xF0) >> 4;
+                accum_t unpacked = filter_offset % 2 == 0 ? v0 : v1;
 
-
-    ::sycl::range<2> GlobalRangeCommonDim11008(11 * groups, 4);
-    ::sycl::range<2> LocalRangeCommonDim11008(11, 4);
-    ::sycl::nd_range<2> RangeCommonDim11008(GlobalRangeCommonDim11008, LocalRangeCommonDim11008);
-
-    if (K == 4096) {
-      e = queue.submit([&](handler& cgh) {
-        cgh.parallel_for(
-            RangeCommonDim4096, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL {
-              matrixMulCommonDim4096Int4NoReshape(
-                  (uint8_t*)w,
-                  (uint8_t*)a,
-                  (uint8_t*)dst,
-                  (uint8_t*)s,
-                  ndi);
-            });
-      });
-    } else if (K == 11008) {
-      e = queue.submit([&](handler& cgh) {
-        cgh.parallel_for(
-            RangeCommonDim11008, [=](nd_item<2> ndi) SYCL_ESIMD_KERNEL {
-              matrixMulCommonDim11008Int4NoReshape(
-                  (uint8_t*)w,
-                  (uint8_t*)a,
-                  (uint8_t*)dst,
-                  (uint8_t*)s,
-                  ndi);
-            });
-      });
-    }
-  } else // GEMM
-  {
-    int groupReduce2048H = (N + 15) / 16;
-    int groupReduce2048V = 1;
-    int localReduce2048H = 64; // internalPrecision == 0  (fp32), not 32
-    int localReduce2048V = 1;
-    ::sycl::range<2> GlobalRangeReduce2048(
-        groupReduce2048H * localReduce2048H,
-        groupReduce2048V * localReduce2048V);
-    ::sycl::range<2> LocalRangeReduce2048(localReduce2048H, localReduce2048V);
-    ::sycl::nd_range<2> RangeReduce2048(
-        GlobalRangeReduce2048, LocalRangeReduce2048);
-
-    int groupReduce768H = (N + 15) / 16;
-    int groupReduce768V = 1;
-    int localReduce768H = 24;
-    int localReduce768V = 1;
-    ::sycl::range<2> GlobalRangeReduce768(
-        groupReduce768H * localReduce768H, groupReduce768V * localReduce768V);
-    ::sycl::range<2> LocalRangeReduce768(localReduce768H, localReduce768V);
-    ::sycl::nd_range<2> RangeReduce768(GlobalRangeReduce768, LocalRangeReduce768);
-
-    int lastReduce = 0;
-    if (K == 4096) {
-      for (int ii = 0; ii < 2; ii++) {
-        if (ii == 2 - 1) {
-          lastReduce = 1;
-        } else {
-          lastReduce = 0;
-        }
-        e = queue.submit([&](handler& cgh) {
-          cgh.parallel_for(
-              RangeReduce2048, [=](nd_item<2> ndi) SYCL_ESIMD_KERNEL {
-                gemmReduce2048WeightsQ40InputFp16_ipex(
-                    (uint8_t*)w,
-                    (uint8_t*)a,
-                    (uint8_t*)dst,
-                    (uint8_t*)s,
-                    K,
-                    M ,
-                    ii,
-                    lastReduce,
-                    ndi);
-              });
+                accum_t filter_val = unpacked * scale;
+                accumulator += a[input0_offset] * filter_val;
+            }
+            dst[dst_index] = accumulator;
         });
-      }
-    }
-    else if (K == 11008) {
-      for (int ii = 0; ii < 5; ii++) {
-        lastReduce = 0;
-        e = queue.submit([&](handler& cgh) {
-          cgh.parallel_for(
-              RangeReduce2048, [=](nd_item<2> ndi) SYCL_ESIMD_KERNEL {
-                gemmReduce2048WeightsQ40InputFp16_ipex(
-                    (uint8_t*)w,
-                    (uint8_t*)a,
-                    (uint8_t*)dst,
-                    (uint8_t*)s,
-                    K,
-                    M,
-                    ii,
-                    lastReduce,
-                    ndi);
-              });
-        });
-      }
-
-      int ii = 5;
-      {
-        lastReduce = 1;
-        e = queue.submit([&](handler& cgh) {
-          cgh.parallel_for(
-              RangeReduce768, [=](nd_item<2> ndi) SYCL_ESIMD_KERNEL {
-                gemmReduce768WeightsQ40InputFp16_ipex(
-                    (uint8_t*)w,
-                    (uint8_t*)a,
-                    (uint8_t*)dst,
-                    (uint8_t*)s,
-                    K,
-                    M,
-                    ii,
-                    lastReduce,
-                    ndi);
-              });
-        });
-      }
-    }
-  }
-  return e;
-}
-
-template<typename AType, typename WType, typename ScaleType, typename DType>
-::sycl::event run_fc_q4_0_fp32out(::sycl::queue& queue, const AType* a, const WType* w, const ScaleType* s, DType* dst,
-                              size_t M, size_t N, size_t K) {
-  ::sycl::event e;
-  if (M == 1) // GEMV
-  {
-    // K=4096
-    uint32_t ppg=16;
-    if (K==11008) ppg=64;
-
-    int groupsV2 = (N + ppg - 1) / ppg;
-
-    ::sycl::range<1> GlobalRange6V2(groupsV2 * 16);
-    ::sycl::range<1> LocalRangeV2(16);
-    ::sycl::nd_range<1> RangeV2(GlobalRange6V2, LocalRangeV2);
-
-
-    int groups = (N+7) / 8;
-    ::sycl::range<1> GlobalRangeCommonDim4096(groups * 64);
-    ::sycl::range<1> LocalRangeCommonDim4096(64);
-    ::sycl::nd_range<1> RangeCommonDim4096(GlobalRangeCommonDim4096, LocalRangeCommonDim4096);
-
-    ::sycl::range<2> GlobalRangeCommonDim11008(11 * groups, 4);
-    ::sycl::range<2> LocalRangeCommonDim11008(11, 4);
-    ::sycl::nd_range<2> RangeCommonDim11008(GlobalRangeCommonDim11008, LocalRangeCommonDim11008);
-    if (K == 4096) {
-      e = queue.submit([&](handler& cgh) {
-        cgh.parallel_for(
-            RangeCommonDim4096, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL {
-              matrixMulCommonDim4096Int4NoReshape_FP32out(
-                  (uint8_t*)w,
-                  (uint8_t*)a,
-                  (uint8_t*)dst,
-                  (uint8_t*)s,
-                  ndi);
-            });
-      });
-    } else if (K == 11008) {
-      e = queue.submit([&](handler& cgh) {
-        cgh.parallel_for(
-            RangeCommonDim11008, [=](nd_item<2> ndi) SYCL_ESIMD_KERNEL {
-              matrixMulCommonDim11008Int4NoReshape_FP32out(
-                  (uint8_t*)w,
-                  (uint8_t*)a,
-                  (uint8_t*)dst,
-                  (uint8_t*)s,
-                  ndi);
-            });
-      });
-    }
-  } else // GEMM
-  {
-    int groupReduce2048H = (N + 15) / 16;
-    int groupReduce2048V = 1;
-    int localReduce2048H = 64; // internalPrecision == 0  (fp32), not 32
-    int localReduce2048V = 1;
-    ::sycl::range<2> GlobalRangeReduce2048(
-        groupReduce2048H * localReduce2048H,
-        groupReduce2048V * localReduce2048V);
-    ::sycl::range<2> LocalRangeReduce2048(localReduce2048H, localReduce2048V);
-    ::sycl::nd_range<2> RangeReduce2048(
-        GlobalRangeReduce2048, LocalRangeReduce2048);
-
-    int groupReduce768H = (N + 15) / 16;
-    int groupReduce768V = 1;
-    int localReduce768H = 24;
-    int localReduce768V = 1;
-    ::sycl::range<2> GlobalRangeReduce768(
-        groupReduce768H * localReduce768H, groupReduce768V * localReduce768V);
-    ::sycl::range<2> LocalRangeReduce768(localReduce768H, localReduce768V);
-    ::sycl::nd_range<2> RangeReduce768(GlobalRangeReduce768, LocalRangeReduce768);
-
-    int lastReduce = 0;
-    if (K == 4096) {
-      for (int ii = 0; ii < 2; ii++) {
-        if (ii == 2 - 1) {
-          lastReduce = 1;
-        } else {
-          lastReduce = 0;
-        }
-        e = queue.submit([&](handler& cgh) {
-          cgh.parallel_for(
-              RangeReduce2048, [=](nd_item<2> ndi) SYCL_ESIMD_KERNEL {
-                gemmReduce2048WeightsQ40InputFp16_ipex_FP32out(
-                    (uint8_t*)w,
-                    (uint8_t*)a,
-                    (uint8_t*)dst,
-                    (uint8_t*)s,
-                    K,
-                    M,
-                    ii,
-                    lastReduce,
-                    ndi);
-              });
-        });
-      }
-    } else if (K == 11008) {
-      for (int ii = 0; ii < 5; ii++) {
-        lastReduce = 0;
-        e = queue.submit([&](handler& cgh) {
-          cgh.parallel_for(
-              RangeReduce2048, [=](nd_item<2> ndi) SYCL_ESIMD_KERNEL {
-                gemmReduce2048WeightsQ40InputFp16_ipex_FP32out(
-                    (uint8_t*)w,
-                    (uint8_t*)a,
-                    (uint8_t*)dst,
-                    (uint8_t*)s,
-                    K,
-                    M,
-                    ii,
-                    lastReduce,
-                    ndi);
-              });
-        });
-      }
-
-      int ii = 5;
-      {
-        lastReduce = 1;
-        e = queue.submit([&](handler& cgh) {
-          cgh.parallel_for(
-              RangeReduce768, [=](nd_item<2> ndi) SYCL_ESIMD_KERNEL {
-                gemmReduce768WeightsQ40InputFp16_ipex_FP32out(
-                    (uint8_t*)w,
-                    (uint8_t*)a,
-                    (uint8_t*)dst,
-                    (uint8_t*)s,
-                    K,
-                    M,
-                    ii,
-                    lastReduce,
-                    ndi);
-              });
-        });
-      }
-    }
-  }
-  return e;
+    });
+    return e;
 }
 
 struct fully_connected_sycl : typed_primitive_sycl_impl<fully_connected> {
@@ -428,21 +181,18 @@ struct fully_connected_sycl : typed_primitive_sycl_impl<fully_connected> {
             std::cerr << "dzp = " << dzp << std::endl;
         }
 
-        OPENVINO_ASSERT(inputs.size() >= 2);
+        // OPENVINO_ASSERT(inputs.size() >= 2);
 
-        auto dzp_scalar = desc->decompression_zero_point_scalar;
+        // auto dzp_scalar = desc->decompression_zero_point_scalar;
 
-        bool barrier = stream.get_queue_type() == QueueTypes::out_of_order;
+        // bool barrier = stream.get_queue_type() == QueueTypes::out_of_order;
 
         if (out_t == ov::element::f16){
-          // const ::sycl::half* in = static_cast<const ::sycl::half*>(inputs[0]->buffer_ptr());
-          // const uint8_t* wei = static_cast<const uint8_t*>(weights->buffer_ptr());
-          // ::sycl::half* out = static_cast<::sycl::half*>(output->buffer_ptr());
-          // const ::sycl::half* ds = static_cast<const ::sycl::half*>(inputs[1]->buffer_ptr());
-          return to_ocl_event(stream, run_fc_q4_0_fp16out(sycl_queue, in, wei, ds, out, M, N, K));
-        }
-        else if (out_t == ov::element::f32){
-          return to_ocl_event(stream, run_fc_q4_0_fp32out(sycl_queue, in, wei, ds, out, M, N, K));
+          const ::sycl::half* in = static_cast<const ::sycl::half*>(inputs[0]->buffer_ptr());
+          const char* wei = static_cast<const char*>(weights->buffer_ptr());
+          ::sycl::half* out = static_cast<::sycl::half*>(output->buffer_ptr());
+          const ::sycl::half* ds = static_cast<const ::sycl::half*>(inputs[1]->buffer_ptr());
+          return to_ocl_event(stream, run_fc_q4_0_fp16out(sycl_queue, in, wei, ds, out, M, N, K, group_size, groups_num));
         }
     }
 
