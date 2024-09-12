@@ -1722,7 +1722,7 @@ impl_types layout_optimizer::get_preferred_impl_type(program_node& node, format 
         if (node.is_type<fully_connected>()) {
             auto& fc_node = node.as<fully_connected>();
             auto prim = fc_node.get_primitive();
-            if (fc_node.weights().get_output_layout().data_type==ov::element::u4 &&
+            if (fc_node.weights().get_output_layout().data_type==ov::element::i4 &&
             fc_node.get_output_layout().data_type==ov::element::f16 &&
             (fc_node.weights().get_output_layout().get_partial_shape()[1]==4096)) {
                 std::cout << fc_node.id() << ": use sycl impl!\n";

@@ -509,7 +509,7 @@ static void optimize_weights_decompression_parameters(fully_connected_node& fc_n
     };
 
     auto need_reorder = [&](size_t dep_id) {
-        if (fc_node.weights().get_output_layout().data_type==ov::element::u4 &&
+        if (fc_node.weights().get_output_layout().data_type==ov::element::i4 &&
             fc_node.get_output_layout().data_type==ov::element::f16 &&
             (fc_node.weights().get_output_layout().get_partial_shape()[1]==4096))
             return false;
