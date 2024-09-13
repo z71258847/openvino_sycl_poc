@@ -58,46 +58,60 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
 ::sycl::event run_fc_q4_0_fp16out(::sycl::queue& queue, const AType* a, const WType* w, const ScaleType* s, DType* dst,
                               size_t M, size_t N, size_t K, size_t group_size, size_t groups_num) {
     ::sycl::event e;
-    e = queue.submit([=](::sycl::handler& cgh) {
-        cgh.parallel_for(::sycl::range<2>(M, N), [=](::sycl::id<2> index) {
-            const uint m = index[0];
-            const uint n = index[1];
-            using accum_t = typename ::sycl::half;
-            accum_t accumulator = 0.0f;
+    if (M==1){ // GEMV
+        uint32_t groupsV2 = (N + 32 - 1) / 32;
+        ::sycl::range<1> GlobalRangeCommonDim3072(groupsV2 * 8);
+        ::sycl::range<1> LocalRangeCommonDim3072(8);
+        ::sycl::nd_range<1> RangeCommonDim3072(
+            GlobalRangeCommonDim3072, LocalRangeCommonDim3072);
+  
+        e = queue.submit([&](handler& cgh) {
+          cgh.parallel_for(
+              RangeCommonDim3072, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL {
+                GEMV_Int4Weight_FP16InOutNx16Temp_largeGRF_block_8T<8192, 5>(
+                    (uint8_t*)w,
+                    (uint8_t*)a,
+                    (uint8_t*)dst,
+                    (uint8_t*)s,
+                    ndi);
+              });
+        });
+    }
+    else{ // GEMM
+        e = queue.submit([=](::sycl::handler& cgh) {
+            cgh.parallel_for(::sycl::range<2>(M, N), [=](::sycl::id<2> index) {
+                const uint m = index[0];
+                const uint n = index[1];
+                using accum_t = typename ::sycl::half;
+                accum_t accumulator = 0.0f;
 
-            const uint dst_index = n + m*N;
-            for (uint y = 0; y < K; ++y) {
-                const uint input0_offset = y + m*K;
-                const uint decomp_offset = (y / group_size) + n*groups_num;
-                const uint filter_offset = y + n*K;
+                const uint dst_index = n + m*N;
+                for (uint y = 0; y < K; ++y) {
+                    const uint input0_offset = y + m*K;
+                    const uint decomp_offset = (y / group_size) + n*groups_num;
+                    const uint filter_offset = y + n*K;
 
-                accum_t scale = s[decomp_offset];
-                const char packed = w[filter_offset / 2];
-                char v0;
-                char v1;
-                accum_t zp_val;
+                    accum_t scale = s[decomp_offset];
+                    const char packed = w[filter_offset / 2];
+                    char v0;
+                    char v1;
+                    accum_t zp_val;
 
-                if (K==2048){
                     zp_val = static_cast<accum_t>(0.0f);
                     const char s_bit = packed & 0x08;
                     const char mask = s_bit > 0 ? 0xF0 : 0x00;
                     v0 = (packed & 0x0F) | mask;
                     v1 = packed >> 4;
-                }
-                else if (K==4096){
-                    zp_val = static_cast<accum_t>(8.0f);
-                    v0 = (packed & 0x0F);
-                    v1 = (packed & 0xF0) >> 4;
-                }
 
-                accum_t unpacked = filter_offset % 2 == 0 ? v0 : v1;
+                    accum_t unpacked = filter_offset % 2 == 0 ? v0 : v1;
 
-                accum_t filter_val = (unpacked - zp_val) * scale;
-                accumulator += a[input0_offset] * filter_val;
-            }
-            dst[dst_index] = accumulator;
+                    accum_t filter_val = (unpacked - zp_val) * scale;
+                    accumulator += a[input0_offset] * filter_val;
+                }
+                dst[dst_index] = accumulator;
+            });
         });
-    });
+    }
     return e;
 }
 
