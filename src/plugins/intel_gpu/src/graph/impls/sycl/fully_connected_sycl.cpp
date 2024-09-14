@@ -59,23 +59,83 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
                               size_t M, size_t N, size_t K, size_t group_size, size_t groups_num) {
     ::sycl::event e;
     if (M==1){ // GEMV
-        uint32_t groupsV2 = (N + 32 - 1) / 32;
-        ::sycl::range<1> GlobalRangeCommonDim3072(groupsV2 * 8);
-        ::sycl::range<1> LocalRangeCommonDim3072(8);
-        ::sycl::nd_range<1> RangeCommonDim3072(
-            GlobalRangeCommonDim3072, LocalRangeCommonDim3072);
-  
-        e = queue.submit([&](handler& cgh) {
-          cgh.parallel_for(
-              RangeCommonDim3072, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL {
-                GEMV_Int4Weight_FP16InOutNx16Temp_largeGRF_block_8T<8192, 5>(
-                    (uint8_t*)w,
-                    (uint8_t*)a,
-                    (uint8_t*)dst,
-                    (uint8_t*)s,
-                    ndi);
-              });
-        });
+        if (K==8192 && N==2048){
+            uint32_t groupsV2 = (N + 32 - 1) / 32;
+            ::sycl::range<1> GlobalRangeCommonDim8192(groupsV2 * 8);
+            ::sycl::range<1> LocalRangeCommonDim8192(8);
+            ::sycl::nd_range<1> RangeCommonDim8192(
+                GlobalRangeCommonDim8192, LocalRangeCommonDim8192);
+    
+            e = queue.submit([&](handler& cgh) {
+            cgh.parallel_for(
+                RangeCommonDim8192, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL {
+                    GEMV_Int4Weight_FP16InOutNx16Temp_largeGRF_block_8T<8192, 5>(
+                        (uint8_t*)w,
+                        (uint8_t*)a,
+                        (uint8_t*)dst,
+                        (uint8_t*)s,
+                        ndi);
+                });
+            });
+        }
+        else if (K==8192 && N==3072){
+            uint32_t groupsV2 = (N + 8 - 1) / 8;
+            ::sycl::range<1> GlobalRangeCommonDim8192(groupsV2 * 8);
+            ::sycl::range<1> LocalRangeCommonDim8192(8);
+            ::sycl::nd_range<1> RangeCommonDim8192(
+                GlobalRangeCommonDim8192, LocalRangeCommonDim8192);
+    
+            e = queue.submit([&](handler& cgh) {
+            cgh.parallel_for(
+                RangeCommonDim8192, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL {
+                    GEMV_Int4Weight_FP16InOutNx16Temp_largeGRF_block_ppg8_8T<8192, 3>(
+                        (uint8_t*)w,
+                        (uint8_t*)a,
+                        (uint8_t*)dst,
+                        (uint8_t*)s,
+                        ndi);
+                });
+            });
+        }
+        else if (K == 3072 /* && N == 8192 || K == 3072 && N == 3072 || K == 3072 && N == 1024 */) {
+            uint32_t groupsV2 = (N + 8 - 1) / 8;
+            ::sycl::range<1> GlobalRangeCommonDim3072(groupsV2 * 6);
+            ::sycl::range<1> LocalRangeCommonDim3072(6);
+            ::sycl::nd_range<1> RangeCommonDim3072(
+                GlobalRangeCommonDim3072, LocalRangeCommonDim3072);
+    
+            e = queue.submit([&](handler& cgh) {
+            cgh.parallel_for(
+                RangeCommonDim3072, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL {
+                    GEMV_Int4Weight_FP16InOutNx16Temp_largeGRF_block_ppg8_8T<3072, 3>(
+                        (uint8_t*)w,
+                        (uint8_t*)a,
+                        (uint8_t*)dst,
+                        (uint8_t*)s,
+                        ndi);
+                });
+            });
+        }
+        else if (K==2048){
+            uint32_t groupsV2 = (N + 8 - 1) / 8;
+            ::sycl::range<1> GlobalRangeCommonDim2048(groupsV2 * 4);
+            ::sycl::range<1> LocalRangeCommonDim2048(4);
+            ::sycl::nd_range<1> RangeCommonDim2048(
+                GlobalRangeCommonDim2048, LocalRangeCommonDim2048);
+    
+            e = queue.submit([&](handler& cgh) {
+            cgh.parallel_for(
+                RangeCommonDim2048, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL {
+                    // GEMV_Int4Weight_FP16InOutNx16Temp_largeGRF_block<3072, 4>(
+                    GEMV_Int4Weight_FP16InOutNx16Temp_largeGRF_block_ppg8_8T<2048, 3>(
+                        (uint8_t*)w,
+                        (uint8_t*)a,
+                        (uint8_t*)dst,
+                        (uint8_t*)s,
+                        ndi);
+                });
+            });
+        }
     }
     else{ // GEMM
         e = queue.submit([=](::sycl::handler& cgh) {
@@ -128,7 +188,7 @@ struct fully_connected_sycl : typed_primitive_sycl_impl<fully_connected> {
     event::ptr execute_impl(const std::vector<event::ptr>& /* events */, typed_primitive_inst<fully_connected>& instance) override {
         auto& network = instance.get_network();
         const auto& desc = instance.get_typed_desc<fully_connected>();
-        const bool print = true;
+        const bool print = false;
 
         auto start = std::chrono::high_resolution_clock::now();
         // auto& stream = dynamic_cast<ocl::ocl_stream&>(network.get_stream());
@@ -175,19 +235,22 @@ struct fully_connected_sycl : typed_primitive_sycl_impl<fully_connected> {
         size_t groups_num = params->input_layouts[2].get_shape()[1];
         size_t group_size = K / groups_num;
 
-        void* in = static_cast<void*>(inputs[0]->buffer_ptr());
-        void* wei = static_cast<void*>(weights->buffer_ptr());
-        void* out = static_cast<void*>(output->buffer_ptr());
-        void* ds = static_cast<void*>(inputs[1]->buffer_ptr());
-        void* dzp = inputs.size() == 3 ? static_cast<void*>(inputs[2]->buffer_ptr()) : nullptr;
+        // void* in = static_cast<void*>(inputs[0]->buffer_ptr());
+        // void* wei = static_cast<void*>(weights->buffer_ptr());
+        // void* out = static_cast<void*>(output->buffer_ptr());
+        // void* ds = static_cast<void*>(inputs[1]->buffer_ptr());
+        // void* dzp = inputs.size() == 3 ? static_cast<void*>(inputs[2]->buffer_ptr()) : nullptr;
 
+        const ::sycl::half* in = static_cast<const ::sycl::half*>(inputs[0]->buffer_ptr());
+        const uint8_t* wei = static_cast<const uint8_t*>(weights->buffer_ptr());
+        ::sycl::half* out = static_cast<::sycl::half*>(output->buffer_ptr());
+        const ::sycl::half* ds = static_cast<const ::sycl::half*>(inputs[1]->buffer_ptr());
 
         if (print) {
             std::cerr << "in: " << params->input_layouts[0].to_short_string() << std::endl;
             std::cerr << "wei: " << params->weights_layout.value().to_short_string() << std::endl;
             std::cerr << "out: " << params->output_layouts[0].to_short_string() << std::endl;
             std::cerr << "scale: " << params->input_layouts[2].to_short_string() << std::endl;
-            std::cerr << "zp: " << (params->input_layouts.size() == 4 ? params->input_layouts[3].to_short_string()  : "none") << std::endl;
 
             std::cerr << "M = " << M << std::endl;
             std::cerr << "N = " << N << std::endl;
@@ -198,13 +261,11 @@ struct fully_connected_sycl : typed_primitive_sycl_impl<fully_connected> {
             std::cerr << "wei_t = " << wei_t << std::endl;
             std::cerr << "out_t = " << out_t << std::endl;
             std::cerr << "ds_t = " << ds_t << std::endl;
-            std::cerr << "dzp_t = " << dzp_t << std::endl;
 
             std::cerr << "in = " << in << std::endl;
             std::cerr << "wei = " << wei << std::endl;
             std::cerr << "out = " << out << std::endl;
             std::cerr << "ds = " << ds << std::endl;
-            std::cerr << "dzp = " << dzp << std::endl;
         }
 
         // OPENVINO_ASSERT(inputs.size() >= 2);
@@ -213,13 +274,7 @@ struct fully_connected_sycl : typed_primitive_sycl_impl<fully_connected> {
 
         // bool barrier = stream.get_queue_type() == QueueTypes::out_of_order;
 
-        if (out_t == ov::element::f16){
-          const ::sycl::half* in = static_cast<const ::sycl::half*>(inputs[0]->buffer_ptr());
-          const uint8_t* wei = static_cast<const uint8_t*>(weights->buffer_ptr());
-          ::sycl::half* out = static_cast<::sycl::half*>(output->buffer_ptr());
-          const ::sycl::half* ds = static_cast<const ::sycl::half*>(inputs[1]->buffer_ptr());
-          return to_ocl_event(stream, run_fc_q4_0_fp16out(sycl_queue, in, wei, ds, out, M, N, K, group_size, groups_num));
-        }
+        return to_ocl_event(stream, run_fc_q4_0_fp16out(sycl_queue, in, wei, ds, out, M, N, K, group_size, groups_num));
     }
 
     static std::shared_ptr<WeightsReorderParams> get_weights_reorder(const kernel_impl_params& impl_params) {

@@ -39,7 +39,9 @@ struct FCImplementationManagerSYCL : public ImplementationManager {
         if (!compressed_case)
             return false;
 
-        if (wei_layout.get_partial_shape()[1] != 8192)
+        if (wei_layout.get_partial_shape()[1] != 8192 && 
+            wei_layout.get_partial_shape()[1] != 3072 && 
+            wei_layout.get_partial_shape()[1] != 2048)
             return false;
 
         if (!one_of(in_layout.format.value, supported_formats) || !one_of(out_layout.format.value, supported_formats))
@@ -50,7 +52,7 @@ struct FCImplementationManagerSYCL : public ImplementationManager {
 
         std::cout << fc_node.id() << std::endl;
         std::cout << "use sycl impl" << std::endl;
-        std::cout << wei_layout << std::endl;
+        // std::cout << wei_layout << std::endl;
         return true;
     }
 
