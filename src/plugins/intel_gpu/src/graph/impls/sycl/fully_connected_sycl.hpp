@@ -39,9 +39,10 @@ struct FCImplementationManagerSYCL : public ImplementationManager {
         if (!compressed_case)
             return false;
 
-        if (wei_layout.get_partial_shape()[1] != 8192 && 
-            wei_layout.get_partial_shape()[1] != 3072 && 
-            wei_layout.get_partial_shape()[1] != 2048)
+        if ((wei_layout.get_partial_shape()[1] != 8192 || out_layout.get_partial_shape()[2]!=2048)
+            // && wei_layout.get_partial_shape()[1] != 3072
+            // && wei_layout.get_partial_shape()[1] != 2048
+            )
             return false;
 
         if (!one_of(in_layout.format.value, supported_formats) || !one_of(out_layout.format.value, supported_formats))
@@ -50,16 +51,16 @@ struct FCImplementationManagerSYCL : public ImplementationManager {
         if (in_layout.data_padding || out_layout.data_padding)
             return false;
 
-        std::cout << fc_node.id() << std::endl;
-        std::cout << "use sycl impl" << std::endl;
+        // std::cout << fc_node.id() << std::endl;
+        // std::cout << "use sycl impl" << std::endl;
         // std::cout << wei_layout << std::endl;
         return true;
     }
 
     bool support_shapes(const kernel_impl_params& param) const override{
-        // auto out_shape = param.output_layouts[0].get_shape();
+        auto out_shape = param.output_layouts[0].get_shape();
         // std::cout << "out shape: " << out_shape << std::endl;
-        // if (out_shape[0]>1) return false;
+        if (out_shape[0]>1) return false;
 
         return true;
     }

@@ -9,7 +9,7 @@ using namespace ::sycl::ext::intel::esimd::xmx;
 #define GROUP 128
 
 template<uint32_t K_DIM, uint32_t pixelPerGroupShift>
-ESIMD_INLINE void GEMV_Int4Weight_FP16InOutNx16Temp_largeGRF_block_8T(uint8_t* a, uint8_t* b, uint8_t* c, uint8_t* d, nd_item<1>& ndi) {
+ESIMD_INLINE void GEMV_Int4Weight_FP16InOutNx16Temp_largeGRF_block_8T(uint8_t* a, uint8_t* b, uint8_t* c, uint8_t* d, size_t N, nd_item<1>& ndi) {
   constexpr uint32_t pixelPerGroup = 1 << pixelPerGroupShift;
   constexpr uint32_t quantPerGroup = K_DIM / GROUP * pixelPerGroup;
   constexpr uint32_t sumThreads = pixelPerGroup / 16;
@@ -21,12 +21,13 @@ ESIMD_INLINE void GEMV_Int4Weight_FP16InOutNx16Temp_largeGRF_block_8T(uint8_t* a
   int h = ndi.get_group(0); // [0, 256)
   int rowSize = ndi.get_group_range(0) * pixelPerGroup;
   int offsetABase = (h * pixelPerGroup * K_DIM + hh * 8 * 8 * 4 * 2) >> 1;
-  int offsetQuanBase = /*rowSize * K_DIM / 2 +*/ h * quantPerGroup * sizeof(fp16) + hh * 512 / GROUP * sizeof(fp16);
+  // int offsetQuanBase = /*rowSize * K_DIM / 2 +*/ h * quantPerGroup * sizeof(fp16) + hh * 512 / GROUP * sizeof(fp16);
+  int offsetQuanBase = hh * (512/GROUP) * N * sizeof(fp16) + h * pixelPerGroup * sizeof(fp16);
   int offsetB = hh * 128 * 2 * 2 * sizeof(fp16);
   int outputOffset = pixelPerGroup * h;
   int offsetSLMThread = hh * 2 * 64 * sizeof(float);
   simd<char, 256> aaa;
-  simd<fp16, 80> quant;
+  simd<fp16, 256> quant;
   simd<fp16, 2560> bb;
   simd<float, 8 * 16 * 4> aa;
   simd<float, 16> cc(0.0f);
@@ -79,35 +80,26 @@ ESIMD_INLINE void GEMV_Int4Weight_FP16InOutNx16Temp_largeGRF_block_8T(uint8_t* a
     offsetB += 4096 * sizeof(fp16);
   }
 
+#pragma unroll
+    for (int k = 0; k < K_DIM_DIV_4096; k++) {
+      offsetQuan = offsetQuanBase;
+#pragma unroll
+      for (int r = 0; r < 512 / GROUP; r++){
+        quant.template bit_cast_view<unsigned char>().template select<pixelPerGroup * 2, 1>(pixelPerGroup * 2 * r + k * pixelPerGroup * (512/GROUP) * 2) =
+          __ESIMD_ENS::lsc_block_load<
+          uint8_t,
+          pixelPerGroup * 2,
+          __ESIMD_ENS::lsc_data_size::default_size,
+          __ESIMD_ENS::cache_hint::cached,
+          __ESIMD_ENS::cache_hint::cached>((uint8_t*)d + offsetQuan);
+        offsetQuan += N * sizeof(fp16);
+      }
+      offsetQuanBase += 4096 / GROUP * N * sizeof(fp16);
+    }
+
+
   for (int n = 0; n < pixelPerGroup; n++) {
     cc = 0.0f;
-    offsetQuan = offsetQuanBase + n * K_DIM / GROUP * sizeof(fp16);
-#pragma unroll
-    for (int k = 0; k < K_DIM_DIV_4096-1; k++) {
-      quant.template bit_cast_view<unsigned char>().template select<512 / GROUP * 2, 1>(512 / GROUP * 2 * k) =
-        __ESIMD_ENS::lsc_block_load<
-        uint8_t,
-        512 / GROUP * 2,
-        __ESIMD_ENS::lsc_data_size::default_size,
-        __ESIMD_ENS::cache_hint::cached,
-        __ESIMD_ENS::cache_hint::cached>((uint8_t*)d + offsetQuan);
-      offsetQuan += 4096 / GROUP * sizeof(fp16);
-    }
-    if (hh < K_DIM_REDUCE_T)
-    {
-      quant.template bit_cast_view<unsigned char>().template select<512 / GROUP * 2, 1>(512 / GROUP * 2 * (K_DIM_DIV_4096-1)) =
-        __ESIMD_ENS::lsc_block_load<
-        uint8_t,
-        512 / GROUP * 2,
-        __ESIMD_ENS::lsc_data_size::default_size,
-        __ESIMD_ENS::cache_hint::cached,
-        __ESIMD_ENS::cache_hint::cached>((uint8_t*)d + offsetQuan);
-    }
-    else
-    {
-      quant.template bit_cast_view<unsigned char>().template select<512 / GROUP * 2, 1>(512 / GROUP * 2 * (K_DIM_DIV_4096-1)) = 0;
-    }
-    offsetQuan += 4096 / GROUP * sizeof(fp16);
 
     offsetA = offsetABase + n * K_DIM / 2;
 
@@ -115,7 +107,7 @@ ESIMD_INLINE void GEMV_Int4Weight_FP16InOutNx16Temp_largeGRF_block_8T(uint8_t* a
     for (int k = 0; k < K_DIM_DIV_4096; k++) {
       if (k != K_DIM_DIV_4096-1 || hh < K_DIM_REDUCE_T)
       {
-        simd<float, 512 / GROUP> fp32Q = quant.select<512 / GROUP, 1>(512 / GROUP * k);
+        simd<float, 512 / GROUP> fp32Q = quant.select<512 / GROUP, pixelPerGroup>(n+k*pixelPerGroup*(512/GROUP));
         aaa.template bit_cast_view<char>().template select<256, 1>(0) =
           __ESIMD_ENS::lsc_block_load<
           char,
