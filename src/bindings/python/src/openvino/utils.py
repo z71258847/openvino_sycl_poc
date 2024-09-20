@@ -37,6 +37,14 @@ def _add_openvino_libs_to_search_path() -> None:
             if os.path.isdir(lib_path):
                 # On Windows, with Python >= 3.8, DLLs are no longer imported from the PATH.
                 os.add_dll_directory(os.path.abspath(lib_path))
+        # SYCL dependency
+        try:
+            import subprocess
+            sycl_lib_path = subprocess.check_output(['icx', f"-print-file-name=libmmd.dll"], stderr=subprocess.DEVNULL,).decode("utf-8").rstrip().split('libmmd.dll')[0]
+            os.add_dll_directory(sycl_lib_path)
+        except:
+            print("SYCL dependency not found, please setup oneapi environment.")
+
 
 
 def get_cmake_path() -> str:

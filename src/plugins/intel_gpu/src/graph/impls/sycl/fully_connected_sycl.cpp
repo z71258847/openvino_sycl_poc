@@ -59,7 +59,7 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
                               size_t M, size_t N, size_t K, size_t group_size, size_t groups_num) {
     ::sycl::event e;
     // if (M==1){ // GEMV
-    // if (K==8192 && N==2048){
+    if (K==8192 && N==2048){
         uint32_t groupsV2 = (N + 32 - 1) / 32;
         ::sycl::range<1> GlobalRangeCommonDim8192(groupsV2 * 8);
         ::sycl::range<1> LocalRangeCommonDim8192(8);
@@ -78,6 +78,51 @@ template<typename AType, typename WType, typename ScaleType, typename DType>
                     ndi);
             });
         });
+    }
+    else if (K==3072 && N==128256){
+        uint32_t groupsV2 = (N + 4 - 1) / 4;
+        ::sycl::range<1> GlobalRangeCommonDim3072(groupsV2 * 6);
+        ::sycl::range<1> LocalRangeCommonDim3072(6);
+        ::sycl::nd_range<1> RangeCommonDim3072(
+            GlobalRangeCommonDim3072, LocalRangeCommonDim3072);
+  
+        e = queue.submit([&](handler& cgh) {
+          cgh.parallel_for(
+              RangeCommonDim3072, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL {
+                GEMV_Int4Weight_FP16InOutNx16Temp_largeGRF_block_ppg8_8T<3072, 2>(
+                    (uint8_t*)w,
+                    (uint8_t*)a,
+                    (uint8_t*)dst,
+                    (uint8_t*)s,
+                    N,
+                    ndi);
+              });
+        });
+    }
+    else if (K==2048 && N==128256){
+        uint32_t groupsV2 = (N + 8 - 1) / 8;
+        ::sycl::range<1> GlobalRangeCommonDim2048(groupsV2 * 4);
+        ::sycl::range<1> LocalRangeCommonDim2048(4);
+        ::sycl::nd_range<1> RangeCommonDim2048(
+            GlobalRangeCommonDim2048, LocalRangeCommonDim2048);
+  
+        e = queue.submit([&](handler& cgh) {
+          cgh.parallel_for(
+              RangeCommonDim2048, [=](nd_item<1> ndi) SYCL_ESIMD_KERNEL {
+                GEMV_Int4Weight_FP16InOutNx16Temp_largeGRF_block_ppg8_8T<2048, 3>(
+                    (uint8_t*)w,
+                    (uint8_t*)a,
+                    (uint8_t*)dst,
+                    (uint8_t*)s,
+                    N,
+                    ndi);
+              });
+        });
+    }
+    // else{
+    //     std::cerr << "M = " << M << std::endl;
+    //     std::cerr << "N = " << N << std::endl;
+    //     std::cerr << "K = " << K << std::endl;
     // }
     // else{
     //     std::cerr << "OP NOT supportedin SYCL but directed to SYCL PATH!" << std::endl;
