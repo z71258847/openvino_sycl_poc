@@ -508,7 +508,7 @@ static void optimize_weights_decompression_parameters(fully_connected_node& fc_n
         fc_node.get_dependency(dep_id).recalc_output_layout(false);
     };
 
-    auto need_reorder = [&](size_t dep_id) {
+    auto need_reorder = [&](size_t dep_id) {        
         auto dep_layout = fc_node.get_input_layout(dep_id);
         auto dep_pshape = dep_layout.get_partial_shape();
         // Group for scale_idx is always 1, whereas zero_point_idx is 0.
