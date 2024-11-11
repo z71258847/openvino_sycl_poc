@@ -87,10 +87,17 @@ ov::OutputVector group_query_attention(const ov::frontend::onnx::Node& node) {
 
     auto num_heads = node.get_attribute_value<int64_t>("num_heads");
     auto num_heads_node = v0::Constant::create(ov::element::i64, ov::Shape{1}, {num_heads});
+
     auto kv_num_heads = node.get_attribute_value<int64_t>("kv_num_heads");
     auto kv_num_heads_node = v0::Constant::create(ov::element::i64, ov::Shape{1}, {kv_num_heads});
-    bool do_rotary = node.get_attribute_value<bool>("do_rotary");
 
+    auto do_rotary = node.get_attribute_value<int64_t>("do_rotary", 0);
+    auto local_window_size = node.get_attribute_value<int64_t>("local_window_size", -1);
+    auto smooth_softmax = node.get_attribute_value<int64_t>("smooth_softmax", 0);
+    auto softcap = node.get_attribute_value<float>("softcap", 0);
+    auto scale = node.get_attribute_value<float>("scale", 0);
+
+    // TODO: decide how to diff packed vs unpacked
     if (!ov::op::util::is_null(key)){
         std::cerr << "qkv unpacked not impl" << std::endl;
         ASSERT(false);
@@ -113,41 +120,71 @@ ov::OutputVector group_query_attention(const ov::frontend::onnx::Node& node) {
     ov::OutputVector split = ov::op::util::make_split(query, qkv_sizes, 2);
 
 
-    // const auto& qkv_type = query->get_element_type();
-    // const auto qkv_shape = std::make_shared<v3::ShapeOf>(query);
-
-    // // TODO:
-    // int present_sequence_length = std::max(total_sequence_length, past_sequence_length);
-    if (do_rotary){
-        // TODO: add rotary embedding to Q K
-
-        auto past_kv_dims = std::make_shared<v3::ShapeOf>(past_key);
-        auto past_sequence_length = get_dimensions(past_kv_dims, {2})
-
-        auto two = v0::Constant::create(ov::element::i64, ov::Shape{}, {2});
-        auto cos_dims = std::make_shared<v3::ShapeOf>(cos_cache);
-        auto rotary_dim = std::make_shared<v1::Multiply>(get_dimensions(cos_dims, {1}), two);
-
-    }
-    
-    // attn
+    auto perm = v0::Constant::create(ov::element::i64, ov::Shape{4}, {0, 2, 1, 3});
     // q
     auto q_new_shape = std::make_shared<v0::Concat>(
         ov::NodeVector{batch_size, sequence_length, num_heads_node, head_size},
         0);
-    auto Q = std::make_shared<v1::Reshape>(split[0], q_new_shape, false);
+    auto reshape_q = std::make_shared<v1::Reshape>(split[0], q_new_shape, false);
+    auto Q = std::make_shared<v1::Transpose>(reshape_q, perm);
     // k
     auto v_new_shape = std::make_shared<v0::Concat>(
         ov::NodeVector{batch_size, sequence_length, kv_num_heads_node, head_size},
         0);
-    auto K = std::make_shared<v1::Reshape>(split[1], k_new_shape, false);
+    auto reshape_k = std::make_shared<v1::Reshape>(split[1], k_new_shape, false);
+    auto K = std::make_shared<v1::Transpose>(reshape_k, perm);
     // v
     auto v_new_shape = std::make_shared<v0::Concat>(
         ov::NodeVector{batch_size, sequence_length, kv_num_heads_node, head_size},
         0);
-    auto V = std::make_shared<v1::Reshape>(split[2], v_new_shape, false);
+    auto reshape_v = std::make_shared<v1::Reshape>(split[2], v_new_shape, false);
+    auto V = std::make_shared<v1::Transpose>(reshape_v, perm);
     
+    // TODO: apply rotary embedding to Q K
+    if (do_rotary && !ov::op::util::is_null(cos_cache) && !ov::op::util::is_null(sin_cache)){
+        // TODO: Generate position ids, check CPU & CUDA impl
+        const int pos_ids_size = is_first_prompt ? 1 : batch_size * sequence_length;
+        std::vector<int64_t> pos_ids(pos_ids_size);
+        if (is_first_prompt) {
+            pos_ids[0] = static_cast<int64_t>(0);
+        } else {
+        // Note: As of now, continuous decoding supports only batch size 1 and token generation supports only sequence length 1.
+        // pos_id (b, s) = seqlens_k(b) + 1 - sequence_length
+            for (int b = 0; b < batch_size; b++) {
+                const int total_seqlen = seqlens_k[b] + 1;
+                const int past_seqlen = total_seqlen - sequence_length;
+                for (int s = 0; s < sequence_length; s++) {
+                    if (past_seqlen + s < total_seqlen) {
+                        pos_ids[b * sequence_length + s] = static_cast<int64_t>(past_seqlen) + s;
+                    } else {
+                        pos_ids[b * sequence_length + s] = static_cast<int64_t>(1);
+                    }
+                }
+            }
+        }
+        const auto pos_ids_node = v0::Constant::create(ov::element::i64, ov::Shape{pos_ids_size}, pos_ids);
 
+        auto two = v0::Constant::create(ov::element::i64, ov::Shape{}, {2});
+        auto half_rotary_dim = std::make_shared<v3::ShapeOf>(cos_cache);
+        auto rotary_dim = std::make_shared<v1::Multiply>(get_dimensions(half_rotary_dim, {1}), two);
+
+    }
+
+    // TODO : kv cache
+    // extend kv to past_kv & output to present_kv
+    // // TODO:
+    // int present_sequence_length = std::max(total_sequence_length, past_sequence_length);
+        
+    if (!ov::op::util::is_null(past_key)){
+        auto past_kv_dims = std::make_shared<v3::ShapeOf>(past_key);
+        auto past_sequence_length = get_dimensions(past_kv_dims, {2})
+    }
+
+    //  TODO : attn
+    //  attention_probs(B, N, S, T) = 1/sqrt(H) x Q(B, N, S, H) x K'(B, N_kv, T, H -> B, N, H, T)
+    //  attention_probs(B, N, S, T) = Softmax(attention_probs)
+    //  attention_value(B, N, S, T) = attention_probs(B, N, S, T) x V(B, N_kv, T, H)
+    //  N=N_kv*scale_kv; N[0]->N_kn[0:scale_kv],N[0]->N_kn[scale_kv:2*scale_kv],...
 
     return {output, present};
 }
@@ -155,6 +192,62 @@ ONNX_OP("GroupQueryAttention", OPSET_SINCE(1), com_microsoft::opset_1::group_que
 }  // namespace opset_1
 
 #if 0
+
+__global__ void SeqlensToPosIdsInteractive(const int32_t* seqlens_k, int64_t* position_ids,
+                                           const int seqlen, const int batch_size) {
+  int tid = blockDim.x * blockIdx.x + threadIdx.x;
+  int b = tid / seqlen;
+  int s = tid % seqlen;
+  if (b < batch_size) {
+    const int total_seqlen = seqlens_k[b] + 1;
+    const int past_seqlen = total_seqlen - seqlen;
+    if (past_seqlen + s < total_seqlen) {
+      position_ids[tid] = past_seqlen + s;
+    } else {
+      position_ids[tid] = 1;
+    }
+  }
+}
+
+__global__ void SeqlensToPosIdsPrompt(const int32_t* seqlens_k, int64_t* position_ids, const int seqlen,
+                                      const int batch_size) {
+  int tid = blockDim.x * blockIdx.x + threadIdx.x;
+  int b = tid / seqlen;
+  int s = tid % seqlen;
+  if (b < batch_size) {
+    if (s < seqlens_k[b] + 1) {
+      position_ids[tid] = s;
+    } else {
+      position_ids[tid] = 1;
+    }
+  }
+}
+
+__global__ void SeqlensToPosIdsToken(const int32_t* seqlens_k, int64_t* position_ids, const int batch_size) {
+  int tid = blockDim.x * blockIdx.x + threadIdx.x;
+  if (tid < batch_size) {
+    position_ids[tid] = seqlens_k[tid];
+  }
+}
+
+// Convert seqlens_k to position_ids
+Status LaunchSeqlensToPosIds(contrib::GroupQueryAttentionParameters& parameters, const int32_t* seqlens_k,
+                             int64_t* position_ids, cudaStream_t stream,
+                             const int max_threads_per_block) {
+  const int seqlen = parameters.sequence_length;
+  const int batch_size = parameters.batch_size;
+  const int threads = max_threads_per_block;
+  const int blocks = (batch_size * seqlen + threads - 1) / threads;
+  if (parameters.is_subsequent_prompt) {
+    SeqlensToPosIdsInteractive<<<blocks, threads, 0, stream>>>(seqlens_k, position_ids, seqlen, batch_size);
+  } else if (parameters.is_first_prompt) {
+    SeqlensToPosIdsPrompt<<<blocks, threads, 0, stream>>>(seqlens_k, position_ids, seqlen, batch_size);
+  } else {
+    SeqlensToPosIdsToken<<<blocks, threads, 0, stream>>>(seqlens_k, position_ids, batch_size);
+  }
+  return CUDA_CALL(cudaGetLastError());
+}
+
 namespace detail {
 namespace {
 
