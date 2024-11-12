@@ -92,28 +92,67 @@ ov::OutputVector group_query_attention(const ov::frontend::onnx::Node& node) {
     auto kv_num_heads_node = v0::Constant::create(ov::element::i64, ov::Shape{1}, {kv_num_heads});
 
     auto do_rotary = node.get_attribute_value<int64_t>("do_rotary", 0);
+    auto rotary_interleaved = node.get_attribute_value<int64_t>("rotary_interleaved", 0);
     auto local_window_size = node.get_attribute_value<int64_t>("local_window_size", -1);
     auto smooth_softmax = node.get_attribute_value<int64_t>("smooth_softmax", 0);
     auto softcap = node.get_attribute_value<float>("softcap", 0);
     auto scale = node.get_attribute_value<float>("scale", 0);
-
+ 
     // TODO: decide how to diff packed vs unpacked
     if (!ov::op::util::is_null(key)){
         std::cerr << "qkv unpacked not impl" << std::endl;
         ASSERT(false);
     }
     
-    const auto batch_size = get_dimensions(qkv_shape, {0});
-    const auto sequence_length = get_dimensions(qkv_shape, {1});
-    const auto qkv_hidden_sizes = get_dimensions(qkv_shape, {2});
-    int64_t hidden_size =  query.get_partial_shape()[2];
-    int64_t per_head_size = hidden_size / (num_heads + kv_num_heads*2);
+    const auto qkv_shape = std::make_shared<v3::ShapeOf>(query);
+
+    // TODO: handle dynamic shape
+    if (!query.get_partial_shape.is_static()){
+        std::cerr << "dynamic shape not supported" << std::endl;
+        ASSERT(false);
+    }
+    const auto batch_size_node = get_dimensions(qkv_shape, {0});
+    int64_t batch_size =  query.get_partial_shape()[0];
+    const auto sequence_length_node = get_dimensions(qkv_shape, {1});
+    int64_t sequence_length =  query.get_partial_shape()[1];
+    const auto qkv_hidden_sizes_node = get_dimensions(qkv_shape, {2});
+    int64_t qkv_hidden_size =  query.get_partial_shape()[2];
+    int64_t per_head_size = qkv_hidden_size / (num_heads + kv_num_heads*2);
 
     auto kv_heads_tot = std::make_shared<v1::Add>(kv_num_heads_node, kv_num_heads_node);
     auto qkv_heads_tot = std::make_shared<v1::Add>(num_heads_node, kv_heads_tot);
     auto head_size = std::make_shared<v1::Divide>(qkv_hidden_sizes, qkv_heads_tot);
     auto q_hidden_size = std::make_shared<v1::Multiply>(head_size, num_heads_node);
     auto kv_hidden_size = std::make_shared<v1::Multiply>(head_size, kv_num_heads_node);
+
+    auto eq = std::make_shared<ov::op::v1::Equal>(sequence_length_node, total_sequence_length);
+    ov::OutputVector cmp_result(1);
+    bool seq_len_eq_tot_seq_len = false;
+    if (eq->constant_fold(cmp_result, eq->input_values())){
+        seq_len_eq_tot_seq_len = true;
+    }
+    
+    bool is_subsequent_prompt = false;
+    if (sequence_length > 1 && !seq_len_eq_tot_seq_len) {
+        if (batch_size != 1) {
+            std::cerr << "batch_size must be 1 when sequence_length > 1 and past context is given." << std::endl;
+        }
+        is_subsequent_prompt = true;
+        // TODO: support subsequent prompt
+        ASSERT(false);
+    }
+
+    bool is_first_prompt;
+    if (is_subsequent_prompt) {
+        is_first_prompt = false;  // irrelevant for interactive decoding
+    } else {
+        // If not interactive, sequence_length is 1 for token gen and arbitrarily large for prompt
+        is_first_prompt = seq_len_eq_tot_seq_len;
+        if (!is_first_prompt && sequence_length != 1) {
+            std::cerr << "sequence_length shall be 1 when it is not prompt." << std::endl;
+            ASSERT(false);
+        }
+    }
 
     const std::vector<int64_t> qkv_sizes = {num_heads*per_head_size, kv_num_heads*per_head_size, kv_num_heads*per_head_size};
     // 0:q, 1:k, 2:v
@@ -125,55 +164,74 @@ ov::OutputVector group_query_attention(const ov::frontend::onnx::Node& node) {
     auto q_new_shape = std::make_shared<v0::Concat>(
         ov::NodeVector{batch_size, sequence_length, num_heads_node, head_size},
         0);
+    // BSNH
     auto reshape_q = std::make_shared<v1::Reshape>(split[0], q_new_shape, false);
-    auto Q = std::make_shared<v1::Transpose>(reshape_q, perm);
+    // auto Q = std::make_shared<v1::Transpose>(reshape_q, perm);
     // k
     auto v_new_shape = std::make_shared<v0::Concat>(
         ov::NodeVector{batch_size, sequence_length, kv_num_heads_node, head_size},
         0);
+    // BSNH
     auto reshape_k = std::make_shared<v1::Reshape>(split[1], k_new_shape, false);
-    auto K = std::make_shared<v1::Transpose>(reshape_k, perm);
+    // auto K = std::make_shared<v1::Transpose>(reshape_k, perm);
     // v
     auto v_new_shape = std::make_shared<v0::Concat>(
         ov::NodeVector{batch_size, sequence_length, kv_num_heads_node, head_size},
         0);
+    // BSNH
     auto reshape_v = std::make_shared<v1::Reshape>(split[2], v_new_shape, false);
-    auto V = std::make_shared<v1::Transpose>(reshape_v, perm);
+    // auto V = std::make_shared<v1::Transpose>(reshape_v, perm);
     
     // TODO: apply rotary embedding to Q K
     if (do_rotary && !ov::op::util::is_null(cos_cache) && !ov::op::util::is_null(sin_cache)){
         // TODO: Generate position ids, check CPU & CUDA impl
-        const int pos_ids_size = is_first_prompt ? 1 : batch_size * sequence_length;
-        std::vector<int64_t> pos_ids(pos_ids_size);
-        if (is_first_prompt) {
-            pos_ids[0] = static_cast<int64_t>(0);
-        } else {
-        // Note: As of now, continuous decoding supports only batch size 1 and token generation supports only sequence length 1.
-        // pos_id (b, s) = seqlens_k(b) + 1 - sequence_length
-            for (int b = 0; b < batch_size; b++) {
-                const int total_seqlen = seqlens_k[b] + 1;
-                const int past_seqlen = total_seqlen - sequence_length;
-                for (int s = 0; s < sequence_length; s++) {
-                    if (past_seqlen + s < total_seqlen) {
-                        pos_ids[b * sequence_length + s] = static_cast<int64_t>(past_seqlen) + s;
-                    } else {
-                        pos_ids[b * sequence_length + s] = static_cast<int64_t>(1);
-                    }
-                }
-            }
-        }
-        const auto pos_ids_node = v0::Constant::create(ov::element::i64, ov::Shape{pos_ids_size}, pos_ids);
+        // 2nd+ token, non-interactive: pos_ids(b, s=1) pos_ids[b][s] = seqlen_k[b]
+        // 1st token, non-interactive: pos_ids(b, s) pos_ids[b][s] = (s < seqlen_k[b]+1) ? s : 1
+        // interactive: pos_ids(b=1, s) pos_ids[b][s] = (s < q_len) ? seqlens_k[b]+1-q_len+s : 1
+
+        // ref cpu impl
+        // const int pos_ids_size = is_first_prompt ? 1 : batch_size * sequence_length;
+        // const auto pos_ids_node = v0::Constant::create(ov::element::i64, ov::Shape{pos_ids_size}, pos_ids);
+        // std::vector<int64_t> pos_ids(pos_ids_size);
+        // if (is_first_prompt) {
+        //     pos_ids[0] = static_cast<int64_t>(0);
+        // } else {
+        // // Note: As of now, continuous decoding supports only batch size 1 and token generation supports only sequence length 1.
+        // // pos_id (b, s) = seqlens_k(b) + 1 - sequence_length
+        //     for (int b = 0; b < batch_size; b++) {
+        //         const int total_seqlen = seqlens_k[b] + 1;
+        //         const int past_seqlen = total_seqlen - sequence_length;
+        //         for (int s = 0; s < sequence_length; s++) {
+        //             if (past_seqlen + s < total_seqlen) {
+        //                 pos_ids[b * sequence_length + s] = static_cast<int64_t>(past_seqlen) + s;
+        //             } else {
+        //                 pos_ids[b * sequence_length + s] = static_cast<int64_t>(1);
+        //             }
+        //         }
+        //     }
+        // }
 
         auto two = v0::Constant::create(ov::element::i64, ov::Shape{}, {2});
         auto half_rotary_dim = std::make_shared<v3::ShapeOf>(cos_cache);
         auto rotary_dim = std::make_shared<v1::Multiply>(get_dimensions(half_rotary_dim, {1}), two);
-
+        if (rotary_interleaved){
+            // TODO: support interleaved rope
+            std::cerr << "interleaved RoPE unsupported" << std:endl;
+            ASSERT(false);
+        }
+        else{
+            // cos(S,H/2) = cos_cache[pos_id[b][s]][:]
+            // sin(S,H/2) = sin_cache[pos_id[b][s]][:]
+            // split in(B,N,S,H) into in_1(B,N,S,H/2) & in_2(B,N,S,H/2)
+            // split out(B,N,S,H) into out_1(B,N,S,H/2) & out_2(B,N,S,H/2)
+            // out_1(B,N,S,H/2)=in_1(B,N,S,H/2)xcos(S,H/2)-in_2(B,N,S,H/2)xsin(S,H/2)
+            // out_2(B,N,S,H/2)=in_2(B,N,S,H/2)xcos(S,H/2)+in_1(B,N,S,H/2)xsin(S,H/2)
+            // out(B,N,S,H) = concat(out_1(B,N,S,H/2), out_2(B,N,S,H/2))
+        }
     }
 
     // TODO : kv cache
     // extend kv to past_kv & output to present_kv
-    // // TODO:
-    // int present_sequence_length = std::max(total_sequence_length, past_sequence_length);
         
     if (!ov::op::util::is_null(past_key)){
         auto past_kv_dims = std::make_shared<v3::ShapeOf>(past_key);
