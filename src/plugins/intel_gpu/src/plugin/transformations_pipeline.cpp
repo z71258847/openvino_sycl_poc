@@ -286,8 +286,18 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
 
         // Temporary solution, global rt info cleanup is needed
         for (auto& node : func->get_ops()) {
+            std::cout << node->get_name() << ":";
+            std::cout << node->description();
+            if (node->get_input_size()>0){
+                std::cout << " " << node->get_input_element_type(0) << "->" << node->get_output_element_type(0) << std::endl;
+            }
+            if (node->description()=="Multiply"){
+                ov::disable_fp16_compression(node);
+                std::cout << "disable fp16 called on current node" << std::endl;
+            }
             ov::enable_constant_folding(node);
             ov::disable_keep_const_precision(node);
+            std::cout << std::endl;
         }
 
         auto is_model_quantized = ov::pass::low_precision::LowPrecision::isFunctionQuantized(func);
